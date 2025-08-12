@@ -1,0 +1,131 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>All Devices - MOHI IT Inventory</title>
+</head>
+<body class="min-h-screen flex flex-col bg-gray-100">
+    <header class="bg-blue-600 text-white fixed top-0 w-full z-10 shadow-md">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between sm:justify-start">
+            <img src="{% static 'images/logo.png' %}" alt="Logo" class="w-16 h-auto mr-4">
+            <a href="{% url 'admin:index' %}" class="text-lg font-semibold hover:text-blue-200 transition-colors">
+                MOHI IT Inventory
+            </a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 pt-24 pb-16 flex-grow">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">All Devices</h2>
+
+        <!-- Export buttons and total records -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:gap-4 mb-6">
+            <p class="text-gray-700">Total Records: {{ report_data.total_records }}</p>
+            <div class="flex flex-wrap gap-2">
+                <button id="print_button" onclick="window.print()" class="flex items-center gap-2 bg-white border border-blue-600 text-blue-600 px-4 py-2 rounded-md hover:bg-blue-50 transition-colors">
+                    <i class="fas fa-print"></i> Print
+                </button>
+                <a href="{% url 'export_to_pdf' %}?page={{ data.number }}&centre={{ report_data.centre|default_if_none:'' }}&department={{ report_data.department|default_if_none:'' }}&hardware={{ report_data.hardware|default_if_none:'' }}&system_model={{ report_data.system_model|default_if_none:'' }}&processor={{ report_data.processor|default_if_none:'' }}&ram_gb={{ report_data.ram_gb|default_if_none:'' }}&hdd_gb={{ report_data.hdd_gb|default_if_none:'' }}&serial_number={{ report_data.serial_number|default_if_none:'' }}&assignee_first_name={{ report_data.assignee_first_name|default_if_none:'' }}&assignee_last_name={{ report_data.assignee_last_name|default_if_none:'' }}&assignee_email_address={{ report_data.assignee_email_address|default_if_none:'' }}&device_condition={{ report_data.device_condition|default_if_none:'' }}&status={{ report_data.status|default_if_none:'' }}&date={{ report_data.date|default_if_none:'' }}" id="export_pdf_button" class="flex items-center gap-2 bg-white border border-blue-600 text-blue-600 px-4 py-2 rounded-md hover:bg-blue-50 transition-colors">
+                    <i class="far fa-file-pdf"></i> Export to PDF
+                </a>
+                <a href="{% url 'export_to_excel' %}?page={{ data.number }}&centre={{ report_data.centre|default_if_none:'' }}&department={{ report_data.department|default_if_none:'' }}&hardware={{ report_data.hardware|default_if_none:'' }}&system_model={{ report_data.system_model|default_if_none:'' }}&processor={{ report_data.processor|default_if_none:'' }}&ram_gb={{ report_data.ram_gb|default_if_none:'' }}&hdd_gb={{ report_data.hdd_gb|default_if_none:'' }}&serial_number={{ report_data.serial_number|default_if_none:'' }}&assignee_first_name={{ report_data.assignee_first_name|default_if_none:'' }}&assignee_last_name={{ report_data.assignee_last_name|default_if_none:'' }}&assignee_email_address={{ report_data.assignee_email_address|default_if_none:'' }}&device_condition={{ report_data.device_condition|default_if_none:'' }}&status={{ report_data.status|default_if_none:'' }}&date={{ report_data.date|default_if_none:'' }}" id="export_excel_button" class="flex items-center gap-2 bg-white border border-blue-600 text-blue-600 px-4 py-2 rounded-md hover:bg-blue-50 transition-colors">
+                    <i class="far fa-file-excel"></i> Export to Excel
+                </a>
+                <button type="submit" id="search_button" form="search_form" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+        </div>
+
+        <!-- Table with search inputs -->
+        <form method="get" action="{% url 'import_displaycsv' %}" id="search_form">
+            <div class="overflow-x-auto">
+                <table class="w-full bg-white shadow-md rounded-lg border border-gray-200">
+                    <thead>
+                        <tr class="bg-gray-200">
+                            <th class="p-2"><input type="text" name="centre" placeholder="Search Centre..." value="{{ report_data.centre|default_if_none:'' }}" form="search_form" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"></th>
+                            <th class="p-2"><input type="text" name="department" placeholder="Search Department..." value="{{ report_data.department|default_if_none:'' }}" form="search_form" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"></th>
+                            <th class="p-2"><input type="text" name="hardware" placeholder="Search Hardware..." value="{{ report_data.hardware|default_if_none:'' }}" form="search_form" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"></th>
+                            <th class="p-2"><input type="text" name="system_model" placeholder="Search System Model..." value="{{ report_data.system_model|default_if_none:'' }}" form="search_form" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"></th>
+                            <th class="p-2"><input type="text" name="processor" placeholder="Search Processor..." value="{{ report_data.processor|default_if_none:'' }}" form="search_form" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"></th>
+                            <th class="p-2"><input type="text" name="ram_gb" placeholder="Search RAM..." value="{{ report_data.ram_gb|default_if_none:'' }}" form="search_form" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"></th>
+                            <th class="p-2"><input type="text" name="hdd_gb" placeholder="Search HDD..." value="{{ report_data.hdd_gb|default_if_none:'' }}" form="search_form" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"></th>
+                            <th class="p-2"><input type="text" name="serial_number" placeholder="Search Serial..." value="{{ report_data.serial_number|default_if_none:'' }}" form="search_form" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"></th>
+                            <th class="p-2"><input type="text" name="assignee_first_name" placeholder="Search First Name..." value="{{ report_data.assignee_first_name|default_if_none:'' }}" form="search_form" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"></th>
+                            <th class="p-2"><input type="text" name="assignee_last_name" placeholder="Search Last Name..." value="{{ report_data.assignee_last_name|default_if_none:'' }}" form="search_form" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"></th>
+                            <th class="p-2"><input type="text" name="assignee_email_address" placeholder="Search Email Address..." value="{{ report_data.assignee_email_address|default_if_none:'' }}" form="search_form" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"></th>
+                            <th class="p-2"><input type="text" name="device_condition" placeholder="Search Device Condition..." value="{{ report_data.device_condition|default_if_none:'' }}" form="search_form" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"></th>
+                            <th class="p-2"><input type="text" name="status" placeholder="Search Status..." value="{{ report_data.status|default_if_none:'' }}" form="search_form" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"></th>
+                            <th class="p-2"><input type="text" name="date" placeholder="Search Date..." value="{{ report_data.date|default_if_none:'' }}" form="search_form" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"></th>
+                        </tr>
+                        <tr class="bg-gray-200 text-gray-800">
+                            <th class="p-2">Centre</th>
+                            <th class="p-2">Department</th>
+                            <th class="p-2">Hardware</th>
+                            <th class="p-2">System Model</th>
+                            <th class="p-2">Processor</th>
+                            <th class="p-2">Ram (GB)</th>
+                            <th class="p-2">HDD (GB)</th>
+                            <th class="p-2">Serial Number</th>
+                            <th class="p-2">Assignee First Name</th>
+                            <th class="p-2">Assignee Last Name</th>
+                            <th class="p-2">Assignee Email Address</th>
+                            <th class="p-2">Device Condition</th>
+                            <th class="p-2">Status</th>
+                            <th class="p-2">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in data %}
+                            <tr class="border-t hover:bg-gray-50">
+                                <td class="p-2">{{ item.centre }}</td>
+                                <td class="p-2">{{ item.department }}</td>
+                                <td class="p-2">{{ item.hardware }}</td>
+                                <td class="p-2">{{ item.system_model }}</td>
+                                <td class="p-2">{{ item.processor }}</td>
+                                <td class="p-2">{{ item.ram_gb }}</td>
+                                <td class="p-2">{{ item.hdd_gb }}</td>
+                                <td class="p-2">{{ item.serial_number }}</td>
+                                <td class="p-2">{{ item.assignee_first_name }}</td>
+                                <td class="p-2">{{ item.assignee_last_name }}</td>
+                                <td class="p-2">{{ item.assignee_email_address }}</td>
+                                <td class="p-2">{{ item.device_condition }}</td>
+                                <td class="p-2">{{ item.status }}</td>
+                                <td class="p-2">{{ item.date }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </form>
+
+        <!-- Pagination -->
+        <div class="flex justify-center mt-6">
+            <div class="flex items-center gap-2">
+                {% if data.has_previous %}
+                    <a href="?page=1&centre={{ report_data.centre|default_if_none:'' }}&department={{ report_data.department|default_if_none:'' }}&hardware={{ report_data.hardware|default_if_none:'' }}&system_model={{ report_data.system_model|default_if_none:'' }}&processor={{ report_data.processor|default_if_none:'' }}&ram_gb={{ report_data.ram_gb|default_if_none:'' }}&hdd_gb={{ report_data.hdd_gb|default_if_none:'' }}&serial_number={{ report_data.serial_number|default_if_none:'' }}&assignee_first_name={{ report_data.assignee_first_name|default_if_none:'' }}&assignee_last_name={{ report_data.assignee_last_name|default_if_none:'' }}&assignee_email_address={{ report_data.assignee_email_address|default_if_none:'' }}&device_condition={{ report_data.device_condition|default_if_none:'' }}&status={{ report_data.status|default_if_none:'' }}&date={{ report_data.date|default_if_none:'' }}" class="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">« First</a>
+                    <a href="?page={{ data.previous_page_number }}&centre={{ report_data.centre|default_if_none:'' }}&department={{ report_data.department|default_if_none:'' }}&hardware={{ report_data.hardware|default_if_none:'' }}&system_model={{ report_data.system_model|default_if_none:'' }}&processor={{ report_data.processor|default_if_none:'' }}&ram_gb={{ report_data.ram_gb|default_if_none:'' }}&hdd_gb={{ report_data.hdd_gb|default_if_none:'' }}&serial_number={{ report_data.serial_number|default_if_none:'' }}&assignee_first_name={{ report_data.assignee_first_name|default_if_none:'' }}&assignee_last_name={{ report_data.assignee_last_name|default_if_none:'' }}&assignee_email_address={{ report_data.assignee_email_address|default_if_none:'' }}&device_condition={{ report_data.device_condition|default_if_none:'' }}&status={{ report_data.status|default_if_none:'' }}&date={{ report_data.date|default_if_none:'' }}" class="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">Previous</a>
+                {% endif %}
+                <span class="text-gray-700">
+                    Page {{ data.number }} of {{ data.paginator.num_pages }}
+                </span>
+                {% if data.has_next %}
+                    <a href="?page={{ data.next_page_number }}&centre={{ report_data.centre|default_if_none:'' }}&department={{ report_data.department|default_if_none:'' }}&hardware={{ report_data.hardware|default_if_none:'' }}&system_model={{ report_data.system_model|default_if_none:'' }}&processor={{ report_data.processor|default_if_none:'' }}&ram_gb={{ report_data.ram_gb|default_if_none:'' }}&hdd_gb={{ report_data.hdd_gb|default_if_none:'' }}&serial_number={{ report_data.serial_number|default_if_none:'' }}&assignee_first_name={{ report_data.assignee_first_name|default_if_none:'' }}&assignee_last_name={{ report_data.assignee_last_name|default_if_none:'' }}&assignee_email_address={{ report_data.assignee_email_address|default_if_none:'' }}&device_condition={{ report_data.device_condition|default_if_none:'' }}&status={{ report_data.status|default_if_none:'' }}&date={{ report_data.date|default_if_none:'' }}" class="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">Next</a>
+                    <a href="?page={{ data.paginator.num_pages }}&centre={{ report_data.centre|default_if_none:'' }}&department={{ report_data.department|default_if_none:'' }}&hardware={{ report_data.hardware|default_if_none:'' }}&system_model={{ report_data.system_model|default_if_none:'' }}&processor={{ report_data.processor|default_if_none:'' }}&ram_gb={{ report_data.ram_gb|default_if_none:'' }}&hdd_gb={{ report_data.hdd_gb|default_if_none:'' }}&serial_number={{ report_data.serial_number|default_if_none:'' }}&assignee_first_name={{ report_data.assignee_first_name|default_if_none:'' }}&assignee_last_name={{ report_data.assignee_last_name|default_if_none:'' }}&assignee_email_address={{ report_data.assignee_email_address|default_if_none:'' }}&device_condition={{ report_data.device_condition|default_if_none:'' }}&status={{ report_data.status|default_if_none:'' }}&date={{ report_data.date|default_if_none:'' }}" class="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">Last »</a>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-blue-600 text-white py-3 text-center fixed bottom-0 w-full shadow-md">
+        <p>© <span id="year"></span> MOHI IT Inventory</p>
+        <script>
+            document.getElementById("year").textContent = new Date().getFullYear();
+        </script>
+    </footer>
+</body>
+</html>

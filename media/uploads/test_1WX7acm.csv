@@ -1,0 +1,13 @@
+centre	department	hardware	system_model	processor	ram_gb	hdd_gb	serial_number	assignee_first_name	assignee_last_name	assignee_email_address	device_condition	status	date
+kosovo	Kosovo	Laptop	Dell Inspiron 5566	Intel(R) Core(TM) i3-7100U CPU @ 2.40GHz 2.40 GHz	6	1000	JW0NSF2	John 	Obongo	john.obongo@mohiafrica.org	Good	issued	
+kosovo	Kosovo	Laptop	Hp EliteBook 840 G3	Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz 2.81GHz	8	250	5CG7090TQ5	Nerea 	Sikote	nerea.sikote@mohiafrica.org	Good	issued	04/06/2018
+kosovo	Kosovo	Laptop	HP EliteBook 840 G3	"Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz, 2808 Mhz, 2 Core(s), 4 Logical Processor(s)"	8	250	5CD712CW2T	Francis 	Maina 		Good	issued	31/07/2016
+kosovo	Kosovo	Chromebook	LENOVO-N21				LRO4LY8G	Zylipher 	Atieno		Good	issued	
+kosovo	Kosovo	Chromebook	SAMSUNG				0SPR91BJ906231P	Paul 	Mungala		Good	issued	
+Kosovo	Kosovo Social Work	Laptop	Dell Latitude E6500	Intel(R) Core(TM)2 Duo CPU P8600 @2.40GHz 2.40GHz	4	250	FGTXBK1	Lilian 	Okoth	lilian.okoth@mohiafrica.org	Fair	issued	
+Kosovo	Kosovo Social Work	Laptop	Dell Latitude E6500	Intel(R) Core(TM)2 Duo CPU P8600 @2.40GHz 2.40GHz	4	250	6HTXBK1	Ruth	 Kanini	ruth.kanini@mohiafrica.org	Fair	issued	
+Kosovo	Kosovo EdTech Lab	Server	Dell Inc. PowerEdge R230	Intel(R) Xeon(R) CPU E3-1220 v6 @ 3.00GHz 3.00 GHz	16	1000		EdTech Assistant Pangani			Good	issued	5/3/2018
+Kosovo	Kosovo EdTech Lab	N-Computing 35 pcs	L300 Series	NComputing Numo System on a chip (SoC)	N/A	N/A		EdTech Assistant Pangani			Good	issued	2019
+Kosovo	Kosovo EdTech Lab	Projector	EPSON EB-W41	"Projection System: 3LCD Technology, RGB liquid crystal shutter
+Resolution: WXGA, 1280 * 800, 16:10
+Lamp: UHE, 210 W, 6,000 Hrs durability, 10,000 Hrs durability (economy mode)"	N/A	N/A		EdTech Assistant Pangani			Good	issued	2017

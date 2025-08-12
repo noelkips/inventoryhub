@@ -1,0 +1,58 @@
+<!-- pdf_template.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exported Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 10px;
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        .object-container {
+            border: 1px solid #dddddd;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+
+        .field-label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<h2>All Devices</h2>
+
+{% for item in data %}
+    <div class="object-container">
+        <p class="field-label">Centre:</p>{{ item.centre }}<br>
+        <p class="field-label">Department:</p>{{ item.department }}<br>
+        <p class="field-label">Hardware:</p>{{ item.hardware }}<br>
+        <p class="field-label">System Model:</p>{{ item.system_model }}<br>
+        <!-- <p class="field-label">Device Name:</p>{{ item.device_name }}<br> -->
+        <p class="field-label">Processor:</p>{{ item.processor }}<br>
+        <p class="field-label">Ram (GB):</p>{{ item.ram_gb }}<br>
+        <p class="field-label">HDD (GB):</p>{{ item.hdd_gb }}<br>
+        <p class="field-label">Serial Number:</p>{{ item.serial_number }}<br>
+        <!-- <p class="field-label">Assigned By:</p>{{ item.assigned_by }}<br> -->
+        <p class="field-label">Assignee First Name:</p>{{ item.assignee_first_name }}<br>
+        <p class="field-label">Assignee Last Name:</p>{{ item.assignee_last_name }}<br>
+        <p class="field-label">Assignee Email Address:</p>{{ item.assignee_email_address }}<br>
+        <p class="field-label">Device Condition:</p>{{ item.device_condition }}<br>
+        <p class="field-label">Status:</p>{{ item.status }}<br>
+        <p class="field-label">Date:</p>{{ item.date }}<br>
+        <!-- Add more fields as needed -->
+    </div>
+{% endfor %}
+
+</body>
+</html>

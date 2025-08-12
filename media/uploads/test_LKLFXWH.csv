@@ -1,0 +1,6 @@
+﻿centre,department,hardware,system_model,device_name,processor,ram_gb,hdd_gb,serial_number,assigned_by,assignee_first_name,assignee_last_name,assignee_email_address,status,date,,,,,,,,,,,,,,
+Kosovo,Kosovo,Laptop,Dell Inspiron 5566,,Intel(R) Core(TM) i3-7100U CPU @ 2.40GHz 2.40 GHz,6,1000,JW0NSF2,,John ,Obongo,john.obongo@mohiafrica.org,Good,,,,,,,,,,,,,,,
+Kosovo,Kosovo,Laptop,Hp EliteBook 840 G3,,Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz 2.81GHz,8,250,5CG7090TQ5,,Nerea ,Sikote,nerea.sikote@mohiafrica.org,Good,2018-06-04,,,,,,,,,,,,,,
+Kosovo,Kosovo,Laptop,HP EliteBook 840 G3,,"Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz, 2808 Mhz, 2 Core(s), 4 Logical Processor(s)",8,250,5CD712CW2T,,Francis ,Maina ,,Good,2016-07-31,,,,,,,,,,,,,,
+Kosovo,Kosovo,Chromebook,LENOVO-N21,,,,,LRO4LY8G,,Zylipher ,Atieno,,Good,,,,,,,,,,,,,,,
+Kosovo,Kosovo,Chromebook,SAMSUNG,,,,,0SPR91BJ906231P,,Paul ,Mungala,,Good,,,,,,,,,,,,,,,

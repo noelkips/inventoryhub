@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>IT Inventory</title>
+        <!-- Add any CSS or meta tags here -->
+    </head>
+    <body>
+        <header>
+            <h1>IT Inventory</h1>
+        </header>
+    
+
+<!-- upload_csv.html -->
+
+<!-- upload_csv.html -->
+<!-- upload_csv.html -->
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Upload CSV</button>
+</form>
+
+
+
+<!-- success.html -->
+<!-- <p>Data successfully imported from CSV!</p>
+
+<footer>
+    <p>&copy; 2024 IT Inventory. All rights reserved.</p>
+</footer> -->
+</body>
+</html>
+
+
