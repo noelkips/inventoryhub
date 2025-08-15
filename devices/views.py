@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.db import transaction
 from datetime import datetime
 from .forms import ImportForm
-from .models import Import
+from .models import Import, Centre
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 from reportlab.pdfgen import canvas
@@ -17,7 +17,7 @@ from io import BytesIO
 import os
 from django.conf import settings
 
-def handle_uploaded_file(file):
+def handle_uploaded_file(file, user):
     header_mapping = {
         'centre': 'centre',
         'department': 'department',
@@ -61,12 +61,20 @@ def handle_uploaded_file(file):
             if serial_number and Import.objects.filter(serial_number=serial_number[0]).exists():
                 print(f"Skipping duplicate serial_number: {serial_number[0]}")
                 continue
-            import_instance = Import()
+            import_instance = Import(added_by=user)  # Set added_by to the logged-in user
             for header, value in zip(headers, row):
                 value = value.strip()
                 field_name = header_mapping.get(header)
                 if field_name:
-                    if field_name == 'date' and value:
+                    if field_name == 'centre' and value:
+                        try:
+                            centre = Centre.objects.get(centre_code=value)
+                            import_instance.centre = centre
+                            print(f"Mapped centre_code {value} to Centre: {centre.name}")
+                        except Centre.DoesNotExist:
+                            print(f"Centre with centre_code {value} not found, setting to None")
+                            import_instance.centre = None
+                    elif field_name == 'date' and value:
                         try:
                             for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'):
                                 try:
@@ -114,7 +122,7 @@ def upload_csv(request):
                             destination.write(chunk)
                     # Process CSV data
                     request.FILES['file'].seek(0)
-                    handle_uploaded_file(request.FILES['file'])
+                    handle_uploaded_file(request.FILES['file'], request.user)
                     messages.success(request, "CSV file uploaded and data imported successfully.")
                     return redirect('import_displaycsv')
                 except Exception as e:
@@ -122,7 +130,9 @@ def upload_csv(request):
             else:
                 # Handle manual record creation
                 try:
-                    form.save()
+                    instance = form.save(commit=False)
+                    instance.added_by = request.user
+                    instance.save()
                     messages.success(request, "Record saved successfully.")
                     return redirect('import_displaycsv')
                 except Exception as e:
@@ -134,8 +144,10 @@ def upload_csv(request):
     return render(request, 'import/uploadcsv.html', {'form': form})
 
 def display_csv(request):
-    data = Import.objects.all()
-
+    if request.user.is_superuser:
+        data = Import.objects.all()
+    elif request.user.is_trainer:
+        data = Import.objects.filter(centre=Centre.objects.get(centre_code=request.user.centre.centre_code))
     # Get individual search parameters
     centre = request.GET.get('centre', '')
     department = request.GET.get('department', '')
@@ -158,7 +170,7 @@ def display_csv(request):
             device_condition, status, date]):
         query = Q()
         if centre:
-            query &= Q(centre__icontains=centre)
+            query &= Q(centre__centre_code__icontains=centre)
         if department:
             query &= Q(department__icontains=department)
         if hardware:
@@ -251,7 +263,7 @@ def export_to_pdf(request):
             device_condition, status, date]):
         query = Q()
         if centre:
-            query &= Q(centre__icontains=centre)
+            query &= Q(centre__centre_code__icontains=centre)
         if department:
             query &= Q(department__icontains=department)
         if hardware:
@@ -336,7 +348,7 @@ def export_to_excel(request):
             device_condition, status, date]):
         query = Q()
         if centre:
-            query &= Q(centre__icontains=centre)
+            query &= Q(centre__centre_code__icontains=centre)
         if department:
             query &= Q(department__icontains=department)
         if hardware:
@@ -366,7 +378,7 @@ def export_to_excel(request):
         data = data.filter(query)
 
     # Apply pagination to match the current page
-    items_per_page = 100
+    items_per_page = 2000
     paginator = Paginator(data, items_per_page)
     page_number = request.GET.get('page', 1)
 
@@ -393,26 +405,30 @@ def export_to_excel(request):
         'Centre', 'Department', 'Hardware', 'System Model', 'Processor',
         'RAM (GB)', 'HDD (GB)', 'Serial Number', 'Assignee First Name',
         'Assignee Last Name', 'Assignee Email Address', 'Device Condition',
-        'Status', 'Date'
+        'Status', 'Date', 'Added By', 'Approved By', 'Is Approved', 'Reason for Update'
     ]
     for col_num, header in enumerate(headers, 1):
         worksheet.cell(row=1, column=col_num, value=header)
 
     for row_num, item in enumerate(data_on_page, 2):
-        worksheet.cell(row=row_num, column=1, value=item.centre)
-        worksheet.cell(row=row_num, column=2, value=item.department)
-        worksheet.cell(row=row_num, column=3, value=item.hardware)
-        worksheet.cell(row=row_num, column=4, value=item.system_model)
-        worksheet.cell(row=row_num, column=5, value=item.processor)
-        worksheet.cell(row=row_num, column=6, value=item.ram_gb)
-        worksheet.cell(row=row_num, column=7, value=item.hdd_gb)
-        worksheet.cell(row=row_num, column=8, value=item.serial_number)
-        worksheet.cell(row=row_num, column=9, value=item.assignee_first_name)
-        worksheet.cell(row=row_num, column=10, value=item.assignee_last_name)
-        worksheet.cell(row=row_num, column=11, value=item.assignee_email_address)
-        worksheet.cell(row=row_num, column=12, value=item.device_condition)
-        worksheet.cell(row=row_num, column=13, value=item.status)
-        worksheet.cell(row=row_num, column=14, value=item.date)
+        worksheet.cell(row=row_num, column=1, value=item.centre.centre_code if item.centre else '')
+        worksheet.cell(row=row_num, column=2, value=item.department or '')
+        worksheet.cell(row=row_num, column=3, value=item.hardware or '')
+        worksheet.cell(row=row_num, column=4, value=item.system_model or '')
+        worksheet.cell(row=row_num, column=5, value=item.processor or '')
+        worksheet.cell(row=row_num, column=6, value=item.ram_gb or '')
+        worksheet.cell(row=row_num, column=7, value=item.hdd_gb or '')
+        worksheet.cell(row=row_num, column=8, value=item.serial_number or '')
+        worksheet.cell(row=row_num, column=9, value=item.assignee_first_name or '')
+        worksheet.cell(row=row_num, column=10, value=item.assignee_last_name or '')
+        worksheet.cell(row=row_num, column=11, value=item.assignee_email_address or '')
+        worksheet.cell(row=row_num, column=12, value=item.device_condition or '')
+        worksheet.cell(row=row_num, column=13, value=item.status or '')
+        worksheet.cell(row=row_num, column=14, value=str(item.date) if item.date else '')
+        worksheet.cell(row=row_num, column=15, value=str(item.added_by) if item.added_by else '')
+        worksheet.cell(row=row_num, column=16, value=str(item.approved_by) if item.approved_by else '')
+        worksheet.cell(row=row_num, column=17, value=str(item.is_approved))
+        worksheet.cell(row=row_num, column=18, value=item.reason_for_update or '')
 
     workbook.save(response)
     return response

@@ -1,0 +1,354 @@
+[
+    {
+        "model": "devices.centre",
+        "pk": 1,
+        "fields": {
+            "name": "Pangani",
+            "centre_code": "CENTRE_1"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 2,
+        "fields": {
+            "name": "Area 2",
+            "centre_code": "CENTRE_2"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 3,
+        "fields": {
+            "name": "Bondeni",
+            "centre_code": "CENTRE_3"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 4,
+        "fields": {
+            "name": "Kosovo",
+            "centre_code": "CENTRE_4"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 5,
+        "fields": {
+            "name": "Gitathuru",
+            "centre_code": "CENTRE_5"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 6,
+        "fields": {
+            "name": "Mathare North",
+            "centre_code": "CENTRE_6"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 7,
+        "fields": {
+            "name": "Mabatini",
+            "centre_code": "CENTRE_7"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 8,
+        "fields": {
+            "name": "Madoya",
+            "centre_code": "CENTRE_8"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 9,
+        "fields": {
+            "name": "Kiamaiko Ngei",
+            "centre_code": "CENTRE_9"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 10,
+        "fields": {
+            "name": "Kariobangi",
+            "centre_code": "CENTRE_10"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 11,
+        "fields": {
+            "name": "Baba Dogo",
+            "centre_code": "CENTRE_11"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 12,
+        "fields": {
+            "name": "Korogocho Grogan",
+            "centre_code": "CENTRE_12"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 13,
+        "fields": {
+            "name": "Korogocho B",
+            "centre_code": "CENTRE_13"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 14,
+        "fields": {
+            "name": "Korogocho Nyayo",
+            "centre_code": "CENTRE_14"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 15,
+        "fields": {
+            "name": "Machakos County",
+            "centre_code": "CENTRE_15"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 16,
+        "fields": {
+            "name": "Ndovoini",
+            "centre_code": "CENTRE_16"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 17,
+        "fields": {
+            "name": "Joska",
+            "centre_code": "CENTRE_17"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 18,
+        "fields": {
+            "name": "Turkana County",
+            "centre_code": "CENTRE_18"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 19,
+        "fields": {
+            "name": "Napuu",
+            "centre_code": "CENTRE_19"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 20,
+        "fields": {
+            "name": "Napusimoru",
+            "centre_code": "CENTRE_20"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 21,
+        "fields": {
+            "name": "Kangegetei",
+            "centre_code": "CENTRE_21"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 22,
+        "fields": {
+            "name": "Turkana High School",
+            "centre_code": "CENTRE_22"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 23,
+        "fields": {
+            "name": "Lochoredome",
+            "centre_code": "CENTRE_23"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 24,
+        "fields": {
+            "name": "Nanam (Approximate)",
+            "centre_code": "CENTRE_24"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 25,
+        "fields": {
+            "name": "Marsabit County",
+            "centre_code": "CENTRE_25"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 26,
+        "fields": {
+            "name": "Kargi",
+            "centre_code": "CENTRE_26"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 27,
+        "fields": {
+            "name": "Olturot",
+            "centre_code": "CENTRE_27"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 28,
+        "fields": {
+            "name": "Namarei",
+            "centre_code": "CENTRE_28"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 29,
+        "fields": {
+            "name": "Nakuru County",
+            "centre_code": "CENTRE_29"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 30,
+        "fields": {
+            "name": "Molo Milimani",
+            "centre_code": "CENTRE_30"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 31,
+        "fields": {
+            "name": "Coram Deo - Molo",
+            "centre_code": "CENTRE_31"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 32,
+        "fields": {
+            "name": "Molo Turi High School",
+            "centre_code": "CENTRE_32"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 33,
+        "fields": {
+            "name": "Kilifi County",
+            "centre_code": "CENTRE_33"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 34,
+        "fields": {
+            "name": "Kibarani",
+            "centre_code": "CENTRE_34"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 35,
+        "fields": {
+            "name": "Kiwandani",
+            "centre_code": "CENTRE_35"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 36,
+        "fields": {
+            "name": "Mitangoni",
+            "centre_code": "CENTRE_36"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 37,
+        "fields": {
+            "name": "Chumani",
+            "centre_code": "CENTRE_37"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 38,
+        "fields": {
+            "name": "Nyeri County",
+            "centre_code": "CENTRE_38"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 39,
+        "fields": {
+            "name": "Nyeri",
+            "centre_code": "CENTRE_39"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 40,
+        "fields": {
+            "name": "Kisumu County",
+            "centre_code": "CENTRE_40"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 41,
+        "fields": {
+            "name": "Nyakach",
+            "centre_code": "CENTRE_41"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 42,
+        "fields": {
+            "name": "Kwale County",
+            "centre_code": "CENTRE_42"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 43,
+        "fields": {
+            "name": "Shambini",
+            "centre_code": "CENTRE_43"
+        }
+    },
+    {
+        "model": "devices.centre",
+        "pk": 44,
+        "fields": {
+            "name": "Kiamaiko Main",
+            "centre_code": "CENTRE_44"
+        }
+    }
+]
