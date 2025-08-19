@@ -1,21 +1,53 @@
-import csv
-from io import TextIOWrapper
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db import transaction
 from datetime import datetime
-from .forms import ImportForm
-from .models import Import, Centre
+from .models import CustomUser, Import, Centre, PendingUpdate
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 from reportlab.pdfgen import canvas
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 import openpyxl
 from django.template.loader import get_template
 from xhtml2pdf import pisa
-from io import BytesIO
+from io import BytesIO, TextIOWrapper
 import os
 from django.conf import settings
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth import logout, update_session_auth_hash
+import csv
+from django.contrib.auth.models import Group, Permission
+from django.urls import reverse 
+
+from fpdf import FPDF
+from django.contrib.auth.decorators import login_required
+from .models import Import
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Q
+from datetime import datetime
+import gc
+
+
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from .models import Import
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Q
+from datetime import datetime
+import gc
+import logging
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.enums import TA_LEFT
+
+# Set up logging for debugging
+logger = logging.getLogger(__name__)
+
 
 def handle_uploaded_file(file, user):
     header_mapping = {
@@ -61,7 +93,7 @@ def handle_uploaded_file(file, user):
             if serial_number and Import.objects.filter(serial_number=serial_number[0]).exists():
                 print(f"Skipping duplicate serial_number: {serial_number[0]}")
                 continue
-            import_instance = Import(added_by=user)  # Set added_by to the logged-in user
+            import_instance = Import(added_by=user)
             for header, value in zip(headers, row):
                 value = value.strip()
                 field_name = header_mapping.get(header)
@@ -69,6 +101,9 @@ def handle_uploaded_file(file, user):
                     if field_name == 'centre' and value:
                         try:
                             centre = Centre.objects.get(centre_code=value)
+                            if user.is_trainer and centre != user.centre:
+                                print(f"Trainer {user.username} cannot add for centre {value}")
+                                continue
                             import_instance.centre = centre
                             print(f"Mapped centre_code {value} to Centre: {centre.name}")
                         except Centre.DoesNotExist:
@@ -107,99 +142,99 @@ def handle_uploaded_file(file, user):
     finally:
         decoded_file.detach()
 
+@login_required
 def upload_csv(request):
     if request.method == 'POST':
-        form = ImportForm(request.POST, request.FILES)
-        if form.is_valid():
-            if 'file' in request.FILES:
-                try:
-                    # Save the file to disk
-                    upload_dir = os.path.join(settings.MEDIA_ROOT, 'uploads')
-                    os.makedirs(upload_dir, exist_ok=True)
-                    file_path = os.path.join(upload_dir, request.FILES['file'].name)
-                    with open(file_path, 'wb') as destination:
-                        for chunk in request.FILES['file'].chunks():
-                            destination.write(chunk)
-                    # Process CSV data
-                    request.FILES['file'].seek(0)
-                    handle_uploaded_file(request.FILES['file'], request.user)
-                    messages.success(request, "CSV file uploaded and data imported successfully.")
-                    return redirect('import_displaycsv')
-                except Exception as e:
-                    messages.error(request, f"Error processing CSV file: {str(e)}")
-            else:
-                # Handle manual record creation
-                try:
-                    instance = form.save(commit=False)
-                    instance.added_by = request.user
-                    instance.save()
+        if 'file' in request.FILES:
+            try:
+                upload_dir = os.path.join(settings.MEDIA_ROOT, 'Uploads')
+                os.makedirs(upload_dir, exist_ok=True)
+                file_path = os.path.join(upload_dir, request.FILES['file'].name)
+                with open(file_path, 'wb') as destination:
+                    for chunk in request.FILES['file'].chunks():
+                        destination.write(chunk)
+                request.FILES['file'].seek(0)
+                handle_uploaded_file(request.FILES['file'], request.user)
+                messages.success(request, "CSV file uploaded and data imported successfully.")
+                return redirect('import_displaycsv')
+            except Exception as e:
+                messages.error(request, f"Error processing CSV file: {str(e)}")
+        else:
+            try:
+                with transaction.atomic():
+                    centre = request.POST.get('centre')
+                    if centre:
+                        centre_obj = Centre.objects.get(id=centre) if centre != 'None' else None
+                    else:
+                        centre_obj = None
+                    user = CustomUser.objects.create_user(
+                        username=request.POST.get('username'),
+                        email=request.POST.get('email'),
+                        password=request.POST.get('password'),
+                        first_name=request.POST.get('first_name', ''),
+                        last_name=request.POST.get('last_name', ''),
+                        centre=centre_obj,
+                        is_trainer=request.POST.get('is_trainer') == 'on',
+                        is_staff=request.POST.get('is_staff') == 'on',
+                        is_superuser=request.POST.get('is_superuser') == 'on'
+                    )
+                    user.save()
                     messages.success(request, "Record saved successfully.")
                     return redirect('import_displaycsv')
-                except Exception as e:
-                    messages.error(request, f"Error saving record: {str(e)}")
-        else:
-            messages.error(request, "Form is not valid. Please check the input and try again.")
+            except Exception as e:
+                messages.error(request, f"Error saving record: {str(e)}")
     else:
-        form = ImportForm()
-    return render(request, 'import/uploadcsv.html', {'form': form})
+        return render(request, 'import/uploadcsv.html', {'centres': Centre.objects.all()})
 
+
+
+@login_required
 def display_csv(request):
     if request.user.is_superuser:
         data = Import.objects.all()
+        logger.debug("Superuser: Fetching all Import records")
     elif request.user.is_trainer:
-        data = Import.objects.filter(centre=Centre.objects.get(centre_code=request.user.centre.centre_code))
-    # Get individual search parameters
-    centre = request.GET.get('centre', '')
-    department = request.GET.get('department', '')
-    hardware = request.GET.get('hardware', '')
-    system_model = request.GET.get('system_model', '')
-    processor = request.GET.get('processor', '')
-    ram_gb = request.GET.get('ram_gb', '')
-    hdd_gb = request.GET.get('hdd_gb', '')
-    serial_number = request.GET.get('serial_number', '')
-    assignee_first_name = request.GET.get('assignee_first_name', '')
-    assignee_last_name = request.GET.get('assignee_last_name', '')
-    assignee_email_address = request.GET.get('assignee_email_address', '')
-    device_condition = request.GET.get('device_condition', '')
-    status = request.GET.get('status', '')
-    date = request.GET.get('date', '')
+        if not request.user.centre:
+            logger.warning(f"Trainer {request.user.username} has no associated centre")
+            data = Import.objects.none()
+        else:
+            data = Import.objects.filter(centre=request.user.centre)
+            logger.debug(f"Trainer {request.user.username}: Fetching records for centre {request.user.centre}, count: {data.count()}")
+    else:
+        data = Import.objects.none()
+        logger.debug(f"User {request.user.username} is neither superuser nor trainer")
 
-    # Apply filters if search parameters are provided
-    if any([centre, department, hardware, system_model, processor, ram_gb, hdd_gb,
-            serial_number, assignee_first_name, assignee_last_name, assignee_email_address,
-            device_condition, status, date]):
-        query = Q()
-        if centre:
-            query &= Q(centre__centre_code__icontains=centre)
-        if department:
-            query &= Q(department__icontains=department)
-        if hardware:
-            query &= Q(hardware__icontains=hardware)
-        if system_model:
-            query &= Q(system_model__icontains=system_model)
-        if processor:
-            query &= Q(processor__icontains=processor)
-        if ram_gb:
-            query &= Q(ram_gb__icontains=ram_gb)
-        if hdd_gb:
-            query &= Q(hdd_gb__icontains=hdd_gb)
-        if serial_number:
-            query &= Q(serial_number__icontains=serial_number)
-        if assignee_first_name:
-            query &= Q(assignee_first_name__icontains=assignee_first_name)
-        if assignee_last_name:
-            query &= Q(assignee_last_name__icontains=assignee_last_name)
-        if assignee_email_address:
-            query &= Q(assignee_email_address__icontains=assignee_email_address)
-        if device_condition:
-            query &= Q(device_condition__icontains=device_condition)
-        if status:
-            query &= Q(status__icontains=status)
-        if date:
-            query &= Q(date__icontains=date)
+    search_query = request.GET.get('search', '')
+    if search_query:
+        query = (
+            Q(centre__name__icontains=search_query) |
+            Q(centre__centre_code__icontains=search_query) |
+            Q(department__icontains=search_query) |
+            Q(hardware__icontains=search_query) |
+            Q(system_model__icontains=search_query) |
+            Q(processor__icontains=search_query) |
+            Q(ram_gb__icontains=search_query) |
+            Q(hdd_gb__icontains=search_query) |
+            Q(serial_number__icontains=search_query) |
+            Q(assignee_first_name__icontains=search_query) |
+            Q(assignee_last_name__icontains=search_query) |
+            Q(assignee_email_address__icontains=search_query) |
+            Q(device_condition__icontains=search_query) |
+            Q(status__icontains=search_query) |
+            Q(date__icontains=search_query) |
+            Q(reason_for_update__icontains=search_query)
+        )
         data = data.filter(query)
+        logger.debug(f"Applied search query '{search_query}': {data.count()} records found")
 
-    items_per_page = 100
+    items_per_page = request.GET.get('items_per_page', '10')
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [10, 25, 50, 100, 500]:
+            items_per_page = 10
+    except ValueError:
+        items_per_page = 10
+
     paginator = Paginator(data, items_per_page)
     page_number = request.GET.get('page', 1)
 
@@ -214,221 +249,888 @@ def display_csv(request):
         data_on_page = paginator.page(1)
     except EmptyPage:
         data_on_page = paginator.page(paginator.num_pages)
+
+    logger.debug(f"Page {page_number}: {len(data_on_page)} records, Total pages: {paginator.num_pages}")
+
+    # Prepare data with pending updates and count unapproved records
+    data_with_pending = []
+    unapproved_count = 0
+    for item in data_on_page:
+        pending_update = item.pending_updates.order_by('-created_at').first()
+        data_with_pending.append({
+            'item': item,
+            'pending_update': pending_update
+        })
+        if not item.is_approved:
+            unapproved_count += 1
 
     report_data = {
         'total_records': data.count(),
-        'centre': centre,
-        'department': department,
-        'hardware': hardware,
-        'system_model': system_model,
-        'processor': processor,
-        'ram_gb': ram_gb,
-        'hdd_gb': hdd_gb,
-        'serial_number': serial_number,
-        'assignee_first_name': assignee_first_name,
-        'assignee_last_name': assignee_last_name,
-        'assignee_email_address': assignee_email_address,
-        'device_condition': device_condition,
-        'status': status,
-        'date': date,
+        'search_query': search_query,
+        'items_per_page': items_per_page,
     }
 
+    items_per_page_options = [10, 25, 50, 100, 500]
+
     return render(request, 'import/displaycsv.html', {
-        'data': data_on_page,
+        'data_with_pending': data_with_pending,
         'paginator': paginator,
+        'data': data_on_page,
         'report_data': report_data,
+        'centres': Centre.objects.all(),
+        'items_per_page_options': items_per_page_options,
+        'unapproved_count': unapproved_count
     })
 
-def export_to_pdf(request):
-    data = Import.objects.all()
+@login_required
+def import_add(request):
+    if request.method == 'POST':
+        if 'file' in request.FILES:
+            try:
+                handle_uploaded_file(request.FILES['file'], request.user)
+                messages.success(request, "CSV file uploaded and data imported successfully.")
+                return redirect('display_csv')
+            except Exception as e:
+                messages.error(request, f"Error processing CSV file: {str(e)}")
+        else:
+            try:
+                with transaction.atomic():
+                    centre_id = request.POST.get('centre')
+                    centre = Centre.objects.get(id=centre_id) if centre_id and centre_id != 'None' else None
+                    if request.user.is_trainer and centre != request.user.centre:
+                        messages.error(request, "Trainers can only add records for their own centre.")
+                        return redirect('display_csv')
+                    if request.user.is_trainer and not request.POST.get('reason_for_update'):
+                        messages.error(request, "Reason for update is required for trainers.")
+                        return redirect('import_add')
+                    import_instance = Import(
+                        added_by=request.user,
+                        centre=centre,
+                        department=request.POST.get('department'),
+                        hardware=request.POST.get('hardware'),
+                        system_model=request.POST.get('system_model'),
+                        processor=request.POST.get('processor'),
+                        ram_gb=request.POST.get('ram_gb'),
+                        hdd_gb=request.POST.get('hdd_gb'),
+                        serial_number=request.POST.get('serial_number'),
+                        assignee_first_name=request.POST.get('assignee_first_name'),
+                        assignee_last_name=request.POST.get('assignee_last_name'),
+                        assignee_email_address=request.POST.get('assignee_email_address'),
+                        device_condition=request.POST.get('device_condition'),
+                        status=request.POST.get('status'),
+                        reason_for_update=request.POST.get('reason_for_update') if request.user.is_trainer else None,
+                        is_approved=False if request.user.is_trainer else request.POST.get('is_approved') == 'on',
+                        approved_by=request.user if request.user.is_superuser and request.POST.get('is_approved') == 'on' else None
+                    )
+                    if import_instance.serial_number and Import.objects.filter(serial_number=import_instance.serial_number).exists():
+                        messages.error(request, f"Serial number {import_instance.serial_number} already exists.")
+                        return redirect('import_add')
+                    import_instance.save()
+                    messages.success(request, "Record added successfully.")
+                    return redirect('display_csv')
+            except Exception as e:
+                messages.error(request, f"Error adding record: {str(e)}")
+                return redirect('import_add')
+    return render(request, 'import/add.html', {'centres': Centre.objects.all()})
 
-    # Apply the same filters as in display_csv
-    centre = request.GET.get('centre', '')
-    department = request.GET.get('department', '')
-    hardware = request.GET.get('hardware', '')
-    system_model = request.GET.get('system_model', '')
-    processor = request.GET.get('processor', '')
-    ram_gb = request.GET.get('ram_gb', '')
-    hdd_gb = request.GET.get('hdd_gb', '')
-    serial_number = request.GET.get('serial_number', '')
-    assignee_first_name = request.GET.get('assignee_first_name', '')
-    assignee_last_name = request.GET.get('assignee_last_name', '')
-    assignee_email_address = request.GET.get('assignee_email_address', '')
-    device_condition = request.GET.get('device_condition', '')
-    status = request.GET.get('status', '')
-    date = request.GET.get('date', '')
+@login_required
+def import_update(request, pk):
+    import_instance = get_object_or_404(Import, pk=pk)
+    if request.user.is_trainer and import_instance.centre != request.user.centre:
+        messages.error(request, "Trainers can only update records for their own centre.")
+        return redirect('display_csv')
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                centre_id = request.POST.get('centre')
+                centre = Centre.objects.get(id=centre_id) if centre_id and centre_id != 'None' else None
+                if request.user.is_trainer and centre != request.user.centre:
+                    messages.error(request, "Trainers can only update records for their own centre.")
+                    return redirect('display_csv')
+                if request.user.is_trainer and not request.POST.get('reason_for_update'):
+                    messages.error(request, "Reason for update is required for trainers.")
+                    return redirect('display_csv')
+                serial_number = request.POST.get('serial_number', '')
+                if serial_number and Import.objects.filter(serial_number=serial_number).exclude(id=pk).exists():
+                    messages.error(request, f"Serial number {serial_number} already exists.")
+                    return redirect('display_csv')
+                if request.user.is_trainer:
+                    # Store pending update
+                    PendingUpdate.objects.create(
+                        import_record=import_instance,
+                        centre=centre,
+                        department=request.POST.get('department', ''),
+                        hardware=request.POST.get('hardware', ''),
+                        system_model=request.POST.get('system_model', ''),
+                        processor=request.POST.get('processor', ''),
+                        ram_gb=request.POST.get('ram_gb', ''),
+                        hdd_gb=request.POST.get('hdd_gb', ''),
+                        serial_number=serial_number,
+                        assignee_first_name=request.POST.get('assignee_first_name', ''),
+                        assignee_last_name=request.POST.get('assignee_last_name', ''),
+                        assignee_email_address=request.POST.get('assignee_email_address', ''),
+                        device_condition=request.POST.get('device_condition', ''),
+                        status=request.POST.get('status', ''),
+                        date=datetime.strptime(request.POST.get('date'), '%Y-%m-%d').date() if request.POST.get('date') else None,
+                        reason_for_update=request.POST.get('reason_for_update', ''),
+                        updated_by=request.user
+                    )
+                    import_instance.is_approved = False
+                    import_instance.approved_by = None
+                    import_instance.save()
+                    messages.success(request, "Update submitted for approval.")
+                else:
+                    # Apply update directly for superusers
+                    import_instance.centre = centre
+                    import_instance.department = request.POST.get('department', '')
+                    import_instance.hardware = request.POST.get('hardware', '')
+                    import_instance.system_model = request.POST.get('system_model', '')
+                    import_instance.processor = request.POST.get('processor', '')
+                    import_instance.ram_gb = request.POST.get('ram_gb', '')
+                    import_instance.hdd_gb = request.POST.get('hdd_gb', '')
+                    import_instance.serial_number = serial_number
+                    import_instance.assignee_first_name = request.POST.get('assignee_first_name', '')
+                    import_instance.assignee_last_name = request.POST.get('assignee_last_name', '')
+                    import_instance.assignee_email_address = request.POST.get('assignee_email_address', '')
+                    import_instance.device_condition = request.POST.get('device_condition', '')
+                    import_instance.status = request.POST.get('status', '')
+                    date_str = request.POST.get('date', '')
+                    if date_str:
+                        for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'):
+                            try:
+                                import_instance.date = datetime.strptime(date_str, fmt).date()
+                                break
+                            except ValueError:
+                                continue
+                    if request.user.is_superuser and request.POST.get('is_approved') == 'on':
+                        import_instance.is_approved = True
+                        import_instance.approved_by = request.user
+                    import_instance.save()
+                    messages.success(request, "Record updated successfully.")
+                return redirect('display_csv')
+        except Exception as e:
+            messages.error(request, f"Error updating record: {str(e)}")
+    return redirect('display_csv')
 
-    if any([centre, department, hardware, system_model, processor, ram_gb, hdd_gb,
-            serial_number, assignee_first_name, assignee_last_name, assignee_email_address,
-            device_condition, status, date]):
-        query = Q()
-        if centre:
-            query &= Q(centre__centre_code__icontains=centre)
-        if department:
-            query &= Q(department__icontains=department)
-        if hardware:
-            query &= Q(hardware__icontains=hardware)
-        if system_model:
-            query &= Q(system_model__icontains=system_model)
-        if processor:
-            query &= Q(processor__icontains=processor)
-        if ram_gb:
-            query &= Q(ram_gb__icontains=ram_gb)
-        if hdd_gb:
-            query &= Q(hdd_gb__icontains=hdd_gb)
-        if serial_number:
-            query &= Q(serial_number__icontains=serial_number)
-        if assignee_first_name:
-            query &= Q(assignee_first_name__icontains=assignee_first_name)
-        if assignee_last_name:
-            query &= Q(assignee_last_name__icontains=assignee_last_name)
-        if assignee_email_address:
-            query &= Q(assignee_email_address__icontains=assignee_email_address)
-        if device_condition:
-            query &= Q(device_condition__icontains=device_condition)
-        if status:
-            query &= Q(status__icontains=status)
-        if date:
-            query &= Q(date__icontains=date)
-        data = data.filter(query)
+@login_required
+@user_passes_test(lambda u: u.is_superuser and not u.is_trainer)
+def import_approve(request, pk):
+    import_instance = get_object_or_404(Import, pk=pk)
+    if request.method == 'POST':
+        with transaction.atomic():
+            pending_update = PendingUpdate.objects.filter(import_record=import_instance).order_by('-created_at').first()
+            if pending_update:
+                # Apply pending update
+                import_instance.centre = pending_update.centre
+                import_instance.department = pending_update.department
+                import_instance.hardware = pending_update.hardware
+                import_instance.system_model = pending_update.system_model
+                import_instance.processor = pending_update.processor
+                import_instance.ram_gb = pending_update.ram_gb
+                import_instance.hdd_gb = pending_update.hdd_gb
+                import_instance.serial_number = pending_update.serial_number
+                import_instance.assignee_first_name = pending_update.assignee_first_name
+                import_instance.assignee_last_name = pending_update.assignee_last_name
+                import_instance.assignee_email_address = pending_update.assignee_email_address
+                import_instance.device_condition = pending_update.device_condition
+                import_instance.status = pending_update.status
+                import_instance.date = pending_update.date
+                import_instance.reason_for_update = pending_update.reason_for_update
+                import_instance.is_approved = True
+                import_instance.approved_by = request.user
+                import_instance.save()
+                pending_update.delete()
+                messages.success(request, "Record approved and updated successfully.")
+            else:
+                # Approve without pending update
+                import_instance.is_approved = True
+                import_instance.approved_by = request.user
+                import_instance.save()
+                messages.success(request, "Record approved successfully.")
+            return redirect('display_csv')
+    return redirect('display_csv')
 
-    # Apply pagination to match the current page
-    items_per_page = 100
-    paginator = Paginator(data, items_per_page)
-    page_number = request.GET.get('page', 1)
 
-    try:
-        page_number = int(page_number)
-    except ValueError:
-        page_number = 1
+@login_required
+@user_passes_test(lambda u: u.is_superuser and not u.is_trainer)
+def import_approve_all(request):
+    if request.method == 'POST':
+        # Get pagination and search parameters
+        page_number = request.GET.get('page', '1')
+        items_per_page = request.GET.get('items_per_page', '10')
+        search_query = request.GET.get('search', '')
+        
+        try:
+            items_per_page = int(items_per_page)
+            if items_per_page not in [10, 25, 50, 100, 500]:
+                items_per_page = 10
+        except ValueError:
+            items_per_page = 10
 
-    try:
-        data_on_page = paginator.page(page_number)
-    except PageNotAnInteger:
-        data_on_page = paginator.page(1)
-    except EmptyPage:
-        data_on_page = paginator.page(paginator.num_pages)
+        try:
+            page_number = int(page_number) if page_number else 1  # Default to page 1 if empty
+        except ValueError:
+            page_number = 1
 
-    pdf_buffer = BytesIO()
-    template_path = 'import/pdf.html'
-    template = get_template(template_path)
-    html = template.render({'data': data_on_page})
-    pisaStatus = pisa.CreatePDF(html, dest=pdf_buffer)
+        # Filter data based on user permissions and search query
+        data = Import.objects.filter(is_approved=False) if request.user.is_superuser else Import.objects.none()
+        if search_query:
+            query = (
+                Q(centre__name__icontains=search_query) |
+                Q(centre__centre_code__icontains=search_query) |
+                Q(department__icontains=search_query) |
+                Q(hardware__icontains=search_query) |
+                Q(system_model__icontains=search_query) |
+                Q(processor__icontains=search_query) |
+                Q(ram_gb__icontains=search_query) |
+                Q(hdd_gb__icontains=search_query) |
+                Q(serial_number__icontains=search_query) |
+                Q(assignee_first_name__icontains=search_query) |
+                Q(assignee_last_name__icontains=search_query) |
+                Q(assignee_email_address__icontains=search_query) |
+                Q(device_condition__icontains=search_query) |
+                Q(status__icontains=search_query) |
+                Q(date__icontains=search_query) |
+                Q(reason_for_update__icontains=search_query)
+            )
+            data = data.filter(query)
 
-    if pisaStatus.err:
-        return HttpResponse('Error creating PDF', content_type='text/plain')
+        # Paginate data
+        paginator = Paginator(data, items_per_page)
+        try:
+            data_on_page = paginator.page(page_number)
+        except PageNotAnInteger:
+            data_on_page = paginator.page(1)
+        except EmptyPage:
+            data_on_page = paginator.page(paginator.num_pages)
 
-    pdf_buffer.seek(0)
-    response = HttpResponse(pdf_buffer.read(), content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="exported_data_page_{page_number}.pdf"'
-    pdf_buffer.close()
-    return response
+        # Approve records with pending updates or is_approved=False
+        approved_count = 0
+        with transaction.atomic():
+            for item in data_on_page:
+                pending_update = PendingUpdate.objects.filter(import_record=item).order_by('-created_at').first()
+                if pending_update:
+                    # Apply pending update
+                    item.centre = pending_update.centre
+                    item.department = pending_update.department
+                    item.hardware = pending_update.hardware
+                    item.system_model = pending_update.system_model
+                    item.processor = pending_update.processor
+                    item.ram_gb = pending_update.ram_gb
+                    item.hdd_gb = pending_update.hdd_gb
+                    item.serial_number = pending_update.serial_number
+                    item.assignee_first_name = pending_update.assignee_first_name
+                    item.assignee_last_name = pending_update.assignee_last_name
+                    item.assignee_email_address = pending_update.assignee_email_address
+                    item.device_condition = pending_update.device_condition
+                    item.status = pending_update.status
+                    item.date = pending_update.date
+                    item.reason_for_update = pending_update.reason_for_update
+                    item.is_approved = True
+                    item.approved_by = request.user
+                    item.save()
+                    pending_update.delete()
+                    approved_count += 1
+                elif not item.is_approved:
+                    # Approve records without pending updates
+                    item.is_approved = True
+                    item.approved_by = request.user
+                    item.save()
+                    approved_count += 1
 
+        if approved_count > 0:
+            messages.success(request, f"{approved_count} record(s) approved successfully.")
+        else:
+            messages.info(request, "No unapproved records to approve on this page.")
+        
+        # Construct redirect URL with query parameters
+        redirect_url = reverse('display_csv')  # Resolve the display_csv URL
+        query_params = []
+        query_params.append(f"page={page_number}")
+        query_params.append(f"items_per_page={items_per_page}")
+        if search_query:
+            query_params.append(f"search={search_query}")
+        redirect_url += "?" + "&".join(query_params)
+        return redirect(redirect_url)
+    return redirect('display_csv')
+
+
+@login_required
+@user_passes_test(lambda u: not u.is_trainer)
+def import_delete(request, pk):
+    import_instance = get_object_or_404(Import, pk=pk)
+    if request.method == 'POST':
+        with transaction.atomic():
+            import_instance.delete()
+            messages.success(request, "Record deleted successfully.")
+        return redirect('display_csv')
+    return redirect('display_csv')
+
+@login_required
+def imports_add(request):
+    return upload_csv(request)
+
+@login_required
+def imports_view(request):
+    return display_csv(request)
+
+
+@login_required
 def export_to_excel(request):
-    data = Import.objects.all()
-
-    # Apply the same filters as in display_csv
-    centre = request.GET.get('centre', '')
-    department = request.GET.get('department', '')
-    hardware = request.GET.get('hardware', '')
-    system_model = request.GET.get('system_model', '')
-    processor = request.GET.get('processor', '')
-    ram_gb = request.GET.get('ram_gb', '')
-    hdd_gb = request.GET.get('hdd_gb', '')
-    serial_number = request.GET.get('serial_number', '')
-    assignee_first_name = request.GET.get('assignee_first_name', '')
-    assignee_last_name = request.GET.get('assignee_last_name', '')
-    assignee_email_address = request.GET.get('assignee_email_address', '')
-    device_condition = request.GET.get('device_condition', '')
-    status = request.GET.get('status', '')
-    date = request.GET.get('date', '')
-
-    if any([centre, department, hardware, system_model, processor, ram_gb, hdd_gb,
-            serial_number, assignee_first_name, assignee_last_name, assignee_email_address,
-            device_condition, status, date]):
-        query = Q()
-        if centre:
-            query &= Q(centre__centre_code__icontains=centre)
-        if department:
-            query &= Q(department__icontains=department)
-        if hardware:
-            query &= Q(hardware__icontains=hardware)
-        if system_model:
-            query &= Q(system_model__icontains=system_model)
-        if processor:
-            query &= Q(processor__icontains=processor)
-        if ram_gb:
-            query &= Q(ram_gb__icontains=ram_gb)
-        if hdd_gb:
-            query &= Q(hdd_gb__icontains=hdd_gb)
-        if serial_number:
-            query &= Q(serial_number__icontains=serial_number)
-        if assignee_first_name:
-            query &= Q(assignee_first_name__icontains=assignee_first_name)
-        if assignee_last_name:
-            query &= Q(assignee_last_name__icontains=assignee_last_name)
-        if assignee_email_address:
-            query &= Q(assignee_email_address__icontains=assignee_email_address)
-        if device_condition:
-            query &= Q(device_condition__icontains=device_condition)
-        if status:
-            query &= Q(status__icontains=status)
-        if date:
-            query &= Q(date__icontains=date)
-        data = data.filter(query)
-
-    # Apply pagination to match the current page
-    items_per_page = 2000
-    paginator = Paginator(data, items_per_page)
-    page_number = request.GET.get('page', 1)
+    scope = request.GET.get('scope', 'page')
+    search_query = request.GET.get('search', '')
+    page_number = request.GET.get('page', '1')
+    items_per_page = request.GET.get('items_per_page', '10')
 
     try:
-        page_number = int(page_number)
+        items_per_page = int(items_per_page)
+        if items_per_page not in [10, 25, 50, 100, 500]:
+            items_per_page = 10
+    except ValueError:
+        items_per_page = 10
+
+    try:
+        page_number = int(page_number) if page_number else 1
     except ValueError:
         page_number = 1
 
-    try:
-        data_on_page = paginator.page(page_number)
-    except PageNotAnInteger:
-        data_on_page = paginator.page(1)
-    except EmptyPage:
-        data_on_page = paginator.page(paginator.num_pages)
+    if request.user.is_superuser:
+        data = Import.objects.all()
+    elif request.user.is_trainer:
+        data = Import.objects.filter(centre=request.user.centre)
+    else:
+        data = Import.objects.none()
 
-    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = f'attachment; filename="exported_data_page_{page_number}.xlsx"'
+    if search_query:
+        query = (
+            Q(centre__name__icontains=search_query) |
+            Q(centre__centre_code__icontains=search_query) |
+            Q(department__icontains=search_query) |
+            Q(hardware__icontains=search_query) |
+            Q(system_model__icontains=search_query) |
+            Q(processor__icontains=search_query) |
+            Q(ram_gb__icontains=search_query) |
+            Q(hdd_gb__icontains=search_query) |
+            Q(serial_number__icontains=search_query) |
+            Q(assignee_first_name__icontains=search_query) |
+            Q(assignee_last_name__icontains=search_query) |
+            Q(assignee_email_address__icontains=search_query) |
+            Q(device_condition__icontains=search_query) |
+            Q(status__icontains=search_query) |
+            Q(date__icontains=search_query) |
+            Q(reason_for_update__icontains=search_query)
+        )
+        data = data.filter(query)
 
-    workbook = openpyxl.Workbook()
-    worksheet = workbook.active
-    worksheet.title = 'IT Inventory'
+    if scope == 'page':
+        paginator = Paginator(data, items_per_page)
+        try:
+            data = paginator.page(page_number)
+        except (PageNotAnInteger, EmptyPage):
+            data = paginator.page(1)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "IT Inventory"
 
     headers = [
-        'Centre', 'Department', 'Hardware', 'System Model', 'Processor',
-        'RAM (GB)', 'HDD (GB)', 'Serial Number', 'Assignee First Name',
-        'Assignee Last Name', 'Assignee Email Address', 'Device Condition',
-        'Status', 'Date', 'Added By', 'Approved By', 'Is Approved', 'Reason for Update'
+        'Centre', 'Department', 'Hardware', 'System Model', 'Processor', 'RAM (GB)', 'HDD (GB)',
+        'Serial Number', 'Assignee First Name', 'Assignee Last Name', 'Assignee Email',
+        'Device Condition', 'Status', 'Date', 'Added By', 'Approved By', 'Is Approved', 'Reason for Update'
     ]
-    for col_num, header in enumerate(headers, 1):
-        worksheet.cell(row=1, column=col_num, value=header)
+    ws.append(headers)
 
-    for row_num, item in enumerate(data_on_page, 2):
-        worksheet.cell(row=row_num, column=1, value=item.centre.centre_code if item.centre else '')
-        worksheet.cell(row=row_num, column=2, value=item.department or '')
-        worksheet.cell(row=row_num, column=3, value=item.hardware or '')
-        worksheet.cell(row=row_num, column=4, value=item.system_model or '')
-        worksheet.cell(row=row_num, column=5, value=item.processor or '')
-        worksheet.cell(row=row_num, column=6, value=item.ram_gb or '')
-        worksheet.cell(row=row_num, column=7, value=item.hdd_gb or '')
-        worksheet.cell(row=row_num, column=8, value=item.serial_number or '')
-        worksheet.cell(row=row_num, column=9, value=item.assignee_first_name or '')
-        worksheet.cell(row=row_num, column=10, value=item.assignee_last_name or '')
-        worksheet.cell(row=row_num, column=11, value=item.assignee_email_address or '')
-        worksheet.cell(row=row_num, column=12, value=item.device_condition or '')
-        worksheet.cell(row=row_num, column=13, value=item.status or '')
-        worksheet.cell(row=row_num, column=14, value=str(item.date) if item.date else '')
-        worksheet.cell(row=row_num, column=15, value=str(item.added_by) if item.added_by else '')
-        worksheet.cell(row=row_num, column=16, value=str(item.approved_by) if item.approved_by else '')
-        worksheet.cell(row=row_num, column=17, value=str(item.is_approved))
-        worksheet.cell(row=row_num, column=18, value=item.reason_for_update or '')
+    for item in data:
+        ws.append([
+            item.centre.name if item.centre else 'N/A',
+            item.department or 'N/A',
+            item.hardware or 'N/A',
+            item.system_model or 'N/A',
+            item.processor or 'N/A',
+            item.ram_gb or 'N/A',
+            item.hdd_gb or 'N/A',
+            item.serial_number or 'N/A',
+            item.assignee_first_name or 'N/A',
+            item.assignee_last_name or 'N/A',
+            item.assignee_email_address or 'N/A',
+            item.device_condition or 'N/A',
+            item.status or 'N/A',
+            item.date.strftime('%Y-%m-%d') if item.date else 'N/A',
+            item.added_by.username if item.added_by else 'N/A',
+            item.approved_by.username if item.approved_by else 'N/A',
+            'Yes' if item.is_approved else 'No',
+            item.reason_for_update or 'N/A'
+        ])
 
-    workbook.save(response)
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    filename = 'IT_Inventory_All.xlsx' if scope == 'all' else 'IT_Inventory_Page.xlsx'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    wb.save(response)
     return response
+
+@login_required
+def export_to_pdf(request):
+    scope = request.GET.get('scope', 'page')
+    search_query = request.GET.get('search', '')
+    page_number = request.GET.get('page', '1')
+    items_per_page = request.GET.get('items_per_page', '10')
+
+    logger.debug(f"Scope: {scope}, Search: {search_query}, Page: {page_number}, Items per page: {items_per_page}")
+
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [10, 25, 50, 100, 500]:
+            items_per_page = 10
+    except ValueError:
+        items_per_page = 10
+
+    try:
+        page_number = int(page_number) if page_number else 1
+    except ValueError:
+        page_number = 1
+
+    # Filter data with minimal fields to reduce memory usage
+    if request.user.is_superuser and not request.user.is_trainer:
+        data = Import.objects.only(
+            'centre__name', 'department', 'hardware', 'system_model', 'processor',
+            'ram_gb', 'hdd_gb', 'serial_number', 'assignee_first_name',
+            'assignee_last_name', 'assignee_email_address', 'device_condition',
+            'status', 'date', 'reason_for_update'
+        )
+    elif request.user.is_trainer:
+        data = Import.objects.filter(centre=request.user.centre).only(
+            'centre__name', 'department', 'hardware', 'system_model', 'processor',
+            'ram_gb', 'hdd_gb', 'serial_number', 'assignee_first_name',
+            'assignee_last_name', 'assignee_email_address', 'device_condition',
+            'status', 'date', 'reason_for_update'
+        )
+    else:
+        data = Import.objects.none()
+
+    # Apply search query
+    if search_query:
+        query = (
+            Q(centre__name__icontains=search_query) |
+            Q(department__icontains=search_query) |
+            Q(hardware__icontains=search_query) |
+            Q(system_model__icontains=search_query) |
+            Q(processor__icontains=search_query) |
+            Q(ram_gb__icontains=search_query) |
+            Q(hdd_gb__icontains=search_query) |
+            Q(serial_number__icontains=search_query) |
+            Q(assignee_first_name__icontains=search_query) |
+            Q(assignee_last_name__icontains=search_query) |
+            Q(assignee_email_address__icontains=search_query) |
+            Q(device_condition__icontains=search_query) |
+            Q(status__icontains=search_query) |
+            Q(date__icontains=search_query) |
+            Q(reason_for_update__icontains=search_query)
+        )
+        data = data.filter(query)
+
+    # Log the number of records
+    record_count = data.count()
+    logger.debug(f"Queryset record count: {record_count}")
+
+    # Apply pagination for scope='page'
+    if scope == 'page':
+        paginator = Paginator(data, items_per_page)
+        try:
+            data = paginator.page(page_number)
+        except (PageNotAnInteger, EmptyPage):
+            data = paginator.page(1)
+        logger.debug(f"Paginated data count: {len(data)}")
+    else:
+        data = data.iterator()  # Memory-efficient for large datasets
+
+    # Initialize PDF response
+    response = HttpResponse(content_type='application/pdf')
+    filename = 'IT_Inventory_All.pdf' if scope == 'all' else 'IT_Inventory_Page.pdf'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    # Set up ReportLab document in landscape mode
+    doc = SimpleDocTemplate(
+        response,
+        pagesize=(A4[1], A4[0]),  # Landscape: 842pt width x 595pt height
+        rightMargin=10*mm,
+        leftMargin=10*mm,
+        topMargin=15*mm,
+        bottomMargin=15*mm
+    )
+    elements = []
+
+    # Register font (optional: use DejaVuSans for Unicode support)
+    # Uncomment the following lines if you have DejaVuSans.ttf in your project
+    # pdfmetrics.registerFont(TTFont('DejaVuSans', 'path/to/DejaVuSans.ttf'))
+    # font_name = 'DejaVuSans'
+    font_name = 'Helvetica'  # Default font for simplicity
+
+    # Styles
+    styles = getSampleStyleSheet()
+    title_style = styles['Heading1']
+    subtitle_style = ParagraphStyle(name='Subtitle', parent=styles['Normal'], fontSize=10, spaceAfter=10)
+    cell_style = ParagraphStyle(name='Cell', fontName=font_name, fontSize=7, leading=8, alignment=TA_LEFT, wordWrap='CJK')
+
+    # Add title and subtitle
+    elements.append(Paragraph('IT Inventory Report', title_style))
+    elements.append(Paragraph(f'Generated on {datetime.now().strftime("%Y-%m-%d")}', subtitle_style))
+    elements.append(Spacer(1, 6*mm))
+
+    # Table headers (aligned with HTML template)
+    headers = ['Device Details', 'Centre', 'Assignee Info', 'Status & Date']
+    col_widths = [250, 150, 200, 200]  # Total: 800pt, fits within 842pt - 56pt margins
+
+    # Prepare table data
+    table_data = [headers]
+    row_count = 0
+
+    def safe_str(value):
+        return str(value or 'N/A').encode('utf-8', errors='replace').decode('utf-8')
+
+    for item in data:
+        row_count += 1
+        logger.debug(f"Processing item {row_count}: Serial No. {safe_str(item.serial_number)}")
+        # Group data as per HTML template, using <br/> for line breaks
+        device_details = (
+            f"<b>Serial:</b> {safe_str(item.serial_number)}<br/>"
+            f"<b>Hardware:</b> {safe_str(item.hardware)}<br/>"
+            f"<b>Model:</b> {safe_str(item.system_model)}<br/>"
+            f"<b>Processor:</b> {safe_str(item.processor)}<br/>"
+            f"<b>RAM:</b> {safe_str(item.ram_gb)} GB<br/>"
+            f"<b>HDD:</b> {safe_str(item.hdd_gb)} GB"
+        )
+        centre_info = (
+            f"<b>Centre:</b> {safe_str(item.centre.name if item.centre else 'N/A')}<br/>"
+            f"<b>Dept:</b> {safe_str(item.department)}"
+        )
+        assignee_info = (
+            f"<b>Name:</b> {safe_str(item.assignee_first_name)} {safe_str(item.assignee_last_name)}<br/>"
+            f"<b>Email:</b> {safe_str(item.assignee_email_address)}"
+        )
+        status_date = (
+            f"<b>Status:</b> {safe_str(item.status)}<br/>"
+            f"<b>Condition:</b> {safe_str(item.device_condition)}<br/>"
+            f"<b>Date:</b> {safe_str(item.date.strftime('%Y-%m-%d') if item.date else 'N/A')}<br/>"
+            f"<b>Reason:</b> {safe_str(item.reason_for_update)}"
+        )
+        row = [
+            Paragraph(device_details, cell_style),
+            Paragraph(centre_info, cell_style),
+            Paragraph(assignee_info, cell_style),
+            Paragraph(status_date, cell_style)
+        ]
+        table_data.append(row)
+
+    # If no data, add a placeholder row
+    if row_count == 0:
+        table_data.append([Paragraph('No records found.', cell_style)] * 4)
+        logger.debug("No records were added to the PDF.")
+
+    # Create table
+    table = Table(table_data, colWidths=col_widths, rowHeights=None)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), font_name),
+        ('FONTSIZE', (0, 0), (-1, 0), 8),
+        ('FONTSIZE', (0, 1), (-1, -1), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+        ('TOPPADDING', (0, 1), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+
+    elements.append(table)
+
+    # Build PDF
+    try:
+        doc.build(elements)
+        logger.debug("PDF generated successfully.")
+    except Exception as e:
+        logger.error(f"PDF generation failed: {str(e)}")
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+    # Clean up memory
+    gc.collect()
+    return response
+
+@login_required
+def profile(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        centre_id = request.POST.get('centre')
+        is_trainer = request.POST.get('is_trainer') == 'on'
+
+        user = request.user
+        errors = []
+
+        if not username:
+            errors.append("Username is required.")
+        if CustomUser.objects.exclude(id=user.id).filter(username=username).exists():
+            errors.append("Username is already taken.")
+        if not email:
+            errors.append("Email is required.")
+        if CustomUser.objects.exclude(id=user.id).filter(email=email).exists():
+            errors.append("Email is already in use.")
+        if centre_id:
+            try:
+                centre = Centre.objects.get(id=centre_id)
+            except Centre.DoesNotExist:
+                errors.append("Selected centre does not exist.")
+        else:
+            centre = None
+
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+        else:
+            user.username = username
+            user.email = email
+            user.first_name = first_name
+            user.last_name = last_name
+            user.centre = centre
+            user.is_trainer = is_trainer
+            user.save()
+            messages.success(request, "Profile updated successfully.")
+            return redirect('profile')
+
+    centres = Centre.objects.all()
+    return render(request, 'accounts/profile.html', {
+        'user': request.user,
+        'centres': centres,
+    })
+
+@login_required
+def change_password(request):
+    if request.method == 'POST':
+        old_password = request.POST.get('old_password')
+        new_password1 = request.POST.get('new_password1')
+        new_password2 = request.POST.get('new_password2')
+
+        errors = []
+        if not old_password or not new_password1 or not new_password2:
+            errors.append("All password fields are required.")
+        if new_password1 != new_password2:
+            errors.append("New passwords do not match.")
+        if len(new_password1) < 8:
+            errors.append("New password must be at least 8 characters long.")
+        if not request.user.check_password(old_password):
+            errors.append("Current password is incorrect.")
+
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+        else:
+            request.user.set_password(new_password1)
+            request.user.save()
+            update_session_auth_hash(request, request.user)
+            messages.success(request, "Password changed successfully.")
+            return redirect('change_password')
+
+    return render(request, 'accounts/change_password.html', {})
+
+@login_required
+def dashboard_view(request):
+    messages.success(request, "You have been logged in successfully.")
+    return render(request, 'dashboard.html')
+
+@login_required
+def login_view(request):
+    messages.success(request, "You have been logged in successfully.")
+    return redirect('dashboard')
+
+@login_required
+def logout_view(request):
+    logout(request)
+    messages.success(request, "You have been logged out successfully.")
+    return redirect('login')
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def manage_users(request):
+    users = CustomUser.objects.all()
+    centres = Centre.objects.all()
+    groups = Group.objects.all()
+    permissions = Permission.objects.all()
+    
+    # Compute stats for each user
+    for user in users:
+        user.stats = {
+            'devices_added': user.imports_added.count(),
+            'devices_approved': user.imports_approved.count() if request.user.is_superuser else 0,
+            'devices_updated': user.pending_updates.count() if request.user.is_trainer else 0
+        }
+    
+    return render(request, 'manage_users.html', {
+        'users': users,
+        'centres': centres,
+        'groups': groups,
+        'permissions': permissions
+    })
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def user_add(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        first_name = request.POST.get('first_name', '')
+        last_name = request.POST.get('last_name', '')
+        centre_id = request.POST.get('centre')
+        is_trainer = request.POST.get('is_trainer') == 'on'
+        is_staff = request.POST.get('is_staff') == 'on'
+        is_superuser = request.POST.get('is_superuser') == 'on'
+        groups = request.POST.getlist('groups')
+        errors = []
+        if not username:
+            errors.append("Username is required.")
+        if CustomUser.objects.filter(username=username).exists():
+            errors.append("Username is already taken.")
+        if not email:
+            errors.append("Email is required.")
+        if CustomUser.objects.filter(email=email).exists():
+            errors.append("Email is already in use.")
+        if not password:
+            errors.append("Password is required.")
+        if centre_id and centre_id != '' and not Centre.objects.filter(id=centre_id).exists():
+            errors.append("Invalid centre selected.")
+        if is_trainer and not centre_id:
+            errors.append("Centre is required for trainers.")
+        if is_superuser:
+            centre_id = None
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+        else:
+            with transaction.atomic():
+                centre = Centre.objects.get(id=centre_id) if centre_id and centre_id != '' else None
+                user = CustomUser.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=password,
+                    first_name=first_name,
+                    last_name=last_name,
+                    centre=centre,
+                    is_trainer=is_trainer,
+                    is_staff=is_staff,
+                    is_superuser=is_superuser
+                )
+                if groups:
+                    user.groups.set(groups)
+                messages.success(request, "User added successfully.")
+                return redirect('manage_users')
+    return redirect('manage_users')
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def user_update(request, pk):
+    user = get_object_or_404(CustomUser, pk=pk)
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        first_name = request.POST.get('first_name', '')
+        last_name = request.POST.get('last_name', '')
+        centre_id = request.POST.get('centre')
+        is_trainer = request.POST.get('is_trainer') == 'on'
+        is_staff = request.POST.get('is_staff') == 'on'
+        is_superuser = request.POST.get('is_superuser') == 'on'
+        groups = request.POST.getlist('groups')
+        errors = []
+        if not username:
+            errors.append("Username is required.")
+        if CustomUser.objects.filter(username=username).exclude(id=pk).exists():
+            errors.append("Username is already taken.")
+        if not email:
+            errors.append("Email is required.")
+        if CustomUser.objects.filter(email=email).exclude(id=pk).exists():
+            errors.append("Email is already in use.")
+        if centre_id and centre_id != '' and not Centre.objects.filter(id=centre_id).exists():
+            errors.append("Invalid centre selected.")
+        if is_trainer and not centre_id:
+            errors.append("Centre is required for trainers.")
+        if is_superuser:
+            centre_id = None
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+        else:
+            with transaction.atomic():
+                centre = Centre.objects.get(id=centre_id) if centre_id and centre_id != '' else None
+                user.username = username
+                user.email = email
+                if password:
+                    user.set_password(password)
+                user.first_name = first_name
+                user.last_name = last_name
+                user.centre = centre
+                user.is_trainer = is_trainer
+                user.is_staff = is_staff
+                user.is_superuser = is_superuser
+                user.save()
+                user.groups.clear()
+                if groups:
+                    user.groups.set(groups)
+                messages.success(request, "User updated successfully.")
+            return redirect('manage_users')
+    return redirect('manage_users')
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def user_delete(request, pk):
+    user = get_object_or_404(CustomUser, pk=pk)
+    if request.method == 'POST':
+        if user == request.user:
+            messages.error(request, "You cannot delete your own account.")
+            return redirect('manage_users')
+        with transaction.atomic():
+            user.delete()
+            messages.success(request, "User deleted successfully.")
+        return redirect('manage_users')
+    return redirect('manage_users')
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def manage_groups(request):
+    if request.method == 'POST':
+        group_name = request.POST.get('group_name')
+        if group_name:
+            if not Group.objects.filter(name=group_name).exists():
+                Group.objects.create(name=group_name)
+                messages.success(request, f"Group '{group_name}' created successfully.")
+            else:
+                messages.error(request, "Group name already exists.")
+        return redirect('manage_users')
+    groups = Group.objects.all()
+    return render(request, 'manage_users.html', {'groups': groups})
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def delete_group(request):
+    if request.method == 'POST':
+        group_id = request.POST.get('group_id')
+        group = get_object_or_404(Group, id=group_id)
+        group.delete()
+        messages.success(request, "Group deleted successfully.")
+    return redirect('manage_users')
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def update_group_permissions(request):
+    if request.method == 'POST':
+        group_id = request.POST.get('group_id')
+        permission_ids = request.POST.getlist('permissions')
+        group = get_object_or_404(Group, id=group_id)
+        group.permissions.clear()
+        if permission_ids:
+            group.permissions.set(permission_ids)
+        messages.success(request, "Permissions updated successfully.")
+        return redirect('manage_users')
+    return redirect('manage_users')

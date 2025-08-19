@@ -6,7 +6,8 @@ from django.shortcuts import redirect
 from django.db import transaction
 from django import forms
 from django.contrib.auth.models import Group
-
+from django.utils.html import format_html
+from django.shortcuts import get_object_or_404
 from .views import handle_uploaded_file
 from .models import CustomUser, Import, Centre, Report
 from .forms import ImportForm
@@ -75,7 +76,7 @@ class CustomUserAdmin(admin.ModelAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('username', 'email', 'password1', 'password2', 'is_trainer','is_superuser', 'centre', 'groups'),
+            'fields': ('username', 'email', 'password1', 'password2', 'is_trainer', 'is_superuser', 'centre', 'groups'),
         }),
     )
 
@@ -96,10 +97,10 @@ class CustomUserAdmin(admin.ModelAdmin):
 class ImportAdmin(admin.ModelAdmin):
     form = ImportForm
     list_display = (
-        'centre', 'department', 'hardware', 'system_model', 'processor', 'ram_gb',
+        'get_centre', 'department', 'hardware', 'system_model', 'processor', 'ram_gb',
         'hdd_gb', 'serial_number', 'assignee_first_name', 'assignee_last_name',
-        'assignee_email_address', 'device_condition', 'status', 'added_by',
-        'approved_by', 'is_approved', 'reason_for_update'
+        'assignee_email_address', 'device_condition', 'status', 'get_added_by',
+        'get_approved_by', 'is_approved', 'reason_for_update'
     )
     search_fields = (
         'centre__centre_code', 'department', 'hardware', 'system_model', 'processor',
@@ -108,10 +109,12 @@ class ImportAdmin(admin.ModelAdmin):
         'approved_by__username', 'reason_for_update'
     )
     list_filter = (
-        'centre', 'department', 'hardware', 'device_condition', 'status',
-        'added_by', 'approved_by', 'is_approved'
+        ('centre', admin.RelatedOnlyFieldListFilter),
+        ('added_by', admin.RelatedOnlyFieldListFilter),
+        ('approved_by', admin.RelatedOnlyFieldListFilter),
+        'is_approved'
     )
-    readonly_fields = ('date', 'added_by')
+    readonly_fields = ()
     fieldsets = (
         (None, {
             'fields': (
@@ -124,10 +127,13 @@ class ImportAdmin(admin.ModelAdmin):
     )
 
     def get_readonly_fields(self, request, obj=None):
-        readonly = super().get_readonly_fields(request, obj)
+        readonly = []
         if request.user.is_trainer:
-            readonly += ('is_approved', 'approved_by', 'centre')
+            readonly = ['is_approved', 'approved_by', 'centre', 'file']
         return readonly
+
+    def has_add_permission(self, request):
+        return not request.user.is_trainer
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -135,13 +141,13 @@ class ImportAdmin(admin.ModelAdmin):
             qs = qs.filter(centre=request.user.centre)
         return qs
 
-    def save_model(self, request, obj, form, change):
+    def save_model(request, obj, form, change):
         if not obj.added_by:
             obj.added_by = request.user
         if request.user.is_trainer and not request.user.is_superuser:
             obj.centre = request.user.centre
             obj.is_approved = False
-        elif request.user.is_staff and form.cleaned_data.get('is_approved'):
+        elif request.user.is_superuser and form.cleaned_data.get('is_approved'):
             obj.approved_by = request.user
         if 'file' in form.cleaned_data and form.cleaned_data['file']:
             try:
@@ -176,7 +182,65 @@ class ImportAdmin(admin.ModelAdmin):
             except Exception as e:
                 messages.error(request, f"Error saving record: {str(e)}")
 
+    def approve_selected_imports(self, request, queryset):
+        if not request.user.is_superuser:
+            self.message_user(request, "Only administrators can approve imports.", level=messages.ERROR)
+            return
+        approved_count = queryset.update(is_approved=True, approved_by=request.user)
+        self.message_user(request, f"{approved_count} import(s) were successfully approved.")
+    approve_selected_imports.short_description = "Approve selected imports"
+
+    def delete_selected_imports(self, request, queryset):
+        if not request.user.is_superuser:
+            self.message_user(request, "Only administrators can delete imports.", level=messages.ERROR)
+            return
+        deleted_count = queryset.delete()[0]  # [0] gives the total number of deleted objects
+        self.message_user(request, f"{deleted_count} import(s) were successfully deleted.")
+    delete_selected_imports.short_description = "Delete selected imports"
+
+    actions = ['approve_selected_imports', 'delete_selected_imports']
+    # Override get_actions to remove the default 'delete_selected' action
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        if 'delete_selected' in actions:
+            del actions['delete_selected']
+        return actions
+
+    def get_list_display(self, request):
+        list_display = list(super().get_list_display(request))
+        return tuple(list_display)  # Use default Django selection checkbox
+
+    def get_row_actions(self, obj):
+        return "-"  # Ensure no row-level buttons
+    get_row_actions.allow_tags = True
+    get_row_actions.short_description = 'Actions'
+
+    def has_change_permission(self, request, obj=None):
+        if request.user.is_trainer and obj and obj.is_approved:
+            return False
+        return super().has_change_permission(request, obj)
+
+    def changelist_view(self, request, extra_context=None):
+        self.request = request  # Store request for use in get_row_actions
+        return super().changelist_view(request, extra_context)
+
+    # Custom methods for list_display
+    def get_centre(self, obj):
+        return obj.centre.centre_code if obj.centre else "N/A"
+    get_centre.short_description = 'Centre'
+
+    def get_added_by(self, obj):
+        return obj.added_by.username if obj.added_by else "N/A"
+    get_added_by.short_description = 'Added By'
+
+    def get_approved_by(self, obj):
+        return obj.approved_by.username if obj.approved_by else "N/A"
+    get_approved_by.short_description = 'Approved By'
+
 class ReportAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False  # Remove the "Add" button for Report
+
     def changelist_view(self, request, extra_context=None):
         displaycsv_url = reverse('import_displaycsv')
         return redirect(displaycsv_url)

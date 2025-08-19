@@ -1,0 +1,128 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script>{% extends "dashboard.html" %}
+{% load static %}
+
+{% block content %}
+<main class="flex-1 p-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-primary">Your Profile</h1>
+            <p class="mt-1 text-sm text-gray">Update your personal information below.</p>
+        </div>
+        <div class="mt-4 sm:mt-0">
+            <a href="{% url 'dashboard' %}"
+               class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors">
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="mt-4">
+        {% for message in messages %}
+        <div class="bg-{% if message.tags == 'success' %}accent{% else %}error{% endif %} text-white p-4 rounded shadow-md flex items-center justify-between">
+            <span>{{ message }}</span>
+            <button type="button" onclick="this.parentElement.remove()" class="text-lg font-bold leading-none">&times;</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Profile Form -->
+    <div class="mt-6 bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-primary">User Information</h3>
+        </div>
+        <form method="post" class="px-6 py-4 space-y-6">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-primary mb-2">Username <span class="text-error">*</span></label>
+                    <input type="text" name="username" id="username" value="{{ user.username }}" required
+                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent text-primary">
+                </div>
+                <div>
+                    <label for="email" class="block text-sm font-medium text-primary mb-2">Email Address <span class="text-error">*</span></label>
+                    <input type="email" name="email" id="email" value="{{ user.email }}" required
+                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent text-primary">
+                </div>
+                <div>
+                    <label for="first_name" class="block text-sm font-medium text-primary mb-2">First Name</label>
+                    <input type="text" name="first_name" id="first_name" value="{{ user.first_name|default_if_none:'' }}"
+                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent text-primary">
+                </div>
+                <div>
+                    <label for="last_name" class="block text-sm font-medium text-primary mb-2">Last Name</label>
+                    <input type="text" name="last_name" id="last_name" value="{{ user.last_name|default_if_none:'' }}"
+                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent text-primary">
+                </div>
+                <div>
+                    <label for="centre" class="block text-sm font-medium text-primary mb-2">Centre</label>
+                    <select name="centre" id="centre"
+                            class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent text-primary">
+                        <option value="">Select Centre</option>
+                        {% for centre in centres %}
+                        <option value="{{ centre.id }}" {% if user.centre.id == centre.id %}selected{% endif %}>{{ centre.name }} ({{ centre.centre_code }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="is_trainer" class="block text-sm font-medium text-primary mb-2">Trainer Status</label>
+                    <input type="checkbox" name="is_trainer" id="is_trainer" {% if user.is_trainer %}checked{% endif %}
+                           class="h-4 w-4 text-accent focus:ring-accent border-gray-300 rounded">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <a href="{% url 'dashboard' %}"
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors">
+                    Cancel
+                </a>
+                <button type="submit"
+                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-accent hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</main>
+{% endblock %}

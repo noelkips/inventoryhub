@@ -1,0 +1,36 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{pdflscape}
+\usepackage{times}
+
+% Setting page margins
+\geometry{margin=1in}
+
+% Starting document
+\begin{document}
+
+% Adding title
+\begin{center}
+    \textbf{\Large IT Inventory Report} \\
+    \vspace{0.5cm}
+    Generated on \today
+\end{center}
+
+% Starting landscape mode for table
+\begin{landscape}
+    % Creating table with headers
+    \begin{tabular}{lllp{2cm}p{2cm}p{2cm}p{2cm}p{2cm}lllp{2cm}p{2cm}p{2cm}ll}
+        \toprule
+        \textbf{Centre} & \textbf{Dept.} & \textbf{Hardware} & \textbf{Model} & \textbf{Processor} & \textbf{RAM} & \textbf{HDD} & \textbf{Serial No.} & \textbf{First Name} & \textbf{Last Name} & \textbf{Email} & \textbf{Condition} & \textbf{Status} & \textbf{Date} & \textbf{Reason} \\
+        \midrule
+        {% for item in data %}
+        {{ item.centre|escape }} & {{ item.department|escape }} & {{ item.hardware|escape }} & {{ item.system_model|escape }} & {{ item.processor|escape }} & {{ item.ram_gb|escape }} & {{ item.hdd_gb|escape }} & {{ item.serial_number|escape }} & {{ item.assignee_first_name|escape }} & {{ item.assignee_last_name|escape }} & {{ item.assignee_email_address|escape }} & {{ item.device_condition|escape }} & {{ item.status|escape }} & {{ item.date|escape }} & {{ item.reason_for_update|escape }} \\
+        {% endfor %}
+        \bottomrule
+    \end{tabular}
+\end{landscape}
+
+% Ending document
+\end{document}

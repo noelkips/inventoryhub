@@ -1,0 +1,228 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script>{% extends "dashboard.html" %}
+{% load static %}
+
+{% block content %}
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+            <div class="bg-gradient-to-r from-[#143C50] to-[#288CC8] text-white p-6">
+                <h2 class="text-2xl font-bold">Add New Device</h2>
+                <p class="mt-2">Add a single device or upload bulk via CSV</p>
+            </div>
+
+            <div class="p-6">
+                {% if messages %}
+                    <div class="mb-4">
+                        {% for message in messages %}
+                            <div class="bg-[#DCDCF0] border-l-4 border-[#B42828] text-[#B42828] p-4 rounded animate-fadeIn" role="alert">
+                                <p>{{ message }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <!-- Bulk Upload Form -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold text-[#143C50] mb-4">Bulk Upload via CSV</h3>
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label class="block text-[#143C50] font-semibold">Upload CSV</label>
+                            <input type="file" name="file" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                        </div>
+                        <button type="submit" class="bg-[#288CC8] text-white px-4 py-2 rounded hover:bg-[#143C50] transition-all duration-200">Upload</button>
+                    </form>
+                </div>
+
+                <!-- Single Add Modal Button -->
+                <div>
+                    <h3 class="text-xl font-bold text-[#143C50] mb-4">Add Single Device</h3>
+                    <button onclick="showModal('add')" class="bg-[#288CC8] text-white px-4 py-2 rounded hover:bg-[#143C50] transition-all duration-200">Open Single Add Form</button>
+                </div>
+
+                <!-- Single Add Modal -->
+                <div id="addModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center overflow-y-auto">
+                    <div class="bg-white p-6 rounded-lg w-full max-w-4xl mx-4 sm:mx-6 md:mx-auto transform transition-all duration-300 animate-slideIn">
+                        <h3 class="text-xl font-bold text-[#143C50] mb-4">Add Single Device</h3>
+                        <form id="addForm" method="post" action="{% url 'import_add' %}" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {% csrf_token %}
+                            <div>
+                                <label class="block text-[#143C50] font-semibold">Centre</label>
+                                <select name="centre" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200" {% if request.user.is_trainer %}disabled{% endif %}>
+                                    <option value="">Select Centre</option>
+                                    {% for centre in centres %}
+                                        <option value="{{ centre.id }}" {% if request.user.is_trainer and centre.id == request.user.centre.id %}selected{% endif %}>{{ centre.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% if request.user.is_trainer %}
+                                    <input type="hidden" name="centre" value="{{ request.user.centre.id }}">
+                                {% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-[#143C50] font-semibold">Department</label>
+                                <input type="text" name="department" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                            </div>
+                            <div>
+                                <label class="block text-[#143C50] font-semibold">Hardware</label>
+                                <input type="text" name="hardware" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                            </div>
+                            <div>
+                                <label class="block text-[#143C50] font-semibold">System Model</label>
+                                <input type="text" name="system_model" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                            </div>
+                            <div>
+                                <label class="block text-[#143C50] font-semibold">Processor</label>
+                                <input type="text" name="processor" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                            </div>
+                            <div>
+                                <label class="block text-[#143C50] font-semibold">Ram (GB)</label>
+                                <input type="text" name="ram_gb" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                            </div>
+                            <div>
+                                <label class="block text-[#143C50] font-semibold">HDD (GB)</label>
+                                <input type="text" name="hdd_gb" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                            </div>
+                            <div>
+                                <label class="block text-[#143C50] font-semibold">Serial Number</label>
+                                <input type="text" name="serial_number" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                            </div>
+                            <div>
+                                <label class="block text-[#143C50] font-semibold">Assignee First Name</label>
+                                <input type="text" name="assignee_first_name" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                            </div>
+                            <div>
+                                <label class="block text-[#143C50] font-semibold">Assignee Last Name</label>
+                                <input type="text" name="assignee_last_name" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                            </div>
+                            <div>
+                                <label class="block text-[#143C50] font-semibold">Assignee Email</label>
+                                <input type="email" name="assignee_email_address" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                            </div>
+                            <div>
+                                <label class="block text-[#143C50] font-semibold">Device Condition</label>
+                                <input type="text" name="device_condition" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                            </div>
+                            <div>
+                                <label class="block text-[#143C50] font-semibold">Status</label>
+                                <input type="text" name="status" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                            </div>
+                            <div>
+                                <label class="block text-[#143C50] font-semibold">Date</label>
+                                <input type="date" name="date" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                            </div>
+                            {% if request.user.is_trainer %}
+                                <div class="col-span-2">
+                                    <label class="block text-[#143C50] font-semibold">Reason for Update</label>
+                                    <textarea name="reason_for_update" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200" rows="3"></textarea>
+                                </div>
+                            {% endif %}
+                            <div class="flex justify-end space-x-4 col-span-2">
+                                <button type="button" onclick="closeModal('addModal')" class="bg-[#A0A0A0] text-white px-4 py-2 rounded hover:bg-[#C86450] transition-all duration-200">Cancel</button>
+                                <button type="submit" class="bg-[#288CC8] text-white px-4 py-2 rounded hover:bg-[#143C50] transition-all duration-200">Save</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        .animate-slideIn {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+        table {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            border-radius: 4px;
+        }
+        @media (max-width: 640px) {
+            table {
+                display: block;
+                overflow-x: auto;
+            }
+            th, td {
+                min-width: 120px;
+            }
+            tr {
+                display: block;
+                margin-bottom: 1rem;
+                border-bottom: 1px solid #A0A0A0;
+            }
+            td {
+                display: block;
+                text-align: left;
+                padding: 0.5rem 1rem;
+            }
+            td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                display: inline-block;
+                width: 50%;
+            }
+            td[data-label="Device Details"] div {
+                display: block;
+            }
+        }
+    </style>
+
+    <script>
+        function showModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+    </script>
+{% endblock %}

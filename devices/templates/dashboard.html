@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Inventory Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .bg-primary { background-color: #143C50; }
+        .bg-secondary { background-color: #C86450; }
+        .bg-gray { background-color: #A0A0A0; }
+        .bg-light { background-color: #DCDCF0; }
+        .bg-accent { background-color: #288CC8; }
+        .bg-error { background-color: #B42828; }
+        .text-primary { color: #143C50; }
+        .text-secondary { color: #C86450; }
+        .text-gray { color: #A0A0A0; }
+        .text-light { color: #DCDCF0; }
+        .text-accent { color: #288CC8; }
+        .text-error { color: #B42828; }
+        .hover-bg-secondary:hover { background-color: #C86450; }
+        .hover-bg-accent:hover { background-color: #288CC8; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen bg-light text-primary">
+    <!-- Header -->
+    <header class="bg-accent text-white shadow-md fixed w-full z-50">
+        <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center">
+                <button id="mobileMenuToggle" class="md:hidden mr-4 text-white focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+                    </svg>
+                </button>
+                <div class="text-xl font-bold">Inventory Hub</div>
+            </div>
+            <div class="relative">
+                <button id="accountDropdown" class="flex items-center space-x-2 focus:outline-none">
+                    <span>{{ user.username }}</span>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div id="accountMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
+                    <a href="{% url 'profile' %}" class="block px-4 py-2 text-gray hover:bg-gray-200">See Profile</a>
+                    <a href="{% url 'change_password' %}" class="block px-4 py-2 text-gray hover:bg-gray-200">Change Password</a>
+                    <a href="{% url 'logout' %}" class="block px-4 py-2 text-error hover:bg-gray-200">Logout</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="bg-primary text-white w-64 p-6 shadow-md fixed h-screen z-40 transition-transform duration-300 -translate-x-full md:translate-x-0">
+        <nav>
+            <ul class="space-y-4">
+                <li>
+                    <a href="#" class="flex items-center justify-between text-white hover:bg-secondary px-4 py-2 rounded" id="manageDevicesToggle">
+                        Manage Devices
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </a>
+                    <ul id="manageDevicesDropdown" class="ml-4 space-y-2 hidden">
+                        <li><a href="{% url 'imports_add' %}" class="text-white hover:bg-secondary px-4 py-2 rounded block">Imports Add</a></li>
+                        <li><a href="{% url 'imports_view' %}" class="text-white hover:bg-secondary px-4 py-2 rounded block">Imports View</a></li>
+                    </ul>
+                </li>
+                <li><a href="{% url 'import_displaycsv' %}" class="text-white hover:bg-secondary px-4 py-2 rounded block">Reports</a></li>
+                {% if user.is_superuser %}
+                    <li><a href="{% url 'manage_users' %}" class="text-white hover:bg-secondary px-4 py-2 rounded block">Manage Users</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6 mt-16 md:ml-64">
+        {% block content %}
+            <h1 class="text-3xl font-bold text-primary">Welcome to the Dashboard</h1>
+            <p class="mt-4 text-gray">Quick Stats:</p>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+                <div class="bg-white p-4 rounded shadow-md">
+                    <h2 class="text-xl font-semibold">Total Imports</h2>
+                    <p class="text-3xl text-accent">{{ total_imports|default:"0" }}</p>
+                </div>
+                <div class="bg-white p-4 rounded shadow-md">
+                    <h2 class="text-xl font-semibold">Approved Imports</h2>
+                    <p class="text-3xl text-accent">{{ approved_imports|default:"0" }}</p>
+                </div>
+                <div class="bg-white p-4 rounded shadow-md">
+                    <h2 class="text-xl font-semibold">Unapproved Imports</h2>
+                    <p class="text-3xl text-error">{{ unapproved_imports|default:"0" }}</p>
+                </div>
+                <div class="bg-white p-4 rounded shadow-md">
+                    <h2 class="text-xl font-semibold">Your Centre Imports</h2>
+                    <p class="text-3xl text-accent">{{ centre_imports|default:"0" }}</p>
+                </div>
+            </div>
+        {% endblock %}
+    </main>
+
+    <!-- Script for Sidebar, Header Dropdown, and Mobile Menu -->
+    <script>
+        // Mobile Menu Toggle
+        document.getElementById('mobileMenuToggle').addEventListener('click', function() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+            sidebar.classList.toggle('md:translate-x-0');
+        });
+
+        // Sidebar Dropdown Toggle
+        document.getElementById('manageDevicesToggle').addEventListener('click', function(e) {
+            e.preventDefault();
+            const dropdown = document.getElementById('manageDevicesDropdown');
+            dropdown.classList.toggle('hidden');
+        });
+
+        // Header Dropdown Toggle
+        document.getElementById('accountDropdown').addEventListener('click', function(e) {
+            e.preventDefault();
+            const menu = document.getElementById('accountMenu');
+            menu.classList.toggle('hidden');
+        });
+
+        // Close Dropdowns on Outside Click
+        document.addEventListener('click', function(e) {
+            const accountMenu = document.getElementById('accountMenu');
+            const accountButton = document.getElementById('accountDropdown');
+            const manageDropdown = document.getElementById('manageDevicesDropdown');
+            const manageButton = document.getElementById('manageDevicesToggle');
+
+            if (!accountButton.contains(e.target) && !accountMenu.contains(e.target)) {
+                accountMenu.classList.add('hidden');
+            }
+            if (!manageButton.contains(e.target) && !manageDropdown.contains(e.target)) {
+                manageDropdown.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

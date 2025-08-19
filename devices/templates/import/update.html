@@ -44,22 +44,23 @@
     <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="bg-white shadow-lg rounded-lg overflow-hidden">
             <div class="bg-gradient-to-r from-[#143C50] to-[#288CC8] text-white p-6">
-                <h2 class="text-2xl font-bold">Upload CSV or Add Record</h2>
-                <p class="mt-2">Upload a CSV file or add a single record</p>
+                <h2 class="text-2xl font-bold">Update Record</h2>
+                <p class="mt-2">Update the details for {{ import_instance.serial_number|default:'this record' }}</p>
             </div>
             <div class="p-6">
-                <form method="post" enctype="multipart/form-data" class="space-y-4">
+                <form method="post" class="space-y-4">
                     {% csrf_token %}
                     {{ form.as_p }}
-                    <button type="submit" class="bg-[#288CC8] text-white px-4 py-2 rounded hover:bg-[#143C50]">Submit</button>
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="mt-4 p-4 bg-[#DCDCF0] border-l-4 border-[#B42828] text-[#B42828] rounded">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    <button type="submit" class="bg-[#288CC8] text-white px-4 py-2 rounded hover:bg-[#143C50]">Update</button>
+                    <a href="{% url 'import_displaycsv' %}" class="bg-[#A0A0A0] text-white px-4 py-2 rounded hover:bg-[#C86450]">Cancel</a>
                 </form>
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="mt-4 p-4 bg-[#DCDCF0] border-l-4 border-[#B42828] text-[#B42828] rounded">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                {% endif %}
             </div>
         </div>
     </div>
