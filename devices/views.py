@@ -11,14 +11,13 @@ import openpyxl
 from django.template.loader import get_template
 from xhtml2pdf import pisa
 from io import BytesIO, TextIOWrapper
-import os
+import os, re
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import logout, update_session_auth_hash
 import csv
 from django.contrib.auth.models import Group, Permission
 from django.urls import reverse
-from fpdf import FPDF
 import gc
 from django.utils import timezone
 from django.contrib.auth import authenticate, login
@@ -277,7 +276,7 @@ def upload_csv(request):
 def display_approved_imports(request):
     if request.user.is_superuser:
         data = Import.objects.filter(is_approved=True)
-        logger.debug("Superuser: Fetching all approved Import records")
+        logger.debug("Superuser: Fetching all approved Import records, initial count: %d", data.count())
     elif request.user.is_trainer:
         if not request.user.centre:
             logger.warning(f"Trainer {request.user.username} has no associated centre")
@@ -289,28 +288,28 @@ def display_approved_imports(request):
         data = Import.objects.none()
         logger.debug(f"User {request.user.username} is neither superuser nor trainer")
 
-    search_query = request.GET.get('search', '')
+    search_query = request.GET.get('search', '').strip()
     if search_query:
-        query = (
-            Q(centre__name__icontains=search_query) |
-            Q(centre__centre_code__icontains=search_query) |
-            Q(department__icontains=search_query) |
-            Q(hardware__icontains=search_query) |
-            Q(system_model__icontains=search_query) |
-            Q(processor__icontains=search_query) |
-            Q(ram_gb__icontains=search_query) |
-            Q(hdd_gb__icontains=search_query) |
-            Q(serial_number__icontains=search_query) |
-            Q(assignee_first_name__icontains=search_query) |
-            Q(assignee_last_name__icontains=search_query) |
-            Q(assignee_email_address__icontains=search_query) |
-            Q(device_condition__icontains=search_query) |
-            Q(status__icontains=search_query) |
-            Q(date__icontains=search_query) |
-            Q(reason_for_update__icontains=search_query)
-        )
+        query = Q()
+        for field in [
+            'centre__name', 'centre__centre_code', 'department', 'hardware',
+            'system_model', 'processor', 'ram_gb', 'hdd_gb', 'serial_number',
+            'assignee_first_name', 'assignee_last_name', 'assignee_email_address',
+            'device_condition', 'status', 'reason_for_update'
+        ]:
+            # Handle contains for non-null and non-empty values
+            query |= Q(**{f'{field}__icontains': search_query}) & ~Q(**{f'{field}__isnull': True}) & ~Q(**{f'{field}': ''})
+            # Optionally include null checks if field might be None but relevant
+            if field not in ['date']:  # Exclude date field
+                query |= Q(**{f'{field}__isnull': True}) & Q(**{f'{field}__iregex': r'^(?:{})$'.format(re.escape(search_query))})
         data = data.filter(query)
-        logger.debug(f"Applied search query '{search_query}': {data.count()} records found")
+        logger.debug(f"Applied search query '{search_query}': Raw query={query}, Filtered count={data.count()}")
+        # Log a sample of matching data
+        for item in data[:5]:
+            logger.debug(f"Match: serial_number={item.serial_number}, centre={item.centre}, status={item.status}, ram_gb={item.ram_gb}")
+        # Log a sample of original data for comparison
+        for item in Import.objects.filter(is_approved=True)[:5]:
+            logger.debug(f"Original sample: serial_number={item.serial_number}, centre={item.centre}, status={item.status}, ram_gb={item.ram_gb}")
 
     items_per_page = request.GET.get('items_per_page', '10')
     try:
@@ -337,7 +336,6 @@ def display_approved_imports(request):
 
     logger.debug(f"Page {page_number}: {len(data_on_page)} records, Total pages: {paginator.num_pages}")
 
-    # Prepare data with pending updates and count unapproved records
     data_with_pending = []
     unapproved_count = 0
     for item in data_on_page:
@@ -357,7 +355,7 @@ def display_approved_imports(request):
 
     items_per_page_options = [10, 25, 50, 100, 500]
 
-    return render(request, 'import/displaycsv.html', {
+    return render(request, 'import/displaycsv_approved.html', {
         'data_with_pending': data_with_pending,
         'paginator': paginator,
         'data': data_on_page,
@@ -371,7 +369,7 @@ def display_approved_imports(request):
 def display_unapproved_imports(request):
     if request.user.is_superuser:
         data = Import.objects.filter(is_approved=False)
-        logger.debug("Superuser: Fetching all unapproved Import records")
+        logger.debug("Superuser: Fetching all unapproved Import records, initial count: %d", data.count())
     elif request.user.is_trainer:
         if not request.user.centre:
             logger.warning(f"Trainer {request.user.username} has no associated centre")
@@ -383,28 +381,24 @@ def display_unapproved_imports(request):
         data = Import.objects.none()
         logger.debug(f"User {request.user.username} is neither superuser nor trainer")
 
-    search_query = request.GET.get('search', '')
+    search_query = request.GET.get('search', '').strip()
     if search_query:
-        query = (
-            Q(centre__name__icontains=search_query) |
-            Q(centre__centre_code__icontains=search_query) |
-            Q(department__icontains=search_query) |
-            Q(hardware__icontains=search_query) |
-            Q(system_model__icontains=search_query) |
-            Q(processor__icontains=search_query) |
-            Q(ram_gb__icontains=search_query) |
-            Q(hdd_gb__icontains=search_query) |
-            Q(serial_number__icontains=search_query) |
-            Q(assignee_first_name__icontains=search_query) |
-            Q(assignee_last_name__icontains=search_query) |
-            Q(assignee_email_address__icontains=search_query) |
-            Q(device_condition__icontains=search_query) |
-            Q(status__icontains=search_query) |
-            Q(date__icontains=search_query) |
-            Q(reason_for_update__icontains=search_query)
-        )
+        query = Q()
+        for field in [
+            'centre__name', 'centre__centre_code', 'department', 'hardware',
+            'system_model', 'processor', 'ram_gb', 'hdd_gb', 'serial_number',
+            'assignee_first_name', 'assignee_last_name', 'assignee_email_address',
+            'device_condition', 'status', 'reason_for_update'
+        ]:
+            query |= Q(**{f'{field}__icontains': search_query}) & ~Q(**{f'{field}__isnull': True}) & ~Q(**{f'{field}': ''})
+            if field not in ['date']:
+                query |= Q(**{f'{field}__isnull': True}) & Q(**{f'{field}__iregex': r'^(?:{})$'.format(re.escape(search_query))})
         data = data.filter(query)
-        logger.debug(f"Applied search query '{search_query}': {data.count()} records found")
+        logger.debug(f"Applied search query '{search_query}': Raw query={query}, Filtered count={data.count()}")
+        for item in data[:5]:
+            logger.debug(f"Match: serial_number={item.serial_number}, centre={item.centre}, status={item.status}, ram_gb={item.ram_gb}")
+        for item in Import.objects.filter(is_approved=False)[:5]:
+            logger.debug(f"Original sample: serial_number={item.serial_number}, centre={item.centre}, status={item.status}, ram_gb={item.ram_gb}")
 
     items_per_page = request.GET.get('items_per_page', '10')
     try:
@@ -431,7 +425,6 @@ def display_unapproved_imports(request):
 
     logger.debug(f"Page {page_number}: {len(data_on_page)} records, Total pages: {paginator.num_pages}")
 
-    # Prepare data with pending updates and count unapproved records
     data_with_pending = []
     unapproved_count = 0
     for item in data_on_page:
@@ -451,7 +444,7 @@ def display_unapproved_imports(request):
 
     items_per_page_options = [10, 25, 50, 100, 500]
 
-    return render(request, 'import/displaycsv.html', {
+    return render(request, 'import/displaycsv_unapproved.html', {
         'data_with_pending': data_with_pending,
         'paginator': paginator,
         'data': data_on_page,

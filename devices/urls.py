@@ -13,8 +13,8 @@ urlpatterns = [
     path('displaycsv/', views.display_approved_imports, name='display_csv'),
     path('exportpdf/', views.export_to_pdf, name='export_to_pdf'),
     path('exportexcel/', views.export_to_excel, name='export_to_excel'),
-    path('displayreport/approved', views.display_approved_imports, name='display_approved_imports'),
-    path('displayreport/unapproved', views.display_unapproved_imports, name='display_unapproved_imports'),
+    path('displayreport/approved/', views.display_approved_imports, name='display_approved_imports'),
+    path('displayreport/unapproved/', views.display_unapproved_imports, name='display_unapproved_imports'),
 
 
     path('import/add/', views.import_add, name='import_add'),
