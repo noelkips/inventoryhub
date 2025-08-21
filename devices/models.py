@@ -1,5 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from simple_history.models import HistoricalRecords
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
 
 class Centre(models.Model):
     name = models.CharField(max_length=300)
@@ -24,7 +27,6 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.username
 
-
 class Import(models.Model):
     centre = models.ForeignKey(Centre, on_delete=models.SET_NULL, null=True, blank=True)
     department = models.CharField(max_length=100, blank=True, null=True)
@@ -44,7 +46,14 @@ class Import(models.Model):
     approved_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='imports_approved')
     is_approved = models.BooleanField(default=False)
     reason_for_update = models.TextField(blank=True, null=True)
+    history = HistoricalRecords()  # Enable audit trail for all changes to Import
 
+    def save(self, *args, **kwargs):
+        # Set _history_user to the user from kwargs if provided
+        if 'user' in kwargs:
+            self._history_user = kwargs.pop('user')
+        super().save(*args, **kwargs)
+    
     def __str__(self):
         return f"{self.serial_number} ({self.centre.name if self.centre else 'No Centre'})"
 
@@ -74,3 +83,20 @@ class PendingUpdate(models.Model):
 class Report(models.Model):
     def __str__(self):
         return "Report"
+
+
+
+class Notification(models.Model):
+    user = models.ForeignKey('CustomUser', on_delete=models.CASCADE, related_name='notifications')
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    related_object = GenericForeignKey('content_type', 'object_id')
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Notification for {self.user.username}: {self.message}"

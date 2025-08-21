@@ -242,11 +242,11 @@ class ReportAdmin(admin.ModelAdmin):
         return False  # Remove the "Add" button for Report
 
     def changelist_view(self, request, extra_context=None):
-        displaycsv_url = reverse('import_displaycsv')
+        displaycsv_url = reverse('display_approved_imports')
         return redirect(displaycsv_url)
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
-        displaycsv_url = reverse('import_displaycsv')
+        displaycsv_url = reverse('display_approved_imports')
         return redirect(displaycsv_url)
 
 admin.site.register(CustomUser, CustomUserAdmin)

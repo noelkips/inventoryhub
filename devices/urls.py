@@ -15,7 +15,9 @@ urlpatterns = [
     path('exportexcel/', views.export_to_excel, name='export_to_excel'),
     path('displayreport/approved/', views.display_approved_imports, name='display_approved_imports'),
     path('displayreport/unapproved/', views.display_unapproved_imports, name='display_unapproved_imports'),
-
+    path('import/history/<int:pk>/', views.device_history, name='device_history'),
+    path('notifications/<int:pk>/mark-read/', views.mark_notification_read, name='mark_notification_read'),
+    path('notifications/', views.notifications_view, name='notifications_view'),
 
     path('import/add/', views.import_add, name='import_add'),
     path('import/update/<int:pk>/', views.import_update, name='import_update'),

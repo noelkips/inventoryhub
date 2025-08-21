@@ -1,8 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db import transaction
-from datetime import datetime
-from .models import CustomUser, Import, Centre, PendingUpdate
+
+from .models import CustomUser, Import, Centre, Notification, PendingUpdate
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 from reportlab.pdfgen import canvas
@@ -30,6 +30,14 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.enums import TA_LEFT
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib import messages
+from django.db import transaction
+from datetime import datetime
+from django.contrib.contenttypes.models import ContentType
+
+from django.http import HttpResponseRedirect
 
 # Set up logging for debugging
 logger = logging.getLogger(__name__)
@@ -146,7 +154,7 @@ def upload_csv(request):
                 request.FILES['file'].seek(0)
                 handle_uploaded_file(request.FILES['file'], request.user)
                 messages.success(request, "CSV file uploaded and data imported successfully.")
-                return redirect('import_displaycsv')
+                return redirect('display_approved_imports')
             except Exception as e:
                 messages.error(request, f"Error processing CSV file: {str(e)}")
         else:
@@ -170,7 +178,7 @@ def upload_csv(request):
                     )
                     user.save()
                     messages.success(request, "Record saved successfully.")
-                    return redirect('import_displaycsv')
+                    return redirect('display_approved_imports')
             except Exception as e:
                 messages.error(request, f"Error saving record: {str(e)}")
     else:
@@ -273,188 +281,6 @@ def upload_csv(request):
 #     })
 
 @login_required
-def display_approved_imports(request):
-    if request.user.is_superuser:
-        data = Import.objects.filter(is_approved=True)
-        logger.debug("Superuser: Fetching all approved Import records, initial count: %d", data.count())
-    elif request.user.is_trainer:
-        if not request.user.centre:
-            logger.warning(f"Trainer {request.user.username} has no associated centre")
-            data = Import.objects.none()
-        else:
-            data = Import.objects.filter(centre=request.user.centre, is_approved=True)
-            logger.debug(f"Trainer {request.user.username}: Fetching approved records for centre {request.user.centre}, count: {data.count()}")
-    else:
-        data = Import.objects.none()
-        logger.debug(f"User {request.user.username} is neither superuser nor trainer")
-
-    search_query = request.GET.get('search', '').strip()
-    if search_query:
-        query = Q()
-        for field in [
-            'centre__name', 'centre__centre_code', 'department', 'hardware',
-            'system_model', 'processor', 'ram_gb', 'hdd_gb', 'serial_number',
-            'assignee_first_name', 'assignee_last_name', 'assignee_email_address',
-            'device_condition', 'status', 'reason_for_update'
-        ]:
-            # Handle contains for non-null and non-empty values
-            query |= Q(**{f'{field}__icontains': search_query}) & ~Q(**{f'{field}__isnull': True}) & ~Q(**{f'{field}': ''})
-            # Optionally include null checks if field might be None but relevant
-            if field not in ['date']:  # Exclude date field
-                query |= Q(**{f'{field}__isnull': True}) & Q(**{f'{field}__iregex': r'^(?:{})$'.format(re.escape(search_query))})
-        data = data.filter(query)
-        logger.debug(f"Applied search query '{search_query}': Raw query={query}, Filtered count={data.count()}")
-        # Log a sample of matching data
-        for item in data[:5]:
-            logger.debug(f"Match: serial_number={item.serial_number}, centre={item.centre}, status={item.status}, ram_gb={item.ram_gb}")
-        # Log a sample of original data for comparison
-        for item in Import.objects.filter(is_approved=True)[:5]:
-            logger.debug(f"Original sample: serial_number={item.serial_number}, centre={item.centre}, status={item.status}, ram_gb={item.ram_gb}")
-
-    items_per_page = request.GET.get('items_per_page', '10')
-    try:
-        items_per_page = int(items_per_page)
-        if items_per_page not in [10, 25, 50, 100, 500]:
-            items_per_page = 10
-    except ValueError:
-        items_per_page = 10
-
-    paginator = Paginator(data, items_per_page)
-    page_number = request.GET.get('page', 1)
-
-    try:
-        page_number = int(page_number)
-    except ValueError:
-        page_number = 1
-
-    try:
-        data_on_page = paginator.page(page_number)
-    except PageNotAnInteger:
-        data_on_page = paginator.page(1)
-    except EmptyPage:
-        data_on_page = paginator.page(paginator.num_pages)
-
-    logger.debug(f"Page {page_number}: {len(data_on_page)} records, Total pages: {paginator.num_pages}")
-
-    data_with_pending = []
-    unapproved_count = 0
-    for item in data_on_page:
-        pending_update = item.pending_updates.order_by('-created_at').first()
-        data_with_pending.append({
-            'item': item,
-            'pending_update': pending_update
-        })
-        if not item.is_approved:
-            unapproved_count += 1
-
-    report_data = {
-        'total_records': data.count(),
-        'search_query': search_query,
-        'items_per_page': items_per_page,
-    }
-
-    items_per_page_options = [10, 25, 50, 100, 500]
-
-    return render(request, 'import/displaycsv_approved.html', {
-        'data_with_pending': data_with_pending,
-        'paginator': paginator,
-        'data': data_on_page,
-        'report_data': report_data,
-        'centres': Centre.objects.all(),
-        'items_per_page_options': items_per_page_options,
-        'unapproved_count': unapproved_count
-    })
-
-@login_required
-def display_unapproved_imports(request):
-    if request.user.is_superuser:
-        data = Import.objects.filter(is_approved=False)
-        logger.debug("Superuser: Fetching all unapproved Import records, initial count: %d", data.count())
-    elif request.user.is_trainer:
-        if not request.user.centre:
-            logger.warning(f"Trainer {request.user.username} has no associated centre")
-            data = Import.objects.none()
-        else:
-            data = Import.objects.filter(centre=request.user.centre, is_approved=False)
-            logger.debug(f"Trainer {request.user.username}: Fetching unapproved records for centre {request.user.centre}, count: {data.count()}")
-    else:
-        data = Import.objects.none()
-        logger.debug(f"User {request.user.username} is neither superuser nor trainer")
-
-    search_query = request.GET.get('search', '').strip()
-    if search_query:
-        query = Q()
-        for field in [
-            'centre__name', 'centre__centre_code', 'department', 'hardware',
-            'system_model', 'processor', 'ram_gb', 'hdd_gb', 'serial_number',
-            'assignee_first_name', 'assignee_last_name', 'assignee_email_address',
-            'device_condition', 'status', 'reason_for_update'
-        ]:
-            query |= Q(**{f'{field}__icontains': search_query}) & ~Q(**{f'{field}__isnull': True}) & ~Q(**{f'{field}': ''})
-            if field not in ['date']:
-                query |= Q(**{f'{field}__isnull': True}) & Q(**{f'{field}__iregex': r'^(?:{})$'.format(re.escape(search_query))})
-        data = data.filter(query)
-        logger.debug(f"Applied search query '{search_query}': Raw query={query}, Filtered count={data.count()}")
-        for item in data[:5]:
-            logger.debug(f"Match: serial_number={item.serial_number}, centre={item.centre}, status={item.status}, ram_gb={item.ram_gb}")
-        for item in Import.objects.filter(is_approved=False)[:5]:
-            logger.debug(f"Original sample: serial_number={item.serial_number}, centre={item.centre}, status={item.status}, ram_gb={item.ram_gb}")
-
-    items_per_page = request.GET.get('items_per_page', '10')
-    try:
-        items_per_page = int(items_per_page)
-        if items_per_page not in [10, 25, 50, 100, 500]:
-            items_per_page = 10
-    except ValueError:
-        items_per_page = 10
-
-    paginator = Paginator(data, items_per_page)
-    page_number = request.GET.get('page', 1)
-
-    try:
-        page_number = int(page_number)
-    except ValueError:
-        page_number = 1
-
-    try:
-        data_on_page = paginator.page(page_number)
-    except PageNotAnInteger:
-        data_on_page = paginator.page(1)
-    except EmptyPage:
-        data_on_page = paginator.page(paginator.num_pages)
-
-    logger.debug(f"Page {page_number}: {len(data_on_page)} records, Total pages: {paginator.num_pages}")
-
-    data_with_pending = []
-    unapproved_count = 0
-    for item in data_on_page:
-        pending_update = item.pending_updates.order_by('-created_at').first()
-        data_with_pending.append({
-            'item': item,
-            'pending_update': pending_update
-        })
-        if not item.is_approved:
-            unapproved_count += 1
-
-    report_data = {
-        'total_records': data.count(),
-        'search_query': search_query,
-        'items_per_page': items_per_page,
-    }
-
-    items_per_page_options = [10, 25, 50, 100, 500]
-
-    return render(request, 'import/displaycsv_unapproved.html', {
-        'data_with_pending': data_with_pending,
-        'paginator': paginator,
-        'data': data_on_page,
-        'report_data': report_data,
-        'centres': Centre.objects.all(),
-        'items_per_page_options': items_per_page_options,
-        'unapproved_count': unapproved_count
-    })
-
-@login_required
 def import_add(request):
     if request.method == 'POST':
         if 'file' in request.FILES:
@@ -467,7 +293,7 @@ def import_add(request):
             try:
                 handle_uploaded_file(file, request.user)
                 messages.success(request, "CSV file uploaded and data imported successfully.")
-                return redirect('import_displaycsv')
+                return redirect('display_approved_imports')
             except ValueError as ve:
                 messages.error(request, str(ve))
                 return redirect('import_add')
@@ -522,7 +348,7 @@ def import_add(request):
                         return redirect('import_add')
                     import_instance.save()
                     messages.success(request, "Record added successfully.")
-                    return redirect('import_displaycsv')
+                    return redirect('display_approved_imports')
             except Centre.DoesNotExist:
                 messages.error(request, "Invalid centre selected.")
                 return redirect('import_add')
@@ -532,6 +358,9 @@ def import_add(request):
     return render(request, 'import/add.html', {'centres': Centre.objects.all()})
 
 
+
+# Configure logging
+logger = logging.getLogger(__name__)
 @login_required
 def import_update(request, pk):
     import_instance = get_object_or_404(Import, pk=pk)
@@ -555,7 +384,7 @@ def import_update(request, pk):
                     return redirect('display_csv')
                 if request.user.is_trainer:
                     # Store pending update
-                    PendingUpdate.objects.create(
+                    pending_update = PendingUpdate.objects.create(
                         import_record=import_instance,
                         centre=centre,
                         department=request.POST.get('department', ''),
@@ -577,7 +406,8 @@ def import_update(request, pk):
                     import_instance.is_approved = False
                     import_instance.approved_by = None
                     import_instance.save()
-                    messages.success(request, "Update submitted for approval.")
+                    messages.success(request, "Update submitted for approval. Check your notifications for updates.")
+                    return redirect('notifications_view')  # Redirect to notifications page
                 else:
                     # Apply update directly for superusers
                     import_instance.centre = centre
@@ -606,9 +436,11 @@ def import_update(request, pk):
                         import_instance.approved_by = request.user
                     import_instance.save()
                     messages.success(request, "Record updated successfully.")
-                return redirect('display_csv')
+                    return redirect('display_csv')
         except Exception as e:
+            logger.error(f"Error updating record: {str(e)}")
             messages.error(request, f"Error updating record: {str(e)}")
+            return redirect('display_csv')
     return redirect('display_csv')
 
 @login_required
@@ -771,7 +603,7 @@ def imports_add(request):
 
 @login_required
 def imports_view(request):
-    return display_csv(request)
+    return display_approved_imports(request)
 
 
 @login_required
@@ -1126,39 +958,440 @@ def change_password(request):
 
 
 @login_required
+def display_unapproved_imports(request):
+    if request.user.is_superuser:
+        data = Import.objects.filter(is_approved=False).order_by('id')
+    elif request.user.is_trainer:
+        if not request.user.centre:
+            data = Import.objects.none()
+        else:
+            data = Import.objects.filter(centre=request.user.centre, is_approved=False).order_by('id')
+    else:
+        data = Import.objects.none()
+
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        query = Q()
+        for field in [
+            'centre__name', 'centre__centre_code', 'department', 'hardware',
+            'system_model', 'processor', 'ram_gb', 'hdd_gb', 'serial_number',
+            'assignee_first_name', 'assignee_last_name', 'assignee_email_address',
+            'device_condition', 'status', 'reason_for_update'
+        ]:
+            query |= Q(**{f'{field}__icontains': search_query}) & ~Q(**{f'{field}__isnull': True}) & ~Q(**{f'{field}': ''})
+            if field not in ['date']:
+                query |= Q(**{f'{field}__isnull': True}) & Q(**{f'{field}__iregex': r'^(?:{})$'.format(re.escape(search_query))})
+        data = data.filter(query)
+
+    items_per_page = request.GET.get('items_per_page', '10')
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [10, 25, 50, 100, 500]:
+            items_per_page = 10
+    except ValueError:
+        items_per_page = 10
+
+    paginator = Paginator(data, items_per_page)
+    page_number = request.GET.get('page', 1)
+    try:
+        page_number = int(page_number)
+        if page_number > paginator.num_pages:
+            page_number = paginator.num_pages
+        elif page_number < 1:
+            page_number = 1
+    except ValueError:
+        page_number = 1
+    try:
+        data_on_page = paginator.page(page_number)
+    except Exception as e:
+        print(f"Pagination error in display_unapproved_imports: {str(e)}")
+        data_on_page = paginator.page(1)
+
+    data_with_pending = []
+    unapproved_count = data.count()
+    for item in data_on_page:
+        pending_update = item.pending_updates.order_by('-created_at').first()
+        data_with_pending.append({'item': item, 'pending_update': pending_update})
+
+    report_data = {'total_records': data.count(), 'search_query': search_query, 'items_per_page': items_per_page}
+    items_per_page_options = [10, 25, 50, 100, 500]
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:10]
+    total_devices = Import.objects.count() if request.user.is_superuser else (Import.objects.filter(centre=request.user.centre).count() if request.user.is_trainer and request.user.centre else 0)
+    approved_imports = total_devices - unapproved_count if total_devices is not None and unapproved_count is not None else 0
+
+    # Compute elided page range
+    page_range = paginator.get_elided_page_range(data_on_page.number, on_each_side=2, on_ends=1)
+
+    # Debug context
+    context = {
+        'data_with_pending': data_with_pending,
+        'paginator': paginator,
+        'data': data_on_page,
+        'report_data': report_data,
+        'centres': Centre.objects.all(),
+        'items_per_page_options': items_per_page_options,
+        'unapproved_count': unapproved_count,
+        'notifications': notifications,
+        'total_devices': total_devices,
+        'approved_imports': approved_imports,
+        'view_name': 'display_unapproved_imports',
+        'page_range': page_range,
+    }
+    print("Context for display_unapproved_imports:", context)
+    print("view_name:", context.get('view_name'))
+
+    return render(request, 'import/displaycsv_unapproved.html', context)
+
+@login_required
+def display_approved_imports(request):
+    if request.user.is_superuser:
+        data = Import.objects.filter(is_approved=True).order_by('id')
+    elif request.user.is_trainer:
+        if not request.user.centre:
+            data = Import.objects.none()
+        else:
+            data = Import.objects.filter(centre=request.user.centre, is_approved=True).order_by('id')
+    else:
+        data = Import.objects.none()
+
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        query = Q()
+        for field in [
+            'centre__name', 'centre__centre_code', 'department', 'hardware',
+            'system_model', 'processor', 'ram_gb', 'hdd_gb', 'serial_number',
+            'assignee_first_name', 'assignee_last_name', 'assignee_email_address',
+            'device_condition', 'status', 'reason_for_update'
+        ]:
+            query |= Q(**{f'{field}__icontains': search_query}) & ~Q(**{f'{field}__isnull': True}) & ~Q(**{f'{field}': ''})
+            if field not in ['date']:
+                query |= Q(**{f'{field}__isnull': True}) & Q(**{f'{field}__iregex': r'^(?:{})$'.format(re.escape(search_query))})
+        data = data.filter(query)
+
+    items_per_page = request.GET.get('items_per_page', '10')
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [10, 25, 50, 100, 500]:
+            items_per_page = 10
+    except ValueError:
+        items_per_page = 10
+
+    paginator = Paginator(data, items_per_page)
+    page_number = request.GET.get('page', 1)
+    try:
+        page_number = int(page_number)
+        if page_number > paginator.num_pages:
+            page_number = paginator.num_pages
+        elif page_number < 1:
+            page_number = 1
+    except ValueError:
+        page_number = 1
+    try:
+        data_on_page = paginator.page(page_number)
+    except Exception as e:
+        print(f"Pagination error in display_approved_imports: {str(e)}")
+        data_on_page = paginator.page(1)
+
+    data_with_pending = []
+    unapproved_count = 0
+    for item in data_on_page:
+        pending_update = item.pending_updates.order_by('-created_at').first()
+        data_with_pending.append({'item': item, 'pending_update': pending_update})
+        if not item.is_approved:
+            unapproved_count += 1
+
+    report_data = {'total_records': data.count(), 'search_query': search_query, 'items_per_page': items_per_page}
+    items_per_page_options = [10, 25, 50, 100, 500]
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:10]
+    total_devices = Import.objects.count() if request.user.is_superuser else (Import.objects.filter(centre=request.user.centre).count() if request.user.is_trainer and request.user.centre else 0)
+    approved_imports = data.count()
+
+    # Compute elided page range
+    page_range = paginator.get_elided_page_range(data_on_page.number, on_each_side=2, on_ends=1)
+
+    # Debug context
+    context = {
+        'data_with_pending': data_with_pending,
+        'paginator': paginator,
+        'data': data_on_page,
+        'report_data': report_data,
+        'centres': Centre.objects.all(),
+        'items_per_page_options': items_per_page_options,
+        'unapproved_count': unapproved_count,
+        'notifications': notifications,
+        'total_devices': total_devices,
+        'approved_imports': approved_imports,
+        'view_name': 'display_approved_imports',
+        'page_range': page_range,
+    }
+    print("Context for display_approved_imports:", context)
+    print("view_name:", context.get('view_name'))
+
+    return render(request, 'import/displaycsv_approved.html', context)
+
+@login_required
+def device_history(request, pk):
+    device = get_object_or_404(Import, pk=pk)
+    history = device.history.all().order_by('-history_date')
+    history_data = []
+    for record in history:
+        diff = {}
+        if record.prev_record:
+            changes = record.diff_against(record.prev_record)
+            if changes:
+                for change in changes.changes:
+                    if hasattr(change, 'field') and hasattr(change, 'old') and hasattr(change, 'new'):
+                        diff[change.field] = {'old': change.old, 'new': change.new}
+        history_data.append({
+            'record': record,
+            'diff': diff,
+            'change_type': record.get_history_type_display() or record.history_type,
+            'user': record.history_user.username if record.history_user else 'System'
+        })
+    context = {'device': device, 'history': history_data}
+    return render(request, 'import/device_history.html', context)
+
+
+
+@login_required
+def display_approved_imports(request):
+    if request.user.is_superuser:
+        data = Import.objects.filter(is_approved=True)
+    elif request.user.is_trainer:
+        if not request.user.centre:
+            data = Import.objects.none()
+        else:
+            data = Import.objects.filter(centre=request.user.centre, is_approved=True)
+    else:
+        data = Import.objects.none()
+
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        query = Q()
+        for field in [
+            'centre__name', 'centre__centre_code', 'department', 'hardware',
+            'system_model', 'processor', 'ram_gb', 'hdd_gb', 'serial_number',
+            'assignee_first_name', 'assignee_last_name', 'assignee_email_address',
+            'device_condition', 'status', 'reason_for_update'
+        ]:
+            query |= Q(**{f'{field}__icontains': search_query}) & ~Q(**{f'{field}__isnull': True}) & ~Q(**{f'{field}': ''})
+            if field not in ['date']:
+                query |= Q(**{f'{field}__isnull': True}) & Q(**{f'{field}__iregex': r'^(?:{})$'.format(re.escape(search_query))})
+        data = data.filter(query)
+
+    items_per_page = request.GET.get('items_per_page', '10')
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [10, 25, 50, 100, 500]:
+            items_per_page = 10
+    except ValueError:
+        items_per_page = 10
+
+    paginator = Paginator(data, items_per_page)
+    page_number = request.GET.get('page', 1)
+    try:
+        page_number = int(page_number)
+    except ValueError:
+        page_number = 1
+    try:
+        data_on_page = paginator.page(page_number)
+    except:
+        data_on_page = paginator.page(1)
+
+    data_with_pending = []
+    unapproved_count = 0
+    for item in data_on_page:
+        pending_update = item.pending_updates.order_by('-created_at').first()
+        data_with_pending.append({'item': item, 'pending_update': pending_update})
+        if not item.is_approved:
+            unapproved_count += 1
+
+    report_data = {'total_records': data.count(), 'search_query': search_query, 'items_per_page': items_per_page}
+    items_per_page_options = [10, 25, 50, 100, 500]
+    total_devices = Import.objects.count() if request.user.is_superuser else (Import.objects.filter(centre=request.user.centre).count() if request.user.is_trainer and request.user.centre else 0)
+    approved_imports = total_devices - unapproved_count if total_devices is not None and unapproved_count is not None else 0
+
+    return render(request, 'import/displaycsv_approved.html', {
+        'data_with_pending': data_with_pending, 'paginator': paginator, 'data': data_on_page,
+        'report_data': report_data, 'centres': Centre.objects.all(), 'items_per_page_options': items_per_page_options,
+        'unapproved_count': unapproved_count, 'total_devices': total_devices, 'approved_imports': approved_imports,
+    })
+
+@login_required
+def display_unapproved_imports(request):
+    if request.user.is_superuser:
+        data = Import.objects.filter(is_approved=False)
+    elif request.user.is_trainer:
+        if not request.user.centre:
+            data = Import.objects.none()
+        else:
+            data = Import.objects.filter(centre=request.user.centre, is_approved=False)
+    else:
+        data = Import.objects.none()
+
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        query = Q()
+        for field in [
+            'centre__name', 'centre__centre_code', 'department', 'hardware',
+            'system_model', 'processor', 'ram_gb', 'hdd_gb', 'serial_number',
+            'assignee_first_name', 'assignee_last_name', 'assignee_email_address',
+            'device_condition', 'status', 'reason_for_update'
+        ]:
+            query |= Q(**{f'{field}__icontains': search_query}) & ~Q(**{f'{field}__isnull': True}) & ~Q(**{f'{field}': ''})
+            if field not in ['date']:
+                query |= Q(**{f'{field}__isnull': True}) & Q(**{f'{field}__iregex': r'^(?:{})$'.format(re.escape(search_query))})
+        data = data.filter(query)
+
+    items_per_page = request.GET.get('items_per_page', '10')
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [10, 25, 50, 100, 500]:
+            items_per_page = 10
+    except ValueError:
+        items_per_page = 10
+
+    paginator = Paginator(data, items_per_page)
+    page_number = request.GET.get('page', 1)
+    try:
+        page_number = int(page_number)
+    except ValueError:
+        page_number = 1
+    try:
+        data_on_page = paginator.page(page_number)
+    except:
+        data_on_page = paginator.page(1)
+
+    data_with_pending = []
+    unapproved_count = data.count()
+    for item in data_on_page:
+        pending_update = item.pending_updates.order_by('-created_at').first()
+        data_with_pending.append({'item': item, 'pending_update': pending_update})
+
+    report_data = {'total_records': data.count(), 'search_query': search_query, 'items_per_page': items_per_page}
+    items_per_page_options = [10, 25, 50, 100, 500]
+    total_devices = Import.objects.count() if request.user.is_superuser else (Import.objects.filter(centre=request.user.centre).count() if request.user.is_trainer and request.user.centre else 0)
+    approved_imports = total_devices - unapproved_count if total_devices is not None and unapproved_count is not None else 0
+
+    return render(request, 'import/displaycsv_unapproved.html', {
+        'data_with_pending': data_with_pending, 'paginator': paginator, 'data': data_on_page,
+        'report_data': report_data, 'centres': Centre.objects.all(), 'items_per_page_options': items_per_page_options,
+        'unapproved_count': unapproved_count, 'total_devices': total_devices, 'approved_imports': approved_imports,
+    })
+
+
+
+@login_required
+def device_history(request, pk):
+    device = get_object_or_404(Import, pk=pk)
+    history = device.history.all().order_by('-history_date')
+    
+    history_data = []
+    for record in history:
+        diff = {}
+        if record.prev_record:
+            changes = record.diff_against(record.prev_record)
+            if changes:  
+                for change in changes.changes:
+                    if len(change) == 2: 
+                        field, (old, new) = change
+                        diff[field] = {'old': old, 'new': new}
+        history_data.append({
+            'record': record,
+            'diff': diff,
+            'change_type': record.get_history_type_display() or record.history_type,
+        })
+
+    context = {'device': device, 'history': history_data}
+    return render(request, 'import/device_history.html', context)
+
+
+
+@login_required
+def device_history(request, pk):
+    device = get_object_or_404(Import, pk=pk)
+    history = device.history.all().order_by('-history_date')
+    
+    history_data = []
+    for record in history:
+        diff = {}
+        if record.prev_record:
+            changes = record.diff_against(record.prev_record)
+            if changes:
+                for change in changes.changes:
+                    if hasattr(change, 'field') and hasattr(change, 'old') and hasattr(change, 'new'):
+                        diff[change.field] = {'old': change.old, 'new': change.new}
+        history_data.append({
+            'record': record,
+            'diff': diff,
+            'change_type': record.get_history_type_display() or record.history_type,
+            'user': record.history_user.username if record.history_user else 'System',
+        })
+
+    context = {'device': device, 'history': history_data}
+    return render(request, 'import/device_history.html', context)
+
+
+@login_required
 def dashboard_view(request):
-    # Role-based data filtering
     if request.user.is_superuser and not request.user.is_trainer:
         total_devices = Import.objects.count()
         pending_approvals = Import.objects.filter(is_approved=False).count()
         total_users = CustomUser.objects.count()
         total_centres = Centre.objects.count()
+        approved_imports = total_devices - pending_approvals if total_devices is not None and pending_approvals is not None else 0
         recent_devices = Import.objects.order_by('-date')[:5]
     elif request.user.is_trainer:
         if not request.user.centre:
             total_devices = 0
             pending_updates = 0
+            approved_imports = 0
             recent_devices = []
         else:
             total_devices = Import.objects.filter(centre=request.user.centre).count()
             pending_updates = PendingUpdate.objects.filter(import_record__centre=request.user.centre).count()
+            approved_imports = total_devices - Import.objects.filter(centre=request.user.centre, is_approved=False).count() if total_devices is not None else 0
             recent_devices = Import.objects.filter(centre=request.user.centre).order_by('-date')[:5]
     else:
         total_devices = 0
         pending_approvals = 0
         pending_updates = 0
+        approved_imports = 0
         recent_devices = []
+
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:5]  # Limit to 5 for card
+    unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
 
     context = {
         'total_devices': total_devices,
+        'approved_imports': approved_imports,
         'pending_approvals': pending_approvals if request.user.is_superuser and not request.user.is_trainer else 0,
         'total_users': total_users if request.user.is_superuser and not request.user.is_trainer else 0,
         'total_centres': total_centres if request.user.is_superuser and not request.user.is_trainer else 0,
         'pending_updates': pending_updates if request.user.is_trainer else 0,
         'recent_devices': recent_devices,
+        'notifications': notifications,
+        'unread_count': unread_count,
     }
 
     return render(request, 'index.html', context)
+
+
+@login_required
+def notifications_view(request):
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+    for notification in notifications:
+        print(f"Notification ID: {notification.pk}, Content Type: {notification.content_type}, Object ID: {notification.object_id}, Related Object: {notification.related_object}")
+    return render(request, 'notifications.html', {'notifications': notifications})
+
+@login_required
+def mark_notification_read(request, pk):
+    notification = get_object_or_404(Notification, pk=pk, user=request.user)
+    if request.method == 'POST':
+        notification.is_read = True
+        notification.save()
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/dashboard/'))
+    return HttpResponseRedirect('/dashboard/')
 
 def login_view(request):
     if request.user.is_authenticated:
