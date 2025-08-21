@@ -1,43 +1,4 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script>{% extends "dashboard.html" %}
+{% extends "dashboard.html" %}
 {% load static %}
 
 {% block content %}
@@ -66,27 +27,28 @@
                         {% csrf_token %}
                         <div class="mb-4">
                             <label class="block text-[#143C50] font-semibold">Upload CSV</label>
-                            <input type="file" name="file" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                            <input type="file" name="file" accept=".csv" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
                         </div>
                         <button type="submit" class="bg-[#288CC8] text-white px-4 py-2 rounded hover:bg-[#143C50] transition-all duration-200">Upload</button>
+                        <button type="button" onclick="showModal('uploadGuideModal')" class="ml-4 bg-[#143C50] text-white px-4 py-2 rounded hover:bg-[#288CC8] transition-all duration-200">Upload Guide</button>
                     </form>
                 </div>
 
                 <!-- Single Add Modal Button -->
                 <div>
                     <h3 class="text-xl font-bold text-[#143C50] mb-4">Add Single Device</h3>
-                    <button onclick="showModal('add')" class="bg-[#288CC8] text-white px-4 py-2 rounded hover:bg-[#143C50] transition-all duration-200">Open Single Add Form</button>
+                    <button onclick="showModal('addModal')" class="bg-[#288CC8] text-white px-4 py-2 rounded hover:bg-[#143C50] transition-all duration-200">Open Single Add Form</button>
                 </div>
 
                 <!-- Single Add Modal -->
                 <div id="addModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center overflow-y-auto">
-                    <div class="bg-white p-6 rounded-lg w-full max-w-4xl mx-4 sm:mx-6 md:mx-auto transform transition-all duration-300 animate-slideIn">
+                    <div class="bg-white p-4 rounded-lg w-full max-w-4xl mx-4 sm:mx-6 md:mx-auto transform transition-all duration-300 animate-slideIn" style="max-height: 90vh; overflow-y-auto;">
                         <h3 class="text-xl font-bold text-[#143C50] mb-4">Add Single Device</h3>
-                        <form id="addForm" method="post" action="{% url 'import_add' %}" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <form id="addForm" method="post" action="{% url 'import_add' %}" class="grid grid-cols-1 md:grid-cols-3 gap-2">
                             {% csrf_token %}
                             <div>
                                 <label class="block text-[#143C50] font-semibold">Centre</label>
-                                <select name="centre" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200" {% if request.user.is_trainer %}disabled{% endif %}>
+                                <select name="centre" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200" {% if request.user.is_trainer %}disabled{% endif %} required>
                                     <option value="">Select Centre</option>
                                     {% for centre in centres %}
                                         <option value="{{ centre.id }}" {% if request.user.is_trainer and centre.id == request.user.centre.id %}selected{% endif %}>{{ centre.name }}</option>
@@ -98,15 +60,15 @@
                             </div>
                             <div>
                                 <label class="block text-[#143C50] font-semibold">Department</label>
-                                <input type="text" name="department" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                                <input type="text" name="department" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200" required>
                             </div>
                             <div>
                                 <label class="block text-[#143C50] font-semibold">Hardware</label>
-                                <input type="text" name="hardware" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                                <input type="text" name="hardware" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200" required>
                             </div>
                             <div>
                                 <label class="block text-[#143C50] font-semibold">System Model</label>
-                                <input type="text" name="system_model" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                                <input type="text" name="system_model" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200" required>
                             </div>
                             <div>
                                 <label class="block text-[#143C50] font-semibold">Processor</label>
@@ -122,15 +84,15 @@
                             </div>
                             <div>
                                 <label class="block text-[#143C50] font-semibold">Serial Number</label>
-                                <input type="text" name="serial_number" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                                <input type="text" name="serial_number" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200" required>
                             </div>
                             <div>
                                 <label class="block text-[#143C50] font-semibold">Assignee First Name</label>
-                                <input type="text" name="assignee_first_name" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                                <input type="text" name="assignee_first_name" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200" required>
                             </div>
                             <div>
                                 <label class="block text-[#143C50] font-semibold">Assignee Last Name</label>
-                                <input type="text" name="assignee_last_name" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                                <input type="text" name="assignee_last_name" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200" required>
                             </div>
                             <div>
                                 <label class="block text-[#143C50] font-semibold">Assignee Email</label>
@@ -138,27 +100,52 @@
                             </div>
                             <div>
                                 <label class="block text-[#143C50] font-semibold">Device Condition</label>
-                                <input type="text" name="device_condition" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                                <input type="text" name="device_condition" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200" required>
                             </div>
                             <div>
                                 <label class="block text-[#143C50] font-semibold">Status</label>
-                                <input type="text" name="status" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
+                                <input type="text" name="status" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200" required>
                             </div>
-                            <div>
-                                <label class="block text-[#143C50] font-semibold">Date</label>
-                                <input type="date" name="date" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200">
-                            </div>
-                            {% if request.user.is_trainer %}
-                                <div class="col-span-2">
-                                    <label class="block text-[#143C50] font-semibold">Reason for Update</label>
-                                    <textarea name="reason_for_update" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200" rows="3"></textarea>
-                                </div>
-                            {% endif %}
-                            <div class="flex justify-end space-x-4 col-span-2">
+                            <div class="flex justify-end space-x-4 col-span-3">
                                 <button type="button" onclick="closeModal('addModal')" class="bg-[#A0A0A0] text-white px-4 py-2 rounded hover:bg-[#C86450] transition-all duration-200">Cancel</button>
                                 <button type="submit" class="bg-[#288CC8] text-white px-4 py-2 rounded hover:bg-[#143C50] transition-all duration-200">Save</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+
+                <!-- Upload Guide Modal -->
+                <div id="uploadGuideModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center overflow-y-auto">
+                    <div class="bg-white p-4 rounded-lg w-full max-w-2xl mx-4 sm:mx-6 md:mx-auto transform transition-all duration-300 animate-slideIn" style="max-height: 90vh; overflow-y-auto;">
+                        <h3 class="text-xl font-bold text-[#143C50] mb-4">CSV Upload Guide</h3>
+                        <div class="text-[#143C50]">
+                            <p class="mb-2">Follow these steps to upload your CSV file:</p>
+                            <ol class="list-decimal list-inside mb-4">
+                                <li>Create an Excel file with the following headings:</li>
+                                <ul class="list-disc list-inside ml-4">
+                                    <li>centre_code</li>
+                                    <li>department</li>
+                                    <li>hardware</li>
+                                    <li>system_model</li>
+                                    <li>processor</li>
+                                    <li>ram_gb</li>
+                                    <li>hdd_gb</li>
+                                    <li>serial_number</li>
+                                    <li>assignee_first_name</li>
+                                    <li>assignee_last_name</li>
+                                    <li>assignee_email_address</li>
+                                    <li>device_condition</li>
+                                    <li>status</li>
+                                </ul>
+                                <li>Ensure you enter the <strong>centre codes</strong> assigned to you, not the centre names.</li>
+                                <li>Convert the Excel file to CSV format.</li>
+                                <li>Upload the CSV file using the form above.</li>
+                            </ol>
+                            <p class="mb-2">Note: Only CSV files are accepted for upload.</p>
+                        </div>
+                        <div class="flex justify-end space-x-4">
+                            <button type="button" onclick="closeModal('uploadGuideModal')" class="bg-[#A0A0A0] text-white px-4 py-2 rounded hover:bg-[#C86450] transition-all duration-200">Close</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -187,12 +174,15 @@
             border-radius: 4px;
         }
         @media (max-width: 640px) {
-            table {
-                display: block;
-                overflow-x: auto;
+            #addModal .bg-white, #uploadGuideModal .bg-white {
+                max-height: 80vh;
+                overflow-y: auto;
+            }
+            .grid {
+                grid-template-columns: 1fr;
             }
             th, td {
-                min-width: 120px;
+                min-width: 100px;
             }
             tr {
                 display: block;
@@ -217,12 +207,59 @@
     </style>
 
     <script>
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+            return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+            if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+                try {
+                    var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                    var firstSheetName = workbook.SheetNames[0];
+                    var worksheet = workbook.Sheets[firstSheetName];
+
+                    // Convert sheet to JSON to filter blank rows
+                    var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                    // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                    var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                    // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                    var headerRowIndex = filteredData.findIndex((row, index) =>
+                      row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                    );
+                    // Fallback
+                    if (headerRowIndex === -1 || headerRowIndex > 25) {
+                      headerRowIndex = 0;
+                    }
+
+                    // Convert filtered JSON back to CSV
+                    var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                    csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                    return csv;
+                } catch (e) {
+                    console.error(e);
+                    return "";
+                }
+            }
+            return gk_fileData[filename] || "";
+        }
+
         function showModal(modalId) {
-            document.getElementById(modalId).classList.remove('hidden');
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('hidden');
+            } else {
+                console.error(`Modal with ID ${modalId} not found`);
+            }
         }
 
         function closeModal(modalId) {
-            document.getElementById(modalId).classList.add('hidden');
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('hidden');
+            }
         }
     </script>
 {% endblock %}

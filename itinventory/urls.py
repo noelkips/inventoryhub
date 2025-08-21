@@ -16,16 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from devices.views import display_csv
 
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('ictinventory.urls')),
-    path('upload/', include('devices.urls')),
-    path('display/', include('devices.urls')),
-    path('displaycsv', display_csv, name='import_displaycsv'),
+    path('inventory/', include('ictinventory.urls')),
+    path('', include('devices.urls')),
+ 
    
       
 ]

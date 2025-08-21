@@ -17,24 +17,11 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import logout, update_session_auth_hash
 import csv
 from django.contrib.auth.models import Group, Permission
-from django.urls import reverse 
-
+from django.urls import reverse
 from fpdf import FPDF
-from django.contrib.auth.decorators import login_required
-from .models import Import
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db.models import Q
-from datetime import datetime
 import gc
-
-
-from django.http import HttpResponse
-from django.contrib.auth.decorators import login_required
-from .models import Import
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db.models import Q
-from datetime import datetime
-import gc
+from django.utils import timezone
+from django.contrib.auth import authenticate, login
 import logging
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
@@ -48,10 +35,9 @@ from reportlab.lib.enums import TA_LEFT
 # Set up logging for debugging
 logger = logging.getLogger(__name__)
 
-
 def handle_uploaded_file(file, user):
     header_mapping = {
-        'centre': 'centre',
+        'centre_code': 'centre_code',
         'department': 'department',
         'hardware': 'hardware',
         'system_model': 'system_model',
@@ -78,12 +64,13 @@ def handle_uploaded_file(file, user):
         headers = [h.lower().strip() for h in headers]
         print(f"Headers: {headers}")
 
-        required_headers = ['centre', 'serial_number']
-        missing_headers = [h for h in required_headers if h not in headers]
-        if missing_headers:
-            raise ValueError(f"Missing required headers: {', '.join(missing_headers)}")
+        # Check for centre_code header
+        if 'centre_code' not in headers:
+            raise ValueError("Missing required header: centre_code")
 
+        centre_code_index = headers.index('centre_code')
         import_instances = []
+
         for row in reader:
             print(f"Row: {row}")
             if not any(row):  # Skip empty rows
@@ -94,22 +81,23 @@ def handle_uploaded_file(file, user):
                 print(f"Skipping duplicate serial_number: {serial_number[0]}")
                 continue
             import_instance = Import(added_by=user)
+            centre_code = row[centre_code_index].strip() if centre_code_index < len(row) else None
+            if centre_code:
+                try:
+                    centre = Centre.objects.get(centre_code=centre_code)
+                    # Validate centre_code for trainers (not superusers)
+                    if user.is_trainer and not user.is_superuser and user.centre and centre != user.centre:
+                        raise ValueError("Import failed, you are only allowed to add devices belonging to your center.")
+                    import_instance.centre = centre
+                    print(f"Mapped centre_code {centre_code} to Centre: {centre.name}")
+                except Centre.DoesNotExist:
+                    print(f"Centre with centre_code {centre_code} not found, setting to None")
+                    import_instance.centre = None
             for header, value in zip(headers, row):
                 value = value.strip()
                 field_name = header_mapping.get(header)
-                if field_name:
-                    if field_name == 'centre' and value:
-                        try:
-                            centre = Centre.objects.get(centre_code=value)
-                            if user.is_trainer and centre != user.centre:
-                                print(f"Trainer {user.username} cannot add for centre {value}")
-                                continue
-                            import_instance.centre = centre
-                            print(f"Mapped centre_code {value} to Centre: {centre.name}")
-                        except Centre.DoesNotExist:
-                            print(f"Centre with centre_code {value} not found, setting to None")
-                            import_instance.centre = None
-                    elif field_name == 'date' and value:
+                if field_name and field_name != 'centre_code':  # Avoid reprocessing centre_code
+                    if field_name == 'date' and value:
                         try:
                             for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'):
                                 try:
@@ -136,8 +124,11 @@ def handle_uploaded_file(file, user):
         else:
             print("No valid instances to create")
 
+    except ValueError as ve:
+        print(f"Validation error: {ve}")
+        raise
     except Exception as e:
-        print(f"Error processing CSV file: {e}")
+        print(f"Error processing CSV file: {str(e)}")
         raise
     finally:
         decoded_file.detach()
@@ -188,18 +179,206 @@ def upload_csv(request):
 
 
 
+# @login_required
+# def display_csv(request, approval_status):
+#     if request.user.is_superuser:
+#         data = Import.objects.all()
+#         logger.debug("Superuser: Fetching all Import records")
+#     elif request.user.is_trainer:
+#         if not request.user.centre:
+#             logger.warning(f"Trainer {request.user.username} has no associated centre")
+#             data = Import.objects.none()
+#         else:
+#             data = Import.objects.filter(centre=request.user.centre)
+#             logger.debug(f"Trainer {request.user.username}: Fetching records for centre {request.user.centre}, count: {data.count()}")
+#     else:
+#         data = Import.objects.none()
+#         logger.debug(f"User {request.user.username} is neither superuser nor trainer")
+
+#     search_query = request.GET.get('search', '')
+#     if search_query:
+#         query = (
+#             Q(centre__name__icontains=search_query) |
+#             Q(centre__centre_code__icontains=search_query) |
+#             Q(department__icontains=search_query) |
+#             Q(hardware__icontains=search_query) |
+#             Q(system_model__icontains=search_query) |
+#             Q(processor__icontains=search_query) |
+#             Q(ram_gb__icontains=search_query) |
+#             Q(hdd_gb__icontains=search_query) |
+#             Q(serial_number__icontains=search_query) |
+#             Q(assignee_first_name__icontains=search_query) |
+#             Q(assignee_last_name__icontains=search_query) |
+#             Q(assignee_email_address__icontains=search_query) |
+#             Q(device_condition__icontains=search_query) |
+#             Q(status__icontains=search_query) |
+#             Q(date__icontains=search_query) |
+#             Q(reason_for_update__icontains=search_query)
+#         )
+#         data = data.filter(query)
+#         logger.debug(f"Applied search query '{search_query}': {data.count()} records found")
+
+#     items_per_page = request.GET.get('items_per_page', '10')
+#     try:
+#         items_per_page = int(items_per_page)
+#         if items_per_page not in [10, 25, 50, 100, 500]:
+#             items_per_page = 10
+#     except ValueError:
+#         items_per_page = 10
+
+#     paginator = Paginator(data, items_per_page)
+#     page_number = request.GET.get('page', 1)
+
+#     try:
+#         page_number = int(page_number)
+#     except ValueError:
+#         page_number = 1
+
+#     try:
+#         data_on_page = paginator.page(page_number)
+#     except PageNotAnInteger:
+#         data_on_page = paginator.page(1)
+#     except EmptyPage:
+#         data_on_page = paginator.page(paginator.num_pages)
+
+#     logger.debug(f"Page {page_number}: {len(data_on_page)} records, Total pages: {paginator.num_pages}")
+
+#     # Prepare data with pending updates and count unapproved records
+#     data_with_pending = []
+#     unapproved_count = 0
+#     for item in data_on_page:
+#         pending_update = item.pending_updates.order_by('-created_at').first()
+#         data_with_pending.append({
+#             'item': item,
+#             'pending_update': pending_update
+#         })
+#         if not item.is_approved:
+#             unapproved_count += 1
+
+#     report_data = {
+#         'total_records': data.count(),
+#         'search_query': search_query,
+#         'items_per_page': items_per_page,
+#     }
+
+#     items_per_page_options = [10, 25, 50, 100, 500]
+
+#     return render(request, 'import/displaycsv.html', {
+#         'data_with_pending': data_with_pending,
+#         'paginator': paginator,
+#         'data': data_on_page,
+#         'report_data': report_data,
+#         'centres': Centre.objects.all(),
+#         'items_per_page_options': items_per_page_options,
+#         'unapproved_count': unapproved_count
+#     })
+
 @login_required
-def display_csv(request):
+def display_approved_imports(request):
     if request.user.is_superuser:
-        data = Import.objects.all()
-        logger.debug("Superuser: Fetching all Import records")
+        data = Import.objects.filter(is_approved=True)
+        logger.debug("Superuser: Fetching all approved Import records")
     elif request.user.is_trainer:
         if not request.user.centre:
             logger.warning(f"Trainer {request.user.username} has no associated centre")
             data = Import.objects.none()
         else:
-            data = Import.objects.filter(centre=request.user.centre)
-            logger.debug(f"Trainer {request.user.username}: Fetching records for centre {request.user.centre}, count: {data.count()}")
+            data = Import.objects.filter(centre=request.user.centre, is_approved=True)
+            logger.debug(f"Trainer {request.user.username}: Fetching approved records for centre {request.user.centre}, count: {data.count()}")
+    else:
+        data = Import.objects.none()
+        logger.debug(f"User {request.user.username} is neither superuser nor trainer")
+
+    search_query = request.GET.get('search', '')
+    if search_query:
+        query = (
+            Q(centre__name__icontains=search_query) |
+            Q(centre__centre_code__icontains=search_query) |
+            Q(department__icontains=search_query) |
+            Q(hardware__icontains=search_query) |
+            Q(system_model__icontains=search_query) |
+            Q(processor__icontains=search_query) |
+            Q(ram_gb__icontains=search_query) |
+            Q(hdd_gb__icontains=search_query) |
+            Q(serial_number__icontains=search_query) |
+            Q(assignee_first_name__icontains=search_query) |
+            Q(assignee_last_name__icontains=search_query) |
+            Q(assignee_email_address__icontains=search_query) |
+            Q(device_condition__icontains=search_query) |
+            Q(status__icontains=search_query) |
+            Q(date__icontains=search_query) |
+            Q(reason_for_update__icontains=search_query)
+        )
+        data = data.filter(query)
+        logger.debug(f"Applied search query '{search_query}': {data.count()} records found")
+
+    items_per_page = request.GET.get('items_per_page', '10')
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [10, 25, 50, 100, 500]:
+            items_per_page = 10
+    except ValueError:
+        items_per_page = 10
+
+    paginator = Paginator(data, items_per_page)
+    page_number = request.GET.get('page', 1)
+
+    try:
+        page_number = int(page_number)
+    except ValueError:
+        page_number = 1
+
+    try:
+        data_on_page = paginator.page(page_number)
+    except PageNotAnInteger:
+        data_on_page = paginator.page(1)
+    except EmptyPage:
+        data_on_page = paginator.page(paginator.num_pages)
+
+    logger.debug(f"Page {page_number}: {len(data_on_page)} records, Total pages: {paginator.num_pages}")
+
+    # Prepare data with pending updates and count unapproved records
+    data_with_pending = []
+    unapproved_count = 0
+    for item in data_on_page:
+        pending_update = item.pending_updates.order_by('-created_at').first()
+        data_with_pending.append({
+            'item': item,
+            'pending_update': pending_update
+        })
+        if not item.is_approved:
+            unapproved_count += 1
+
+    report_data = {
+        'total_records': data.count(),
+        'search_query': search_query,
+        'items_per_page': items_per_page,
+    }
+
+    items_per_page_options = [10, 25, 50, 100, 500]
+
+    return render(request, 'import/displaycsv.html', {
+        'data_with_pending': data_with_pending,
+        'paginator': paginator,
+        'data': data_on_page,
+        'report_data': report_data,
+        'centres': Centre.objects.all(),
+        'items_per_page_options': items_per_page_options,
+        'unapproved_count': unapproved_count
+    })
+
+@login_required
+def display_unapproved_imports(request):
+    if request.user.is_superuser:
+        data = Import.objects.filter(is_approved=False)
+        logger.debug("Superuser: Fetching all unapproved Import records")
+    elif request.user.is_trainer:
+        if not request.user.centre:
+            logger.warning(f"Trainer {request.user.username} has no associated centre")
+            data = Import.objects.none()
+        else:
+            data = Import.objects.filter(centre=request.user.centre, is_approved=False)
+            logger.debug(f"Trainer {request.user.username}: Fetching unapproved records for centre {request.user.centre}, count: {data.count()}")
     else:
         data = Import.objects.none()
         logger.debug(f"User {request.user.username} is neither superuser nor trainer")
@@ -286,23 +465,46 @@ def display_csv(request):
 def import_add(request):
     if request.method == 'POST':
         if 'file' in request.FILES:
+            # Check if file is CSV
+            file = request.FILES['file']
+            if not file.name.lower().endswith('.csv'):
+                messages.error(request, "Only CSV files are accepted for upload. Please convert your file to CSV format.")
+                return redirect('import_add')
+            # Handle bulk CSV upload
             try:
-                handle_uploaded_file(request.FILES['file'], request.user)
+                handle_uploaded_file(file, request.user)
                 messages.success(request, "CSV file uploaded and data imported successfully.")
-                return redirect('display_csv')
+                return redirect('import_displaycsv')
+            except ValueError as ve:
+                messages.error(request, str(ve))
+                return redirect('import_add')
             except Exception as e:
                 messages.error(request, f"Error processing CSV file: {str(e)}")
+                return redirect('import_add')
         else:
+            # Handle single device form submission
             try:
                 with transaction.atomic():
                     centre_id = request.POST.get('centre')
-                    centre = Centre.objects.get(id=centre_id) if centre_id and centre_id != 'None' else None
+                    centre = Centre.objects.get(id=centre_id) if centre_id and centre_id != '' else None
                     if request.user.is_trainer and centre != request.user.centre:
-                        messages.error(request, "Trainers can only add records for their own centre.")
-                        return redirect('display_csv')
-                    if request.user.is_trainer and not request.POST.get('reason_for_update'):
-                        messages.error(request, "Reason for update is required for trainers.")
+                        messages.error(request, "You are only allowed to add records for your own centre.")
                         return redirect('import_add')
+                    # Validate required fields
+                    required_fields = {
+                        'department': request.POST.get('department'),
+                        'hardware': request.POST.get('hardware'),
+                        'system_model': request.POST.get('system_model'),
+                        'serial_number': request.POST.get('serial_number'),
+                        'assignee_first_name': request.POST.get('assignee_first_name'),
+                        'assignee_last_name': request.POST.get('assignee_last_name'),
+                        'device_condition': request.POST.get('device_condition'),
+                        'status': request.POST.get('status')
+                    }
+                    for field_name, value in required_fields.items():
+                        if not value:
+                            messages.error(request, f"{field_name.replace('_', ' ').title()} is required.")
+                            return redirect('import_add')
                     import_instance = Import(
                         added_by=request.user,
                         centre=centre,
@@ -318,20 +520,24 @@ def import_add(request):
                         assignee_email_address=request.POST.get('assignee_email_address'),
                         device_condition=request.POST.get('device_condition'),
                         status=request.POST.get('status'),
-                        reason_for_update=request.POST.get('reason_for_update') if request.user.is_trainer else None,
-                        is_approved=False if request.user.is_trainer else request.POST.get('is_approved') == 'on',
-                        approved_by=request.user if request.user.is_superuser and request.POST.get('is_approved') == 'on' else None
+                        date=timezone.now().date(),  # Set to current date
+                        is_approved=False if request.user.is_trainer else True,
+                        approved_by=request.user if request.user.is_superuser else None
                     )
                     if import_instance.serial_number and Import.objects.filter(serial_number=import_instance.serial_number).exists():
                         messages.error(request, f"Serial number {import_instance.serial_number} already exists.")
                         return redirect('import_add')
                     import_instance.save()
                     messages.success(request, "Record added successfully.")
-                    return redirect('display_csv')
+                    return redirect('import_displaycsv')
+            except Centre.DoesNotExist:
+                messages.error(request, "Invalid centre selected.")
+                return redirect('import_add')
             except Exception as e:
                 messages.error(request, f"Error adding record: {str(e)}")
                 return redirect('import_add')
     return render(request, 'import/add.html', {'centres': Centre.objects.all()})
+
 
 @login_required
 def import_update(request, pk):
@@ -864,9 +1070,7 @@ def profile(request):
         email = request.POST.get('email')
         first_name = request.POST.get('first_name')
         last_name = request.POST.get('last_name')
-        centre_id = request.POST.get('centre')
-        is_trainer = request.POST.get('is_trainer') == 'on'
-
+        # Do not update centre, is_trainer, is_staff, or is_superuser from POST data
         user = request.user
         errors = []
 
@@ -878,13 +1082,6 @@ def profile(request):
             errors.append("Email is required.")
         if CustomUser.objects.exclude(id=user.id).filter(email=email).exists():
             errors.append("Email is already in use.")
-        if centre_id:
-            try:
-                centre = Centre.objects.get(id=centre_id)
-            except Centre.DoesNotExist:
-                errors.append("Selected centre does not exist.")
-        else:
-            centre = None
 
         if errors:
             for error in errors:
@@ -894,8 +1091,6 @@ def profile(request):
             user.email = email
             user.first_name = first_name
             user.last_name = last_name
-            user.centre = centre
-            user.is_trainer = is_trainer
             user.save()
             messages.success(request, "Profile updated successfully.")
             return redirect('profile')
@@ -905,6 +1100,7 @@ def profile(request):
         'user': request.user,
         'centres': centres,
     })
+
 
 @login_required
 def change_password(request):
@@ -935,15 +1131,59 @@ def change_password(request):
 
     return render(request, 'accounts/change_password.html', {})
 
-@login_required
-def dashboard_view(request):
-    messages.success(request, "You have been logged in successfully.")
-    return render(request, 'dashboard.html')
 
 @login_required
+def dashboard_view(request):
+    # Role-based data filtering
+    if request.user.is_superuser and not request.user.is_trainer:
+        total_devices = Import.objects.count()
+        pending_approvals = Import.objects.filter(is_approved=False).count()
+        total_users = CustomUser.objects.count()
+        total_centres = Centre.objects.count()
+        recent_devices = Import.objects.order_by('-date')[:5]
+    elif request.user.is_trainer:
+        if not request.user.centre:
+            total_devices = 0
+            pending_updates = 0
+            recent_devices = []
+        else:
+            total_devices = Import.objects.filter(centre=request.user.centre).count()
+            pending_updates = PendingUpdate.objects.filter(import_record__centre=request.user.centre).count()
+            recent_devices = Import.objects.filter(centre=request.user.centre).order_by('-date')[:5]
+    else:
+        total_devices = 0
+        pending_approvals = 0
+        pending_updates = 0
+        recent_devices = []
+
+    context = {
+        'total_devices': total_devices,
+        'pending_approvals': pending_approvals if request.user.is_superuser and not request.user.is_trainer else 0,
+        'total_users': total_users if request.user.is_superuser and not request.user.is_trainer else 0,
+        'total_centres': total_centres if request.user.is_superuser and not request.user.is_trainer else 0,
+        'pending_updates': pending_updates if request.user.is_trainer else 0,
+        'recent_devices': recent_devices,
+    }
+
+    return render(request, 'index.html', context)
+
 def login_view(request):
-    messages.success(request, "You have been logged in successfully.")
-    return redirect('dashboard')
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        logger.debug(f"Login attempt for username: {username}")
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            logger.info(f"Successful login for user: {username}")
+            return redirect('dashboard')
+        else:
+            logger.warning(f"Failed login attempt for username: {username}")
+            messages.error(request, 'Invalid username or password.')
+    return render(request, 'login.html')
+
 
 @login_required
 def logout_view(request):

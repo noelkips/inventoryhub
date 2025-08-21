@@ -115,7 +115,7 @@
         "model": "devices.centre",
         "pk": 15,
         "fields": {
-            "name": "Machakos County",
+            "name": "Pangani HQ",
             "centre_code": "CENTRE_15"
         }
     },
@@ -139,7 +139,7 @@
         "model": "devices.centre",
         "pk": 18,
         "fields": {
-            "name": "Turkana County",
+            "name": "Sabaki",
             "centre_code": "CENTRE_18"
         }
     },
@@ -187,7 +187,7 @@
         "model": "devices.centre",
         "pk": 24,
         "fields": {
-            "name": "Nanam (Approximate)",
+            "name": "Nanam",
             "centre_code": "CENTRE_24"
         }
     },
@@ -195,7 +195,7 @@
         "model": "devices.centre",
         "pk": 25,
         "fields": {
-            "name": "Marsabit County",
+            "name": "Ethiopia",
             "centre_code": "CENTRE_25"
         }
     },
@@ -227,7 +227,7 @@
         "model": "devices.centre",
         "pk": 29,
         "fields": {
-            "name": "Nakuru County",
+            "name": "Angaza Discovery Camp",
             "centre_code": "CENTRE_29"
         }
     },
@@ -259,7 +259,7 @@
         "model": "devices.centre",
         "pk": 33,
         "fields": {
-            "name": "Kilifi County",
+            "name": "MTTI",
             "centre_code": "CENTRE_33"
         }
     },
@@ -299,7 +299,7 @@
         "model": "devices.centre",
         "pk": 38,
         "fields": {
-            "name": "Nyeri County",
+            "name": "MCL",
             "centre_code": "CENTRE_38"
         }
     },
@@ -315,7 +315,7 @@
         "model": "devices.centre",
         "pk": 40,
         "fields": {
-            "name": "Kisumu County",
+            "name": "Elpida",
             "centre_code": "CENTRE_40"
         }
     },
@@ -331,7 +331,7 @@
         "model": "devices.centre",
         "pk": 42,
         "fields": {
-            "name": "Kwale County",
+            "name": "Morokani",
             "centre_code": "CENTRE_42"
         }
     },

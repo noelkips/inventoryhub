@@ -1,43 +1,4 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script>{% extends "dashboard.html" %}
+{% extends "dashboard.html" %}
 {% load static %}
 
 {% block content %}
@@ -97,19 +58,20 @@
                            class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent text-primary">
                 </div>
                 <div>
-                    <label for="centre" class="block text-sm font-medium text-primary mb-2">Centre</label>
-                    <select name="centre" id="centre"
-                            class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent text-primary">
-                        <option value="">Select Centre</option>
-                        {% for centre in centres %}
-                        <option value="{{ centre.id }}" {% if user.centre.id == centre.id %}selected{% endif %}>{{ centre.name }} ({{ centre.centre_code }})</option>
-                        {% endfor %}
-                    </select>
+                    <label class="block text-sm font-medium text-primary mb-2">Centre</label>
+                    <p class="block w-full px-3 py-2 border border-gray-300 rounded-md text-primary">{{ user.centre.name|default:"None" }}</p>
                 </div>
                 <div>
-                    <label for="is_trainer" class="block text-sm font-medium text-primary mb-2">Trainer Status</label>
-                    <input type="checkbox" name="is_trainer" id="is_trainer" {% if user.is_trainer %}checked{% endif %}
-                           class="h-4 w-4 text-accent focus:ring-accent border-gray-300 rounded">
+                    <label class="block text-sm font-medium text-primary mb-2">Trainer Status</label>
+                    <p class="block w-full px-3 py-2 border border-gray-300 rounded-md text-primary">{{ user.is_trainer|yesno:"Yes,No" }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-primary mb-2">Staff Status</label>
+                    <p class="block w-full px-3 py-2 border border-gray-300 rounded-md text-primary">{{ user.is_staff|yesno:"Yes,No" }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-primary mb-2">Superuser Status</label>
+                    <p class="block w-full px-3 py-2 border border-gray-300 rounded-md text-primary">{{ user.is_superuser|yesno:"Yes,No" }}</p>
                 </div>
             </div>
             <div class="flex justify-end space-x-3">

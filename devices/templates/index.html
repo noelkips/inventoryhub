@@ -1,0 +1,133 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script>{% extends 'dashboard.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <h2 class="text-2xl font-bold mb-4 text-gray-800">InventoryHub Dashboard</h2>
+
+    <!-- Messages -->
+    {% if messages %}
+        <div class="mb-4">
+            {% for message in messages %}
+                <div class="bg-{% if message.tags == 'error' %}red{% else %}green{% endif %}-100 border border-{% if message.tags == 'error' %}red{% else %}green{% endif %}-400 text-{% if message.tags == 'error' %}red{% else %}green{% endif %}-700 px-4 py-3 rounded relative animate__animated animate__fadeIn" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white p-4 rounded-lg shadow-md">
+            <h3 class="text-lg font-semibold text-gray-700">Total Devices</h3>
+            <p class="text-2xl font-bold text-blue-600">{{ total_devices }}</p>
+        </div>
+        {% if user.is_superuser and not user.is_trainer %}
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold text-gray-700">Pending Approvals</h3>
+                <p class="text-2xl font-bold text-red-600">{{ pending_approvals }}</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold text-gray-700">Total Users</h3>
+                <p class="text-2xl font-bold text-blue-600">{{ total_users }}</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold text-gray-700">Total Centres</h3>
+                <p class="text-2xl font-bold text-blue-600">{{ total_centres }}</p>
+            </div>
+        {% else %}
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold text-gray-700">Pending Updates</h3>
+                <p class="text-2xl font-bold text-red-600">{{ pending_updates }}</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold text-gray-700">Centre</h3>
+                <p class="text-2xl font-bold text-blue-600">{{ user.centre.name|default:"N/A" }}</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Devices Table -->
+    <div class="bg-white p-4 rounded-lg shadow-md">
+        <h3 class="text-lg font-semibold mb-4 text-gray-800">Recent Devices</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border">
+                <thead>
+                    <tr class="bg-gray-200 text-gray-600">
+                        <th class="py-3 px-4 border text-left">Serial Number</th>
+                        <th class="py-3 px-4 border text-left">Hardware</th>
+                        <th class="py-3 px-4 border text-left">Centre</th>
+                        <th class="py-3 px-4 border text-left">Status</th>
+                        <th class="py-3 px-4 border text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in recent_devices %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="py-2 px-4 border">{{ item.serial_number|default:"N/A" }}</td>
+                            <td class="py-2 px-4 border">{{ item.hardware|default:"N/A" }}</td>
+                            <td class="py-2 px-4 border">{{ item.centre.name|default:"N/A" }}</td>
+                            <td class="py-2 px-4 border">{{ item.status|default:"N/A" }}</td>
+                            <td class="py-2 px-4 border">
+                                <a href="{% url 'display_csv' %}" class="text-blue-600 hover:underline">View Details</a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="py-2 px-4 border text-center text-gray-600">No recent devices found.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="mt-6 flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
+        <a href="{% url 'import_add' %}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition duration-200 w-full sm:w-auto">Add New Device</a>
+        <a href="{% url 'display_csv' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200 w-full sm:w-auto">View All Devices</a>
+        {% if user.is_superuser and not user.is_trainer and pending_approvals > 0 %}
+            <a href="{% url 'display_csv' %}?filter=unapproved" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition duration-200 w-full sm:w-auto">Review Pending Approvals ({{ pending_approvals }})</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
