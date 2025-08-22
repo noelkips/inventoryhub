@@ -132,7 +132,7 @@
                         <td class="py-2 px-4 border">{{ item.assignee_first_name|default:"N/A" }} {{ item.assignee_last_name|default:"" }}</td>
                         <td class="py-2 px-4 border">
                             <strong>Status:</strong> {{ item.status|default:"N/A" }}<br>
-                            <strong>Date:</strong> {{ item.date|date:"Y-m-d"|default:"N/A" }}
+                            <strong>Date:</strong> {{ item.date|default:"N/A" }}
                         </td>
                         <td class="py-2 px-4 border flex space-x-2">
                             <button class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition duration-200" onclick="openModal('viewModal{{ item.id }}')">View</button>
@@ -175,7 +175,7 @@
                                     </div>
                                     <div>
                                         <p class="mb-2"><strong class="text-gray-700">Status:</strong> {{ item.status|default:"N/A" }}</p>
-                                        <p class="mb-2"><strong class="text-gray-700">Date:</strong> {{ item.date|date:"Y-m-d"|default:"N/A" }}</p>
+                                        <p class="mb-2"><strong class="text-gray-700">Date:</strong> {{ item.date|default:"N/A" }}</p>
                                         <p class="mb-2"><strong class="text-gray-700">Added By:</strong> {{ item.added_by|default:"N/A" }}</p>
                                         <p class="mb-2"><strong class="text-gray-700">Approved By:</strong> {{ item.approved_by|default:"N/A" }}</p>
                                         <p class="mb-2"><strong class="text-gray-700">Is Approved:</strong> {{ item.is_approved|yesno:"Yes,No" }}</p>

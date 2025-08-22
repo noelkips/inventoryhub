@@ -26,7 +26,6 @@ class CustomUser(AbstractUser):
   
     def __str__(self):
         return self.username
-
 class Import(models.Model):
     centre = models.ForeignKey(Centre, on_delete=models.SET_NULL, null=True, blank=True)
     department = models.CharField(max_length=100, blank=True, null=True)
@@ -41,7 +40,7 @@ class Import(models.Model):
     assignee_email_address = models.EmailField(blank=True, null=True)
     device_condition = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=50, blank=True, null=True)
-    date = models.DateField(blank=True, null=True)
+    date = models.DateField(auto_now_add=True)  # Auto-generate date on creation
     added_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='imports_added')
     approved_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='imports_approved')
     is_approved = models.BooleanField(default=False)

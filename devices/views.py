@@ -443,6 +443,8 @@ def import_update(request, pk):
             return redirect('display_csv')
     return redirect('display_csv')
 
+
+
 @login_required
 @user_passes_test(lambda u: u.is_superuser and not u.is_trainer)
 def import_approve(request, pk):
@@ -478,8 +480,18 @@ def import_approve(request, pk):
                 import_instance.approved_by = request.user
                 import_instance.save()
                 messages.success(request, "Record approved successfully.")
+            
+            # Mark related notifications as read
+            content_type = ContentType.objects.get_for_model(Import)
+            Notification.objects.filter(
+                content_type=content_type,
+                object_id=import_instance.pk,
+                is_read=False
+            ).update(is_read=True)
+            
             return redirect('display_csv')
     return redirect('display_csv')
+
 
 
 @login_required
@@ -562,12 +574,26 @@ def import_approve_all(request):
                     item.save()
                     pending_update.delete()
                     approved_count += 1
+                    # Mark related notifications as read
+                    content_type = ContentType.objects.get_for_model(Import)
+                    Notification.objects.filter(
+                        content_type=content_type,
+                        object_id=item.pk,
+                        is_read=False
+                    ).update(is_read=True)
                 elif not item.is_approved:
                     # Approve records without pending updates
                     item.is_approved = True
                     item.approved_by = request.user
                     item.save()
                     approved_count += 1
+                    # Mark related notifications as read
+                    content_type = ContentType.objects.get_for_model(Import)
+                    Notification.objects.filter(
+                        content_type=content_type,
+                        object_id=item.pk,
+                        is_read=False
+                    ).update(is_read=True)
 
         if approved_count > 0:
             messages.success(request, f"{approved_count} record(s) approved successfully.")
@@ -958,178 +984,6 @@ def change_password(request):
 
 
 @login_required
-def display_unapproved_imports(request):
-    if request.user.is_superuser:
-        data = Import.objects.filter(is_approved=False).order_by('id')
-    elif request.user.is_trainer:
-        if not request.user.centre:
-            data = Import.objects.none()
-        else:
-            data = Import.objects.filter(centre=request.user.centre, is_approved=False).order_by('id')
-    else:
-        data = Import.objects.none()
-
-    search_query = request.GET.get('search', '').strip()
-    if search_query:
-        query = Q()
-        for field in [
-            'centre__name', 'centre__centre_code', 'department', 'hardware',
-            'system_model', 'processor', 'ram_gb', 'hdd_gb', 'serial_number',
-            'assignee_first_name', 'assignee_last_name', 'assignee_email_address',
-            'device_condition', 'status', 'reason_for_update'
-        ]:
-            query |= Q(**{f'{field}__icontains': search_query}) & ~Q(**{f'{field}__isnull': True}) & ~Q(**{f'{field}': ''})
-            if field not in ['date']:
-                query |= Q(**{f'{field}__isnull': True}) & Q(**{f'{field}__iregex': r'^(?:{})$'.format(re.escape(search_query))})
-        data = data.filter(query)
-
-    items_per_page = request.GET.get('items_per_page', '10')
-    try:
-        items_per_page = int(items_per_page)
-        if items_per_page not in [10, 25, 50, 100, 500]:
-            items_per_page = 10
-    except ValueError:
-        items_per_page = 10
-
-    paginator = Paginator(data, items_per_page)
-    page_number = request.GET.get('page', 1)
-    try:
-        page_number = int(page_number)
-        if page_number > paginator.num_pages:
-            page_number = paginator.num_pages
-        elif page_number < 1:
-            page_number = 1
-    except ValueError:
-        page_number = 1
-    try:
-        data_on_page = paginator.page(page_number)
-    except Exception as e:
-        print(f"Pagination error in display_unapproved_imports: {str(e)}")
-        data_on_page = paginator.page(1)
-
-    data_with_pending = []
-    unapproved_count = data.count()
-    for item in data_on_page:
-        pending_update = item.pending_updates.order_by('-created_at').first()
-        data_with_pending.append({'item': item, 'pending_update': pending_update})
-
-    report_data = {'total_records': data.count(), 'search_query': search_query, 'items_per_page': items_per_page}
-    items_per_page_options = [10, 25, 50, 100, 500]
-    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:10]
-    total_devices = Import.objects.count() if request.user.is_superuser else (Import.objects.filter(centre=request.user.centre).count() if request.user.is_trainer and request.user.centre else 0)
-    approved_imports = total_devices - unapproved_count if total_devices is not None and unapproved_count is not None else 0
-
-    # Compute elided page range
-    page_range = paginator.get_elided_page_range(data_on_page.number, on_each_side=2, on_ends=1)
-
-    # Debug context
-    context = {
-        'data_with_pending': data_with_pending,
-        'paginator': paginator,
-        'data': data_on_page,
-        'report_data': report_data,
-        'centres': Centre.objects.all(),
-        'items_per_page_options': items_per_page_options,
-        'unapproved_count': unapproved_count,
-        'notifications': notifications,
-        'total_devices': total_devices,
-        'approved_imports': approved_imports,
-        'view_name': 'display_unapproved_imports',
-        'page_range': page_range,
-    }
-    print("Context for display_unapproved_imports:", context)
-    print("view_name:", context.get('view_name'))
-
-    return render(request, 'import/displaycsv_unapproved.html', context)
-
-@login_required
-def display_approved_imports(request):
-    if request.user.is_superuser:
-        data = Import.objects.filter(is_approved=True).order_by('id')
-    elif request.user.is_trainer:
-        if not request.user.centre:
-            data = Import.objects.none()
-        else:
-            data = Import.objects.filter(centre=request.user.centre, is_approved=True).order_by('id')
-    else:
-        data = Import.objects.none()
-
-    search_query = request.GET.get('search', '').strip()
-    if search_query:
-        query = Q()
-        for field in [
-            'centre__name', 'centre__centre_code', 'department', 'hardware',
-            'system_model', 'processor', 'ram_gb', 'hdd_gb', 'serial_number',
-            'assignee_first_name', 'assignee_last_name', 'assignee_email_address',
-            'device_condition', 'status', 'reason_for_update'
-        ]:
-            query |= Q(**{f'{field}__icontains': search_query}) & ~Q(**{f'{field}__isnull': True}) & ~Q(**{f'{field}': ''})
-            if field not in ['date']:
-                query |= Q(**{f'{field}__isnull': True}) & Q(**{f'{field}__iregex': r'^(?:{})$'.format(re.escape(search_query))})
-        data = data.filter(query)
-
-    items_per_page = request.GET.get('items_per_page', '10')
-    try:
-        items_per_page = int(items_per_page)
-        if items_per_page not in [10, 25, 50, 100, 500]:
-            items_per_page = 10
-    except ValueError:
-        items_per_page = 10
-
-    paginator = Paginator(data, items_per_page)
-    page_number = request.GET.get('page', 1)
-    try:
-        page_number = int(page_number)
-        if page_number > paginator.num_pages:
-            page_number = paginator.num_pages
-        elif page_number < 1:
-            page_number = 1
-    except ValueError:
-        page_number = 1
-    try:
-        data_on_page = paginator.page(page_number)
-    except Exception as e:
-        print(f"Pagination error in display_approved_imports: {str(e)}")
-        data_on_page = paginator.page(1)
-
-    data_with_pending = []
-    unapproved_count = 0
-    for item in data_on_page:
-        pending_update = item.pending_updates.order_by('-created_at').first()
-        data_with_pending.append({'item': item, 'pending_update': pending_update})
-        if not item.is_approved:
-            unapproved_count += 1
-
-    report_data = {'total_records': data.count(), 'search_query': search_query, 'items_per_page': items_per_page}
-    items_per_page_options = [10, 25, 50, 100, 500]
-    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:10]
-    total_devices = Import.objects.count() if request.user.is_superuser else (Import.objects.filter(centre=request.user.centre).count() if request.user.is_trainer and request.user.centre else 0)
-    approved_imports = data.count()
-
-    # Compute elided page range
-    page_range = paginator.get_elided_page_range(data_on_page.number, on_each_side=2, on_ends=1)
-
-    # Debug context
-    context = {
-        'data_with_pending': data_with_pending,
-        'paginator': paginator,
-        'data': data_on_page,
-        'report_data': report_data,
-        'centres': Centre.objects.all(),
-        'items_per_page_options': items_per_page_options,
-        'unapproved_count': unapproved_count,
-        'notifications': notifications,
-        'total_devices': total_devices,
-        'approved_imports': approved_imports,
-        'view_name': 'display_approved_imports',
-        'page_range': page_range,
-    }
-    print("Context for display_approved_imports:", context)
-    print("view_name:", context.get('view_name'))
-
-    return render(request, 'import/displaycsv_approved.html', context)
-
-@login_required
 def device_history(request, pk):
     device = get_object_or_404(Import, pk=pk)
     history = device.history.all().order_by('-history_date')
@@ -1219,15 +1073,18 @@ def display_approved_imports(request):
 
 @login_required
 def display_unapproved_imports(request):
+    print(f"Center: {request.user.centre}")
     if request.user.is_superuser:
         data = Import.objects.filter(is_approved=False)
     elif request.user.is_trainer:
         if not request.user.centre:
             data = Import.objects.none()
+            print("TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT")
         else:
             data = Import.objects.filter(centre=request.user.centre, is_approved=False)
     else:
         data = Import.objects.none()
+    print(f"date: {data}")
 
     search_query = request.GET.get('search', '').strip()
     if search_query:
