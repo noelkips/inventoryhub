@@ -94,6 +94,7 @@ class CustomUserAdmin(admin.ModelAdmin):
             obj.set_password(form.cleaned_data['password1'])
         super().save_model(request, obj, form, change)
 
+        
 class ImportAdmin(admin.ModelAdmin):
     form = ImportForm
     list_display = (
@@ -120,7 +121,7 @@ class ImportAdmin(admin.ModelAdmin):
             'fields': (
                 'file', 'centre', 'department', 'hardware', 'system_model', 'processor',
                 'ram_gb', 'hdd_gb', 'serial_number', 'assignee_first_name', 'assignee_last_name',
-                'assignee_email_address', 'device_condition', 'status', 'date', 'added_by',
+                'assignee_email_address', 'device_condition', 'status', 'added_by',
                 'approved_by', 'is_approved', 'reason_for_update'
             )
         }),
@@ -141,7 +142,7 @@ class ImportAdmin(admin.ModelAdmin):
             qs = qs.filter(centre=request.user.centre)
         return qs
 
-    def save_model(request, obj, form, change):
+    def save_model(self, request, obj, form, change):
         if not obj.added_by:
             obj.added_by = request.user
         if request.user.is_trainer and not request.user.is_superuser:
@@ -236,7 +237,6 @@ class ImportAdmin(admin.ModelAdmin):
     def get_approved_by(self, obj):
         return obj.approved_by.username if obj.approved_by else "N/A"
     get_approved_by.short_description = 'Approved By'
-
 class ReportAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return False  # Remove the "Add" button for Report

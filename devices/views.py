@@ -481,13 +481,13 @@ def import_approve(request, pk):
                 import_instance.save()
                 messages.success(request, "Record approved successfully.")
             
-            # Mark related notifications as read
-            content_type = ContentType.objects.get_for_model(Import)
-            Notification.objects.filter(
-                content_type=content_type,
-                object_id=import_instance.pk,
-                is_read=False
-            ).update(is_read=True)
+            # # Mark related notifications as read
+            # content_type = ContentType.objects.get_for_model(Import)
+            # Notification.objects.filter(
+            #     content_type=content_type,
+            #     object_id=import_instance.pk,
+            #     is_read=False
+            # ).update(is_read=True)
             
             return redirect('display_csv')
     return redirect('display_csv')
@@ -691,7 +691,7 @@ def export_to_excel(request):
     ws.title = "IT Inventory"
 
     headers = [
-        'Centre', 'Department', 'Hardware', 'System Model', 'Processor', 'RAM (GB)', 'HDD (GB)',
+        'Centre_code', 'Department', 'Hardware', 'System Model', 'Processor', 'RAM (GB)', 'HDD (GB)',
         'Serial Number', 'Assignee First Name', 'Assignee Last Name', 'Assignee Email',
         'Device Condition', 'Status', 'Date', 'Added By', 'Approved By', 'Is Approved', 'Reason for Update'
     ]
@@ -699,7 +699,7 @@ def export_to_excel(request):
 
     for item in data:
         ws.append([
-            item.centre.name if item.centre else 'N/A',
+            item.centre.centre_code if item.centre else 'N/A',
             item.department or 'N/A',
             item.hardware or 'N/A',
             item.system_model or 'N/A',
@@ -1007,6 +1007,7 @@ def device_history(request, pk):
 
 
 
+
 @login_required
 def display_approved_imports(request):
     if request.user.is_superuser:
@@ -1033,6 +1034,8 @@ def display_approved_imports(request):
                 query |= Q(**{f'{field}__isnull': True}) & Q(**{f'{field}__iregex': r'^(?:{})$'.format(re.escape(search_query))})
         data = data.filter(query)
 
+    # Force queryset evaluation to ensure data is available
+    data = list(data)  # Convert to list to materialize the queryset
     items_per_page = request.GET.get('items_per_page', '10')
     try:
         items_per_page = int(items_per_page)
@@ -1044,23 +1047,24 @@ def display_approved_imports(request):
     paginator = Paginator(data, items_per_page)
     page_number = request.GET.get('page', 1)
     try:
-        page_number = int(page_number)
-    except ValueError:
-        page_number = 1
-    try:
         data_on_page = paginator.page(page_number)
-    except:
+    except PageNotAnInteger:
+        data_on_page = paginator.page(1)
+    except EmptyPage:
+        data_on_page = paginator.page(paginator.num_pages)
+    except Exception as e:
+        messages.error(request, f"Pagination error: {str(e)}")
         data_on_page = paginator.page(1)
 
     data_with_pending = []
-    unapproved_count = 0
-    for item in data_on_page:
-        pending_update = item.pending_updates.order_by('-created_at').first()
+    unapproved_count = 0  # Should be 0 for approved imports, but kept for consistency
+    for item in data_on_page.object_list:  # Use object_list to access the paginated items
+        pending_update = getattr(item, 'pending_updates', None).order_by('-created_at').first() if hasattr(item, 'pending_updates') else None
         data_with_pending.append({'item': item, 'pending_update': pending_update})
-        if not item.is_approved:
+        if not getattr(item, 'is_approved', True):  # Should always be True for this view
             unapproved_count += 1
 
-    report_data = {'total_records': data.count(), 'search_query': search_query, 'items_per_page': items_per_page}
+    report_data = {'total_records': paginator.count, 'search_query': search_query, 'items_per_page': items_per_page}
     items_per_page_options = [10, 25, 50, 100, 500]
     total_devices = Import.objects.count() if request.user.is_superuser else (Import.objects.filter(centre=request.user.centre).count() if request.user.is_trainer and request.user.centre else 0)
     approved_imports = total_devices - unapproved_count if total_devices is not None and unapproved_count is not None else 0
@@ -1069,6 +1073,7 @@ def display_approved_imports(request):
         'data_with_pending': data_with_pending, 'paginator': paginator, 'data': data_on_page,
         'report_data': report_data, 'centres': Centre.objects.all(), 'items_per_page_options': items_per_page_options,
         'unapproved_count': unapproved_count, 'total_devices': total_devices, 'approved_imports': approved_imports,
+        'view_name': 'display_approved_imports'  # Added for pagination URL consistency
     })
 
 @login_required
@@ -1079,12 +1084,11 @@ def display_unapproved_imports(request):
     elif request.user.is_trainer:
         if not request.user.centre:
             data = Import.objects.none()
-            print("TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT")
         else:
             data = Import.objects.filter(centre=request.user.centre, is_approved=False)
     else:
         data = Import.objects.none()
-    print(f"date: {data}")
+    print(f"data: {data}")  # Debug the queryset
 
     search_query = request.GET.get('search', '').strip()
     if search_query:
@@ -1100,6 +1104,8 @@ def display_unapproved_imports(request):
                 query |= Q(**{f'{field}__isnull': True}) & Q(**{f'{field}__iregex': r'^(?:{})$'.format(re.escape(search_query))})
         data = data.filter(query)
 
+    # Force queryset evaluation
+    data = list(data)
     items_per_page = request.GET.get('items_per_page', '10')
     try:
         items_per_page = int(items_per_page)
@@ -1111,21 +1117,22 @@ def display_unapproved_imports(request):
     paginator = Paginator(data, items_per_page)
     page_number = request.GET.get('page', 1)
     try:
-        page_number = int(page_number)
-    except ValueError:
-        page_number = 1
-    try:
         data_on_page = paginator.page(page_number)
-    except:
+    except PageNotAnInteger:
+        data_on_page = paginator.page(1)
+    except EmptyPage:
+        data_on_page = paginator.page(paginator.num_pages)
+    except Exception as e:
+        messages.error(request, f"Pagination error: {str(e)}")
         data_on_page = paginator.page(1)
 
     data_with_pending = []
-    unapproved_count = data.count()
-    for item in data_on_page:
-        pending_update = item.pending_updates.order_by('-created_at').first()
+    unapproved_count = data.count()  # Correct for unapproved imports
+    for item in data_on_page.object_list:
+        pending_update = getattr(item, 'pending_updates', None).order_by('-created_at').first() if hasattr(item, 'pending_updates') else None
         data_with_pending.append({'item': item, 'pending_update': pending_update})
 
-    report_data = {'total_records': data.count(), 'search_query': search_query, 'items_per_page': items_per_page}
+    report_data = {'total_records': paginator.count, 'search_query': search_query, 'items_per_page': items_per_page}
     items_per_page_options = [10, 25, 50, 100, 500]
     total_devices = Import.objects.count() if request.user.is_superuser else (Import.objects.filter(centre=request.user.centre).count() if request.user.is_trainer and request.user.centre else 0)
     approved_imports = total_devices - unapproved_count if total_devices is not None and unapproved_count is not None else 0
@@ -1134,9 +1141,8 @@ def display_unapproved_imports(request):
         'data_with_pending': data_with_pending, 'paginator': paginator, 'data': data_on_page,
         'report_data': report_data, 'centres': Centre.objects.all(), 'items_per_page_options': items_per_page_options,
         'unapproved_count': unapproved_count, 'total_devices': total_devices, 'approved_imports': approved_imports,
+        'view_name': 'display_unapproved_imports'  # Added for pagination URL consistency
     })
-
-
 
 @login_required
 def device_history(request, pk):

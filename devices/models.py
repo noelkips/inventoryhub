@@ -26,6 +26,7 @@ class CustomUser(AbstractUser):
   
     def __str__(self):
         return self.username
+    
 class Import(models.Model):
     centre = models.ForeignKey(Centre, on_delete=models.SET_NULL, null=True, blank=True)
     department = models.CharField(max_length=100, blank=True, null=True)
