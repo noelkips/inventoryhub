@@ -1,45 +1,39 @@
 from django.db import models
-from django.utils import timezone
+from django.conf import settings
+from devices.models import Import, Centre
 
-# Create your models here.
+class PPMPeriod(models.Model):
+    name = models.CharField(max_length=255)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    is_active = models.BooleanField(default=False)
+    activities = models.ManyToManyField('PPMActivity', blank=True)
 
-class PPM(models.Model):
-    DEVICE = (
-        ('PC', 'PC'),
-        ('Monitor', 'Monitor'),
-        ('Keyboard', 'Keyboard'),
-        ('Printer', 'Printer'),
-        ('UPS', 'UPS'),
-    )
-    device = models.CharField(max_length=100, choices= DEVICE)
-    # device_name = models.CharField(max_length=100, unique=True)
-    device_model = models.CharField(max_length=500)
-    serial_number = models.CharField(max_length=100, unique=True)
-    # it_staff = models.ForeignKey(ITStaff, on_delete=models.CASCADE)
-    done_by = models.CharField(max_length=500)
-    centre = models.CharField(max_length=500)
-    department = models.CharField(max_length=500)
-    ACTIVITIES = (
-        ('Complete static dust extraction', 'Complete static dust extraction'),
-        ('Internal Cleaning', 'Internal Cleaning'),
-        ('Clean and inspect power supply', 'Clean and inspect power supply'),
-        ('Cable ties and arrangement', 'Cable ties and arrangement'),
-        ('Inspect for loose screws and corrosion', 'Inspect for loose screws and corrosion'),
-        ('Detailed external cleaning', 'Detailed external cleaning'),
-        ('System test and verification', 'System test and verification'),
-        ('Check for software loaded in the PC', 'Check for software loaded in the PC'),
-        ('Load the latest antivirus on the PC', 'Load the latest antivirus on the PC'),
-        ('Clean and lubricate moving parts/gears', 'Clean and lubricate moving parts/gears'),
-        ('Test printer, working properly', 'Test printer, working properly'),
-        ('Returned', 'Returned'),
-        
-    )
-    activities = models.CharField(max_length=500, choices=ACTIVITIES)
-    # activities = MultiSelectField(choices=ACTIVITIES, max_length=1000)
-    issues = models.CharField(max_length=1000)
-    recommendations = models.CharField(max_length=1000)
-    date = models.DateTimeField(default=timezone.now)
-    # date = models.DateTimeField(auto_now=True)
+    def save(self, *args, **kwargs):
+        if self.is_active:
+            # Deactivate all other periods
+            PPMPeriod.objects.filter(is_active=True).exclude(id=self.id).update(is_active=False)
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.serial_number
+        return self.name
+
+class PPMActivity(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+class PPMTask(models.Model):
+    device = models.ForeignKey(Import, on_delete=models.CASCADE, related_name='ppm_tasks')
+    period = models.ForeignKey(PPMPeriod, on_delete=models.CASCADE)
+    activities = models.ManyToManyField(PPMActivity)
+    completed_date = models.DateField(null=True, blank=True)
+    remarks = models.TextField(blank=True, null=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"PPM Task for {self.device.serial_number} - {self.period.name}"

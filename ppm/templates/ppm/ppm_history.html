@@ -1,0 +1,151 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script>{% extends 'dashboard.html' %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <h2 class="text-2xl font-bold mb-4 text-gray-800">PPM History {% if device_id %}for Device ID {{ device_id }}{% endif %}</h2>
+
+    <!-- Messages -->
+    {% if messages %}
+        <div class="mb-4">
+            {% for message in messages %}
+                <div class="bg-{{ message.tags }}-100 border border-{{ message.tags }}-400 text-{{ message.tags }}-700 px-4 py-3 rounded-lg mb-2" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Filters -->
+    <div class="bg-white p-4 rounded-lg shadow-md mb-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label for="search" class="block text-gray-700 font-medium mb-1">Search</label>
+                <input type="text" name="search" id="search" value="{{ report_data.search_query }}" class="w-full border rounded-md p-2" placeholder="Serial, User, Department">
+            </div>
+            {% if user.is_superuser %}
+                <div>
+                    <label for="centre" class="block text-gray-700 font-medium mb-1">Centre</label>
+                    <select name="centre" id="centre" class="w-full border rounded-md p-2">
+                        <option value="">All Centres</option>
+                        {% for centre in centres %}
+                            <option value="{{ centre.id }}" {% if report_data.centre_filter == centre.id|stringformat:"s" %}selected{% endif %}>{{ centre.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endif %}
+            <div>
+                <label for="items_per_page" class="block text-gray-700 font-medium mb-1">Items per Page</label>
+                <select name="items_per_page" id="items_per_page" class="w-full border rounded-md p-2" onchange="this.form.submit()">
+                    {% for option in items_per_page_options %}
+                        <option value="{{ option }}" {% if report_data.items_per_page == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Filter</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tasks Table -->
+    <div class="bg-white p-4 rounded-lg shadow-md">
+        <h3 class="text-lg font-semibold mb-4 text-gray-800">PPM Tasks ({{ report_data.total_records }})</h3>
+        {% if tasks %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border">
+                    <thead>
+                        <tr class="bg-gray-200 text-gray-600">
+                            <th class="py-3 px-4 border text-left">Device Serial</th>
+                            <th class="py-3 px-4 border text-left">Period</th>
+                            <th class="py-3 px-4 border text-left">Activities</th>
+                            <th class="py-3 px-4 border text-left">Completed Date</th>
+                            <th class="py-3 px-4 border text-left">Remarks</th>
+                            <th class="py-3 px-4 border text-left">Centre</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in tasks %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="py-2 px-4 border">{{ task.device.serial_number }}</td>
+                                <td class="py-2 px-4 border">{{ task.period.name }}</td>
+                                <td class="py-2 px-4 border">
+                                    {% for activity in task.activities.all %}
+                                        {{ activity.name }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </td>
+                                <td class="py-2 px-4 border">{{ task.completed_date|default:"N/A" }}</td>
+                                <td class="py-2 px-4 border">{{ task.remarks|default:"N/A" }}</td>
+                                <td class="py-2 px-4 border">{{ task.device.centre.name }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <!-- Pagination -->
+            {% if paginator.num_pages > 1 %}
+                <div class="mt-4 flex justify-between items-center">
+                    <div>
+                        Showing {{ tasks.start_index }} to {{ tasks.end_index }} of {{ report_data.total_records }} tasks
+                    </div>
+                    <div class="flex space-x-2">
+                        {% if tasks.has_previous %}
+                            <a href="?page={{ tasks.previous_page_number }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}" class="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700">Previous</a>
+                        {% endif %}
+                        {% for num in paginator.page_range %}
+                            {% if num == tasks.number %}
+                                <span class="px-3 py-1 bg-blue-600 text-white rounded-md">{{ num }}</span>
+                            {% else %}
+                                <a href="?page={{ num }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">{{ num }}</a>
+                            {% endif %}
+                        {% endfor %}
+                        {% if tasks.has_next %}
+                            <a href="?page={{ tasks.next_page_number }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}" class="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700">Next</a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        {% else %}
+            <p class="text-gray-600">No PPM tasks found.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,202 @@
+[
+  {
+    "model": "devices.customuser",
+    "pk": 1,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$SRhPvObXZzVlmqQlOlmRje$0lSbVodFvemZEYArwgBm0799KReV3EDHSr+BV2kyMQs=",
+      "last_login": "2025-08-22T12:23:14.964Z",
+      "is_superuser": true,
+      "username": "santana.macharia",
+      "first_name": "Santana",
+      "last_name": "Macharia",
+      "email": "santana.macharia@mohiafrica.org",
+      "is_active": true,
+      "date_joined": "2025-08-21T13:13:46.732Z",
+      "is_trainer": false,
+      "is_staff": true,
+      "centre": null,
+      "user_permissions": [],
+      "groups": [1]
+    }
+  },
+  {
+    "model": "devices.customuser",
+    "pk": 2,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$SGcdESCyxEwWTwrMj7woTw$iAwsLOYYIPhFaX7S+CFrianX/EmvVQ9sR3Ofa+kQfMw=",
+      "last_login": "2025-08-25T08:07:40.656Z",
+      "is_superuser": true,
+      "username": "john.mwangi",
+      "first_name": "john",
+      "last_name": "mwangi",
+      "email": "john.mwangi@mohiafrica.org",
+      "is_active": true,
+      "date_joined": "2025-08-22T10:02:23.753Z",
+      "is_trainer": false,
+      "is_staff": true,
+      "centre": null,
+      "user_permissions": [],
+      "groups": [1]
+    }
+  },
+  {
+    "model": "devices.customuser",
+    "pk": 3,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$RouLLdB0c8GFgJoI5xETBu$wRBvSVFgcWW4kaWnXvtAVOTWfcLur55hxuK5QTsUkEQ=",
+      "last_login": "2025-08-22T11:00:32.602Z",
+      "is_superuser": true,
+      "username": "gerald.kamande",
+      "first_name": "Gerald",
+      "last_name": "Kamande",
+      "email": "gerald.kamande@mohiafrica.org",
+      "is_active": true,
+      "date_joined": "2025-08-22T10:02:36.808Z",
+      "is_trainer": false,
+      "is_staff": true,
+      "centre": null,
+      "user_permissions": [],
+      "groups": [1]
+    }
+  },
+  {
+    "model": "devices.customuser",
+    "pk": 4,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$KHhvuvKzqwWkVymK8wU7z0$R1wCvKYUBZIwPgnw2LUUqTOrxAnV9vWB4D1xSm/jRhA=",
+      "last_login": null,
+      "is_superuser": true,
+      "username": "sylvia.wanjiru",
+      "first_name": "sylvia",
+      "last_name": "wanjiru",
+      "email": "sylvia.wanjiru@mohiafrica.org",
+      "is_active": true,
+      "date_joined": "2025-08-22T10:04:02.622Z",
+      "is_trainer": false,
+      "is_staff": true,
+      "centre": null,
+      "user_permissions": [],
+      "groups": [1]
+    }
+  },
+  {
+    "model": "devices.customuser",
+    "pk": 5,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$AKYn51hWwvDhbQC4hEfZsI$saf0NoyiCrcRZA9h7NDP725/LreG568c/qFJiuDl+pw=",
+      "last_login": "2025-08-25T10:05:00.835Z",
+      "is_superuser": true,
+      "username": "glen.osano",
+      "first_name": "Glen",
+      "last_name": "Osano",
+      "email": "glen.osano@mohiafrica.org",
+      "is_active": true,
+      "date_joined": "2025-08-22T10:04:52.615Z",
+      "is_trainer": false,
+      "is_staff": true,
+      "centre": null,
+      "user_permissions": [],
+      "groups": [1]
+    }
+  },
+  {
+    "model": "devices.customuser",
+    "pk": 6,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$LvFbXL1L8Sf5fS5qZjQoLH$g0AuavDQ8rT1Jto7jCB+GuEC+fmUd9pf4IPdxEvJEiw=",
+      "last_login": null,
+      "is_superuser": true,
+      "username": "samuel.kamande",
+      "first_name": "Samuel",
+      "last_name": "Kamande",
+      "email": "samuel.kamande@mohiafrica.org",
+      "is_active": true,
+      "date_joined": "2025-08-22T10:06:04.919Z",
+      "is_trainer": false,
+      "is_staff": true,
+      "centre": null,
+      "user_permissions": [],
+      "groups": [1]
+    }
+  },
+  {
+    "model": "devices.customuser",
+    "pk": 7,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$FXGuu8obD55ZzG79eJE4Ut$XpQrF+SfvMxMgPgg1xqGLikUUHtBsAmzIpwhL6g1SQc=",
+      "last_login": "2025-08-26T07:31:18.428Z",
+      "is_superuser": true,
+      "username": "noel.langat",
+      "first_name": "noel",
+      "last_name": "langat",
+      "email": "noel.langat@mohiafrica.org",
+      "is_active": true,
+      "date_joined": "2025-08-22T10:06:24.469Z",
+      "is_trainer": false,
+      "is_staff": true,
+      "centre": null,
+      "user_permissions": [],
+      "groups": [1]
+    }
+  },
+  {
+    "model": "devices.customuser",
+    "pk": 8,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$9iuSU9duazMiucODH2vsZR$BB2aITfPIYrRftwsdLaPVqrw34P8CCbTmDe3Yf8ZZE4=",
+      "last_login": "2025-08-25T10:33:01.134Z",
+      "is_superuser": true,
+      "username": "ezra.ndonga",
+      "first_name": "Ezra",
+      "last_name": "Ndonga",
+      "email": "ezra.ndonga@mohiafrica.org",
+      "is_active": true,
+      "date_joined": "2025-08-22T10:07:06.308Z",
+      "is_trainer": false,
+      "is_staff": true,
+      "centre": null,
+      "user_permissions": [],
+      "groups": [1]
+    }
+  },
+  {
+    "model": "devices.customuser",
+    "pk": 9,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$hnWrRq9MEEnkhLbIobYWgs$VFFHBnRoz9GTK7yYkQmxp5fTMhhQmHvCbfRULdiu2ys=",
+      "last_login": "2025-08-25T08:26:26.506Z",
+      "is_superuser": false,
+      "username": "phillip.ndolo",
+      "first_name": "Phillip",
+      "last_name": "Ndolo",
+      "email": "phillip.ndolo@mohiafrica.org",
+      "is_active": true,
+      "date_joined": "2025-08-25T08:24:49.470Z",
+      "is_trainer": true,
+      "is_staff": true,
+      "centre": null,
+      "user_permissions": [],
+      "groups": [7]
+    }
+  },
+  {
+    "model": "devices.customuser",
+    "pk": 10,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$CoSwj6hAmGj9ySwP8tx8F9$25mjzcOzQVccFPb/uNWwecK2FFAH4KjNCWJfPQfNDQI=",
+      "last_login": "2025-08-25T09:15:45.946Z",
+      "is_superuser": true,
+      "username": "ephrem.onyango",
+      "first_name": "ephrem",
+      "last_name": "Onyango",
+      "email": "ephrem.onyango@mohiafrica.org",
+      "is_active": true,
+      "date_joined": "2025-08-25T09:07:33.095Z",
+      "is_trainer": false,
+      "is_staff": true,
+      "centre": null,
+      "user_permissions": [],
+      "groups": [1]
+    }
+  }
+]

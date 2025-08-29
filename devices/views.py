@@ -1127,7 +1127,7 @@ def display_unapproved_imports(request):
         data_on_page = paginator.page(1)
 
     data_with_pending = []
-    unapproved_count = data.count()  # Correct for unapproved imports
+    unapproved_count = len(data)  # Use len() instead of count() for list
     for item in data_on_page.object_list:
         pending_update = getattr(item, 'pending_updates', None).order_by('-created_at').first() if hasattr(item, 'pending_updates') else None
         data_with_pending.append({'item': item, 'pending_update': pending_update})
@@ -1141,7 +1141,7 @@ def display_unapproved_imports(request):
         'data_with_pending': data_with_pending, 'paginator': paginator, 'data': data_on_page,
         'report_data': report_data, 'centres': Centre.objects.all(), 'items_per_page_options': items_per_page_options,
         'unapproved_count': unapproved_count, 'total_devices': total_devices, 'approved_imports': approved_imports,
-        'view_name': 'display_unapproved_imports'  # Added for pagination URL consistency
+        'view_name': 'display_unapproved_imports'
     })
 
 @login_required
