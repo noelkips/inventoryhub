@@ -10,6 +10,15 @@ class Centre(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.centre_code})"
+    
+
+class Department(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    department_code = models.CharField(max_length=30, unique=True)
+
+    def __str__(self):
+        return self.name
+
 
 class CustomUser(AbstractUser):
     is_trainer = models.BooleanField(default=False)
@@ -29,7 +38,8 @@ class CustomUser(AbstractUser):
     
 class Import(models.Model):
     centre = models.ForeignKey(Centre, on_delete=models.SET_NULL, null=True, blank=True)
-    department = models.CharField(max_length=100, blank=True, null=True)
+    # department = models.CharField(max_length=100, blank=True, null=True)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, default=1)
     hardware = models.CharField(max_length=100, blank=True, null=True)
     system_model = models.CharField(max_length=100, blank=True, null=True)
     processor = models.CharField(max_length=100, blank=True, null=True)
@@ -57,10 +67,37 @@ class Import(models.Model):
     def __str__(self):
         return f"{self.serial_number} ({self.centre.name if self.centre else 'No Centre'})"
 
+class Clearance(models.Model):
+    device = models.ForeignKey(Import, on_delete=models.CASCADE, related_name='clearances')
+    cleared_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='clearances')
+    clearance_date = models.DateField(auto_now_add=True)
+    remarks = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        # Get the user from kwargs if provided
+        user = kwargs.pop('user', None)
+        # Clear assignee fields, set status to 'Available', and department to default (id=1)
+        self.device.assignee_first_name = None
+        self.device.assignee_last_name = None
+        self.device.assignee_email_address = None
+        self.device.status = 'Available'
+        self.device.department_id = 1  # Set to default department (id=1)
+        # Set reason_for_update for history tracking
+        self.device.reason_for_update = f"Device cleared by {self.cleared_by.username if self.cleared_by else 'Unknown'}"
+        # Pass the user to Import's save for history tracking
+        self.device.save(user=user)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Clearance for {self.device.serial_number} by {self.cleared_by}"
+
+
 class PendingUpdate(models.Model):
     import_record = models.ForeignKey(Import, on_delete=models.CASCADE, related_name='pending_updates')
     centre = models.ForeignKey(Centre, on_delete=models.SET_NULL, null=True, blank=True)
-    department = models.CharField(max_length=100, blank=True, null=True)
+    # department = models.CharField(max_length=100, blank=True, null=True)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, default=1)
     hardware = models.CharField(max_length=100, blank=True, null=True)
     system_model = models.CharField(max_length=100, blank=True, null=True)
     processor = models.CharField(max_length=100, blank=True, null=True)

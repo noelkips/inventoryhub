@@ -1,0 +1,210 @@
+[
+  {
+    "model": "devices.department",
+    "pk": 1,
+    "fields": {
+      "name": "Education",
+      "department_code": "DEPT_1"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 2,
+    "fields": {
+      "name": "CEO's Office",
+      "department_code": "DEPT_2"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 3,
+    "fields": {
+      "name": "Internal Audit",
+      "department_code": "DEPT_3"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 4,
+    "fields": {
+      "name": "Special Projects",
+      "department_code": "DEPT_4"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 5,
+    "fields": {
+      "name": "Administration & Logistics",
+      "department_code": "DEPT_5"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 6,
+    "fields": {
+      "name": "Finance",
+      "department_code": "DEPT_6"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 7,
+    "fields": {
+      "name": "Infrastructure Development",
+      "department_code": "DEPT_7"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 8,
+    "fields": {
+      "name": "Procurement",
+      "department_code": "DEPT_8"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 9,
+    "fields": {
+      "name": "Security & Safety",
+      "department_code": "DEPT_9"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 10,
+    "fields": {
+      "name": "Human Resource Development",
+      "department_code": "DEPT_10"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 11,
+    "fields": {
+      "name": "Child Sponsorship",
+      "department_code": "DEPT_11"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 12,
+    "fields": {
+      "name": "Church Planting",
+      "department_code": "DEPT_12"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 13,
+    "fields": {
+      "name": "Communication",
+      "department_code": "DEPT_13"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 14,
+    "fields": {
+      "name": "DDC Department (Angaza)",
+      "department_code": "DEPT_14"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 15,
+    "fields": {
+      "name": "Growth & Expansion",
+      "department_code": "DEPT_15"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 16,
+    "fields": {
+      "name": "IT Department",
+      "department_code": "DEPT_16"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 17,
+    "fields": {
+      "name": "MSV (includes Elpida)",
+      "department_code": "DEPT_17"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 18,
+    "fields": {
+      "name": "Partnerships",
+      "department_code": "DEPT_18"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 19,
+    "fields": {
+      "name": "Social Work",
+      "department_code": "DEPT_19"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 20,
+    "fields": {
+      "name": "Leadership Development",
+      "department_code": "DEPT_20"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 21,
+    "fields": {
+      "name": "MEAL",
+      "department_code": "DEPT_21"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 22,
+    "fields": {
+      "name": "Health",
+      "department_code": "DEPT_22"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 23,
+    "fields": {
+      "name": "MCL",
+      "department_code": "DEPT_23"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 24,
+    "fields": {
+      "name": "Mentorship",
+      "department_code": "DEPT_24"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 25,
+    "fields": {
+      "name": "MTTI",
+      "department_code": "DEPT_25"
+    }
+  },
+  {
+    "model": "devices.department",
+    "pk": 26,
+    "fields": {
+      "name": "Spiritual Development",
+      "department_code": "DEPT_26"
+    }
+  }
+]

@@ -9,7 +9,7 @@ from django.contrib.auth.models import Group
 from django.utils.html import format_html
 from django.shortcuts import get_object_or_404
 from .views import handle_uploaded_file
-from .models import CustomUser, Import, Centre, Report
+from .models import CustomUser, Department, Import, Centre, Report
 from .forms import ImportForm
 from django.core.files.uploadedfile import SimpleUploadedFile
 from io import BytesIO
@@ -251,5 +251,6 @@ class ReportAdmin(admin.ModelAdmin):
 
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(Centre)
+admin.site.register(Department)
 admin.site.register(Import, ImportAdmin)
 admin.site.register(Report, ReportAdmin)

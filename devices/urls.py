@@ -24,6 +24,8 @@ urlpatterns = [
     path('import/delete/<int:pk>/', views.import_delete, name='import_delete'),
     path('import/approve/<int:pk>/', views.import_approve, name='import_approve'),
     path('import/approve_all/', views.import_approve_all, name='import_approve_all'),
+    path('devices/<int:device_id>/clear/', views.clear_user, name='clear_user'),
+    path('devices/<int:device_id>/download_clearance/', views.download_clearance_form, name='download_clearance_form'),
     
     path('imports/add/', views.imports_add, name='imports_add'),
     path('imports/view/', views.imports_view, name='imports_view'),

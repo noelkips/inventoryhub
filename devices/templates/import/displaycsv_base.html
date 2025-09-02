@@ -1,4 +1,7 @@
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+{% load static %}
+
+
 <script type="text/javascript">
     var gk_isXlsx = false;
     var gk_xlsxFileLookup = {};
@@ -20,11 +23,11 @@
 
                 // Heuristic to find the header row
                 var headerRowIndex = filteredData.findIndex((row, index) =>
-                    row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
                 );
                 // Fallback
                 if (headerRowIndex === -1 || headerRowIndex > 25) {
-                    headerRowIndex = 0;
+                  headerRowIndex = 0;
                 }
 
                 // Convert filtered JSON back to CSV
@@ -131,8 +134,13 @@
                         <td class="py-2 px-4 border">{{ item.centre.name|default:"N/A" }}</td>
                         <td class="py-2 px-4 border">{{ item.assignee_first_name|default:"N/A" }} {{ item.assignee_last_name|default:"" }}</td>
                         <td class="py-2 px-4 border">
-                            <strong>Status:</strong> {{ item.status|default:"N/A" }}<br>
-                            <strong>Date:</strong> {{ item.date|default:"N/A" }}
+                            <p class="">Date added: {{ item.date|default:"N/A" }}<br>
+                            {% if item.status == 'Available' %}
+                                <button class="bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 transition duration-200" onclick="openModal('editModal{{ item.id }}')">Reassign user</button>
+                            {% else %}
+                                <strong>Status:</strong> {{ item.status|default:"N/A" }}
+                            {% endif %}
+                            </p>
                         </td>
                         <td class="py-2 px-4 border flex space-x-2">
                             <button class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition duration-200" onclick="openModal('viewModal{{ item.id }}')">View</button>
@@ -159,7 +167,7 @@
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div>
                                         <p class="mb-2"><strong class="text-gray-700">Centre:</strong> {{ item.centre.name|default:"N/A" }}</p>
-                                        <p class="mb-2"><strong class="text-gray-700">Department:</strong> {{ item.department|default:"N/A" }}</p>
+                                        <p class="mb-2"><strong class="text-gray-700">Department:</strong> {{ item.department.name|default:"N/A" }}</p>
                                         <p class="mb-2"><strong class="text-gray-700">Hardware:</strong> {{ item.hardware|default:"N/A" }}</p>
                                         <p class="mb-2"><strong class="text-gray-700">System Model:</strong> {{ item.system_model|default:"N/A" }}</p>
                                         <p class="mb-2"><strong class="text-gray-700">Processor:</strong> {{ item.processor|default:"N/A" }}</p>
@@ -182,7 +190,9 @@
                                         <p class="mb-2"><strong class="text-gray-700">Reason for Update:</strong> {{ item.reason_for_update|default:"N/A" }}</p>
                                     </div>
                                 </div>
-                                <div class="mt-6 flex justify-end">
+                                <div class="mt-6 flex justify-end space-x-2">
+                                    <a href="{% url 'clear_user' item.id %}" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition duration-200">Clear User</a>
+                                    <a href="{% url 'download_clearance_form' item.id %}" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition duration-200">Download Clearance Form</a>
                                     <button class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200" onclick="closeModal('viewModal{{ item.id }}')">Close</button>
                                 </div>
                             </div>
@@ -215,7 +225,12 @@
                                                 </div>
                                                 <div class="mb-4">
                                                     <label class="block text-gray-700 font-medium mb-1">Department</label>
-                                                    <input type="text" name="department" value="{{ item.department|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                    <select name="department" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                                        <option value="">Select Department</option>
+                                                        {% for dept in departments %}
+                                                            <option value="{{ dept.id }}" {% if dept.id == item.department.id %}selected{% endif %}>{{ dept.name }} ({{ dept.department_code }})</option>
+                                                        {% endfor %}
+                                                    </select>
                                                 </div>
                                                 <div class="mb-4">
                                                     <label class="block text-gray-700 font-medium mb-1">Hardware</label>
@@ -382,7 +397,8 @@
                     {% endif %}
                     {% for num in paginator.page_range %}
                         {% if num >= data.number|add:-2 and num <= data.number|add:2 %}
-                            <a href="{% url view_name|default:'display_unapproved_imports' %}?page={{ num }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}" class="px-2 py-1 border rounded {% if num == data.number %}bg-blue-600 text-white{% else %}hover:bg-gray-200{% endif %} transition duration-200">{{ num }}</a>
+                            <a href="{% url view_name|default:'display_unapproved_imports' %}?page={{ num }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}" class="px-2 py-1 border rounded {% if num == data.number %}bg-blue-6
+00 text-white{% else %}hover:bg-gray-200{% endif %} transition duration-200">{{ num }}</a>
                         {% endif %}
                     {% endfor %}
                     {% if data.has_next %}

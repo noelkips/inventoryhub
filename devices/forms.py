@@ -1,5 +1,5 @@
 from django import forms
-from .models import Import
+from .models import Clearance, Import
 
 class ImportForm(forms.ModelForm):
     file = forms.FileField(
@@ -29,3 +29,14 @@ class ImportForm(forms.ModelForm):
             if file.size == 0:
                 raise forms.ValidationError('The uploaded file is empty.')
         return file
+    
+
+
+
+class ClearanceForm(forms.ModelForm):
+    class Meta:
+        model = Clearance
+        fields = ['remarks']
+        widgets = {
+            'remarks': forms.Textarea(attrs={'rows': 4, 'class': 'w-full border rounded-md p-2'}),
+        }

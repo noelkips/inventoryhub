@@ -1,8 +1,11 @@
+from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db import transaction
 
-from .models import CustomUser, Import, Centre, Notification, PendingUpdate
+from devices.forms import ClearanceForm
+
+from .models import CustomUser, Import, Centre, Notification, PendingUpdate, Department
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 from reportlab.pdfgen import canvas
@@ -30,14 +33,10 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.enums import TA_LEFT
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404, redirect
-from django.contrib import messages
-from django.db import transaction
-from datetime import datetime
 from django.contrib.contenttypes.models import ContentType
 
 from django.http import HttpResponseRedirect
+from django.template.loader import render_to_string
 
 # Set up logging for debugging
 logger = logging.getLogger(__name__)
@@ -45,7 +44,7 @@ logger = logging.getLogger(__name__)
 def handle_uploaded_file(file, user):
     header_mapping = {
         'centre_code': 'centre_code',
-        'department': 'department',
+        'department': 'department_code',
         'hardware': 'hardware',
         'system_model': 'system_model',
         'processor': 'processor',
@@ -71,9 +70,11 @@ def handle_uploaded_file(file, user):
         headers = [h.lower().strip() for h in headers]
         print(f"Headers: {headers}")
 
-        # Check for centre_code header
+        # Check for required headers
         if 'centre_code' not in headers:
             raise ValueError("Missing required header: centre_code")
+        if 'department_code' not in headers:
+            raise ValueError("Missing required header: department")
 
         centre_code_index = headers.index('centre_code')
         import_instances = []
@@ -104,7 +105,15 @@ def handle_uploaded_file(file, user):
                 value = value.strip()
                 field_name = header_mapping.get(header)
                 if field_name and field_name != 'centre_code':  # Avoid reprocessing centre_code
-                    if field_name == 'date' and value:
+                    if field_name == 'department_code':
+                        try:
+                            department = Department.objects.get(code=value) if value else None
+                            setattr(import_instance, 'department', department)
+                            print(f"Setting department to {department.name if department else None} (code: {value})")
+                        except Department.DoesNotExist:
+                            print(f"Department with code {value} not found, setting to None")
+                            setattr(import_instance, 'department', None)
+                    elif field_name == 'date' and value:
                         try:
                             for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'):
                                 try:
@@ -184,102 +193,6 @@ def upload_csv(request):
     else:
         return render(request, 'import/uploadcsv.html', {'centres': Centre.objects.all()})
 
-
-
-# @login_required
-# def display_csv(request, approval_status):
-#     if request.user.is_superuser:
-#         data = Import.objects.all()
-#         logger.debug("Superuser: Fetching all Import records")
-#     elif request.user.is_trainer:
-#         if not request.user.centre:
-#             logger.warning(f"Trainer {request.user.username} has no associated centre")
-#             data = Import.objects.none()
-#         else:
-#             data = Import.objects.filter(centre=request.user.centre)
-#             logger.debug(f"Trainer {request.user.username}: Fetching records for centre {request.user.centre}, count: {data.count()}")
-#     else:
-#         data = Import.objects.none()
-#         logger.debug(f"User {request.user.username} is neither superuser nor trainer")
-
-#     search_query = request.GET.get('search', '')
-#     if search_query:
-#         query = (
-#             Q(centre__name__icontains=search_query) |
-#             Q(centre__centre_code__icontains=search_query) |
-#             Q(department__icontains=search_query) |
-#             Q(hardware__icontains=search_query) |
-#             Q(system_model__icontains=search_query) |
-#             Q(processor__icontains=search_query) |
-#             Q(ram_gb__icontains=search_query) |
-#             Q(hdd_gb__icontains=search_query) |
-#             Q(serial_number__icontains=search_query) |
-#             Q(assignee_first_name__icontains=search_query) |
-#             Q(assignee_last_name__icontains=search_query) |
-#             Q(assignee_email_address__icontains=search_query) |
-#             Q(device_condition__icontains=search_query) |
-#             Q(status__icontains=search_query) |
-#             Q(date__icontains=search_query) |
-#             Q(reason_for_update__icontains=search_query)
-#         )
-#         data = data.filter(query)
-#         logger.debug(f"Applied search query '{search_query}': {data.count()} records found")
-
-#     items_per_page = request.GET.get('items_per_page', '10')
-#     try:
-#         items_per_page = int(items_per_page)
-#         if items_per_page not in [10, 25, 50, 100, 500]:
-#             items_per_page = 10
-#     except ValueError:
-#         items_per_page = 10
-
-#     paginator = Paginator(data, items_per_page)
-#     page_number = request.GET.get('page', 1)
-
-#     try:
-#         page_number = int(page_number)
-#     except ValueError:
-#         page_number = 1
-
-#     try:
-#         data_on_page = paginator.page(page_number)
-#     except PageNotAnInteger:
-#         data_on_page = paginator.page(1)
-#     except EmptyPage:
-#         data_on_page = paginator.page(paginator.num_pages)
-
-#     logger.debug(f"Page {page_number}: {len(data_on_page)} records, Total pages: {paginator.num_pages}")
-
-#     # Prepare data with pending updates and count unapproved records
-#     data_with_pending = []
-#     unapproved_count = 0
-#     for item in data_on_page:
-#         pending_update = item.pending_updates.order_by('-created_at').first()
-#         data_with_pending.append({
-#             'item': item,
-#             'pending_update': pending_update
-#         })
-#         if not item.is_approved:
-#             unapproved_count += 1
-
-#     report_data = {
-#         'total_records': data.count(),
-#         'search_query': search_query,
-#         'items_per_page': items_per_page,
-#     }
-
-#     items_per_page_options = [10, 25, 50, 100, 500]
-
-#     return render(request, 'import/displaycsv.html', {
-#         'data_with_pending': data_with_pending,
-#         'paginator': paginator,
-#         'data': data_on_page,
-#         'report_data': report_data,
-#         'centres': Centre.objects.all(),
-#         'items_per_page_options': items_per_page_options,
-#         'unapproved_count': unapproved_count
-#     })
-
 @login_required
 def import_add(request):
     if request.method == 'POST':
@@ -324,10 +237,15 @@ def import_add(request):
                         if not value:
                             messages.error(request, f"{field_name.replace('_', ' ').title()} is required.")
                             return redirect('import_add')
+                    department_id = request.POST.get('department')
+                    department = Department.objects.get(id=department_id) if department_id and department_id != 'None' else None
+                    if not department:
+                        messages.error(request, "Department is required.")
+                        return redirect('import_add')
                     import_instance = Import(
                         added_by=request.user,
                         centre=centre,
-                        department=request.POST.get('department'),
+                        department=department,
                         hardware=request.POST.get('hardware'),
                         system_model=request.POST.get('system_model'),
                         processor=request.POST.get('processor'),
@@ -352,15 +270,14 @@ def import_add(request):
             except Centre.DoesNotExist:
                 messages.error(request, "Invalid centre selected.")
                 return redirect('import_add')
+            except Department.DoesNotExist:
+                messages.error(request, "Invalid department selected.")
+                return redirect('import_add')
             except Exception as e:
                 messages.error(request, f"Error adding record: {str(e)}")
                 return redirect('import_add')
-    return render(request, 'import/add.html', {'centres': Centre.objects.all()})
+    return render(request, 'import/add.html', {'centres': Centre.objects.all(), 'departments': Department.objects.all()})
 
-
-
-# Configure logging
-logger = logging.getLogger(__name__)
 @login_required
 def import_update(request, pk):
     import_instance = get_object_or_404(Import, pk=pk)
@@ -382,12 +299,14 @@ def import_update(request, pk):
                 if serial_number and Import.objects.filter(serial_number=serial_number).exclude(id=pk).exists():
                     messages.error(request, f"Serial number {serial_number} already exists.")
                     return redirect('display_csv')
+                department_id = request.POST.get('department')
+                department = Department.objects.get(id=department_id) if department_id and department_id != 'None' else None
                 if request.user.is_trainer:
                     # Store pending update
                     pending_update = PendingUpdate.objects.create(
                         import_record=import_instance,
                         centre=centre,
-                        department=request.POST.get('department', ''),
+                        department=department,
                         hardware=request.POST.get('hardware', ''),
                         system_model=request.POST.get('system_model', ''),
                         processor=request.POST.get('processor', ''),
@@ -411,7 +330,7 @@ def import_update(request, pk):
                 else:
                     # Apply update directly for superusers
                     import_instance.centre = centre
-                    import_instance.department = request.POST.get('department', '')
+                    import_instance.department = department
                     import_instance.hardware = request.POST.get('hardware', '')
                     import_instance.system_model = request.POST.get('system_model', '')
                     import_instance.processor = request.POST.get('processor', '')
@@ -437,13 +356,14 @@ def import_update(request, pk):
                     import_instance.save()
                     messages.success(request, "Record updated successfully.")
                     return redirect('display_csv')
+        except Department.DoesNotExist:
+            messages.error(request, "Invalid department selected.")
+            return redirect('display_csv')
         except Exception as e:
             logger.error(f"Error updating record: {str(e)}")
             messages.error(request, f"Error updating record: {str(e)}")
             return redirect('display_csv')
     return redirect('display_csv')
-
-
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser and not u.is_trainer)
@@ -480,19 +400,8 @@ def import_approve(request, pk):
                 import_instance.approved_by = request.user
                 import_instance.save()
                 messages.success(request, "Record approved successfully.")
-            
-            # # Mark related notifications as read
-            # content_type = ContentType.objects.get_for_model(Import)
-            # Notification.objects.filter(
-            #     content_type=content_type,
-            #     object_id=import_instance.pk,
-            #     is_read=False
-            # ).update(is_read=True)
-            
             return redirect('display_csv')
     return redirect('display_csv')
-
-
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser and not u.is_trainer)
@@ -521,7 +430,7 @@ def import_approve_all(request):
             query = (
                 Q(centre__name__icontains=search_query) |
                 Q(centre__centre_code__icontains=search_query) |
-                Q(department__icontains=search_query) |
+                Q(department__code__icontains=search_query) |
                 Q(hardware__icontains=search_query) |
                 Q(system_model__icontains=search_query) |
                 Q(processor__icontains=search_query) |
@@ -611,7 +520,6 @@ def import_approve_all(request):
         return redirect(redirect_url)
     return redirect('display_csv')
 
-
 @login_required
 @user_passes_test(lambda u: not u.is_trainer)
 def import_delete(request, pk):
@@ -630,7 +538,6 @@ def imports_add(request):
 @login_required
 def imports_view(request):
     return display_approved_imports(request)
-
 
 @login_required
 def export_to_excel(request):
@@ -662,7 +569,7 @@ def export_to_excel(request):
         query = (
             Q(centre__name__icontains=search_query) |
             Q(centre__centre_code__icontains=search_query) |
-            Q(department__icontains=search_query) |
+            Q(department__code__icontains=search_query) |
             Q(hardware__icontains=search_query) |
             Q(system_model__icontains=search_query) |
             Q(processor__icontains=search_query) |
@@ -691,7 +598,7 @@ def export_to_excel(request):
     ws.title = "IT Inventory"
 
     headers = [
-        'Centre_code', 'Department', 'Hardware', 'System Model', 'Processor', 'RAM (GB)', 'HDD (GB)',
+        'Centre_code', 'Department Code', 'Hardware', 'System Model', 'Processor', 'RAM (GB)', 'HDD (GB)',
         'Serial Number', 'Assignee First Name', 'Assignee Last Name', 'Assignee Email',
         'Device Condition', 'Status', 'Date', 'Added By', 'Approved By', 'Is Approved', 'Reason for Update'
     ]
@@ -700,7 +607,7 @@ def export_to_excel(request):
     for item in data:
         ws.append([
             item.centre.centre_code if item.centre else 'N/A',
-            item.department or 'N/A',
+            item.department.code if item.department else 'N/A',
             item.hardware or 'N/A',
             item.system_model or 'N/A',
             item.processor or 'N/A',
@@ -749,14 +656,14 @@ def export_to_pdf(request):
     # Filter data with minimal fields to reduce memory usage
     if request.user.is_superuser and not request.user.is_trainer:
         data = Import.objects.only(
-            'centre__name', 'department', 'hardware', 'system_model', 'processor',
+            'centre__name', 'department__code', 'hardware', 'system_model', 'processor',
             'ram_gb', 'hdd_gb', 'serial_number', 'assignee_first_name',
             'assignee_last_name', 'assignee_email_address', 'device_condition',
             'status', 'date', 'reason_for_update'
         )
     elif request.user.is_trainer:
         data = Import.objects.filter(centre=request.user.centre).only(
-            'centre__name', 'department', 'hardware', 'system_model', 'processor',
+            'centre__name', 'department__code', 'hardware', 'system_model', 'processor',
             'ram_gb', 'hdd_gb', 'serial_number', 'assignee_first_name',
             'assignee_last_name', 'assignee_email_address', 'device_condition',
             'status', 'date', 'reason_for_update'
@@ -768,7 +675,8 @@ def export_to_pdf(request):
     if search_query:
         query = (
             Q(centre__name__icontains=search_query) |
-            Q(department__icontains=search_query) |
+            Q(centre__centre_code__icontains=search_query) |
+            Q(department__code__icontains=search_query) |
             Q(hardware__icontains=search_query) |
             Q(system_model__icontains=search_query) |
             Q(processor__icontains=search_query) |
@@ -817,9 +725,6 @@ def export_to_pdf(request):
     elements = []
 
     # Register font (optional: use DejaVuSans for Unicode support)
-    # Uncomment the following lines if you have DejaVuSans.ttf in your project
-    # pdfmetrics.registerFont(TTFont('DejaVuSans', 'path/to/DejaVuSans.ttf'))
-    # font_name = 'DejaVuSans'
     font_name = 'Helvetica'  # Default font for simplicity
 
     # Styles
@@ -858,7 +763,7 @@ def export_to_pdf(request):
         )
         centre_info = (
             f"<b>Centre:</b> {safe_str(item.centre.name if item.centre else 'N/A')}<br/>"
-            f"<b>Dept:</b> {safe_str(item.department)}"
+            f"<b>Dept:</b> {safe_str(item.department.code if item.department else 'N/A')}"
         )
         assignee_info = (
             f"<b>Name:</b> {safe_str(item.assignee_first_name)} {safe_str(item.assignee_last_name)}<br/>"
@@ -952,7 +857,6 @@ def profile(request):
         'centres': centres,
     })
 
-
 @login_required
 def change_password(request):
     if request.method == 'POST':
@@ -982,7 +886,6 @@ def change_password(request):
 
     return render(request, 'accounts/change_password.html', {})
 
-
 @login_required
 def device_history(request, pk):
     device = get_object_or_404(Import, pk=pk)
@@ -1005,9 +908,6 @@ def device_history(request, pk):
     context = {'device': device, 'history': history_data}
     return render(request, 'import/device_history.html', context)
 
-
-
-
 @login_required
 def display_approved_imports(request):
     if request.user.is_superuser:
@@ -1024,7 +924,7 @@ def display_approved_imports(request):
     if search_query:
         query = Q()
         for field in [
-            'centre__name', 'centre__centre_code', 'department', 'hardware',
+            'centre__name', 'centre__centre_code', 'department__code', 'hardware',
             'system_model', 'processor', 'ram_gb', 'hdd_gb', 'serial_number',
             'assignee_first_name', 'assignee_last_name', 'assignee_email_address',
             'device_condition', 'status', 'reason_for_update'
@@ -1071,14 +971,13 @@ def display_approved_imports(request):
 
     return render(request, 'import/displaycsv_approved.html', {
         'data_with_pending': data_with_pending, 'paginator': paginator, 'data': data_on_page,
-        'report_data': report_data, 'centres': Centre.objects.all(), 'items_per_page_options': items_per_page_options,
+        'report_data': report_data, 'centres': Centre.objects.all(),'departments': Department.objects.all(), 'items_per_page_options': items_per_page_options,
         'unapproved_count': unapproved_count, 'total_devices': total_devices, 'approved_imports': approved_imports,
         'view_name': 'display_approved_imports'  # Added for pagination URL consistency
     })
 
 @login_required
 def display_unapproved_imports(request):
-    print(f"Center: {request.user.centre}")
     if request.user.is_superuser:
         data = Import.objects.filter(is_approved=False)
     elif request.user.is_trainer:
@@ -1088,13 +987,12 @@ def display_unapproved_imports(request):
             data = Import.objects.filter(centre=request.user.centre, is_approved=False)
     else:
         data = Import.objects.none()
-    print(f"data: {data}")  # Debug the queryset
 
     search_query = request.GET.get('search', '').strip()
     if search_query:
         query = Q()
         for field in [
-            'centre__name', 'centre__centre_code', 'department', 'hardware',
+            'centre__name', 'centre__centre_code', 'department__code', 'hardware',
             'system_model', 'processor', 'ram_gb', 'hdd_gb', 'serial_number',
             'assignee_first_name', 'assignee_last_name', 'assignee_email_address',
             'device_condition', 'status', 'reason_for_update'
@@ -1139,61 +1037,10 @@ def display_unapproved_imports(request):
 
     return render(request, 'import/displaycsv_unapproved.html', {
         'data_with_pending': data_with_pending, 'paginator': paginator, 'data': data_on_page,
-        'report_data': report_data, 'centres': Centre.objects.all(), 'items_per_page_options': items_per_page_options,
+        'report_data': report_data, 'centres': Centre.objects.all(), 'departments': Department.objects.all(), 'items_per_page_options': items_per_page_options,
         'unapproved_count': unapproved_count, 'total_devices': total_devices, 'approved_imports': approved_imports,
         'view_name': 'display_unapproved_imports'
     })
-
-@login_required
-def device_history(request, pk):
-    device = get_object_or_404(Import, pk=pk)
-    history = device.history.all().order_by('-history_date')
-    
-    history_data = []
-    for record in history:
-        diff = {}
-        if record.prev_record:
-            changes = record.diff_against(record.prev_record)
-            if changes:  
-                for change in changes.changes:
-                    if len(change) == 2: 
-                        field, (old, new) = change
-                        diff[field] = {'old': old, 'new': new}
-        history_data.append({
-            'record': record,
-            'diff': diff,
-            'change_type': record.get_history_type_display() or record.history_type,
-        })
-
-    context = {'device': device, 'history': history_data}
-    return render(request, 'import/device_history.html', context)
-
-
-
-@login_required
-def device_history(request, pk):
-    device = get_object_or_404(Import, pk=pk)
-    history = device.history.all().order_by('-history_date')
-    
-    history_data = []
-    for record in history:
-        diff = {}
-        if record.prev_record:
-            changes = record.diff_against(record.prev_record)
-            if changes:
-                for change in changes.changes:
-                    if hasattr(change, 'field') and hasattr(change, 'old') and hasattr(change, 'new'):
-                        diff[change.field] = {'old': change.old, 'new': change.new}
-        history_data.append({
-            'record': record,
-            'diff': diff,
-            'change_type': record.get_history_type_display() or record.history_type,
-            'user': record.history_user.username if record.history_user else 'System',
-        })
-
-    context = {'device': device, 'history': history_data}
-    return render(request, 'import/device_history.html', context)
-
 
 @login_required
 def dashboard_view(request):
@@ -1239,7 +1086,6 @@ def dashboard_view(request):
 
     return render(request, 'index.html', context)
 
-
 @login_required
 def notifications_view(request):
     notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
@@ -1272,7 +1118,6 @@ def login_view(request):
             logger.warning(f"Failed login attempt for username: {username}")
             messages.error(request, 'Invalid username or password.')
     return render(request, 'login.html')
-
 
 @login_required
 def logout_view(request):
@@ -1463,3 +1308,34 @@ def update_group_permissions(request):
         messages.success(request, "Permissions updated successfully.")
         return redirect('manage_users')
     return redirect('manage_users')
+
+@login_required
+def clear_user(request, device_id):
+    device = get_object_or_404(Import, id=device_id)
+    if request.method == 'POST':
+        form = ClearanceForm(request.POST)
+        if form.is_valid():
+            clearance = form.save(commit=False)
+            clearance.device = device
+            clearance.cleared_by = request.user
+            clearance.save(user=request.user)  # Pass the user for history tracking
+            messages.success(request, f"Device {device.serial_number} cleared successfully.")
+            return redirect('display_approved_imports')
+    else:
+        form = ClearanceForm()
+    return render(request, 'import/clear_user.html', {'form': form, 'device': device})
+
+@login_required
+def download_clearance_form(request, device_id):
+    device = get_object_or_404(Import, id=device_id)
+    clearance = device.clearances.order_by('-created_at').first()
+    if not clearance:
+        messages.error(request, "No clearance record found for this device.")
+        return redirect('display_approved_imports')
+    
+    return render(request, 'import/clearance_form_pdf.html', {
+        'device': device,
+        'clearance': clearance,
+        'centre': device.centre,
+        'cleared_by': clearance.cleared_by,
+    })
