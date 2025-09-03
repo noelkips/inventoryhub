@@ -206,5 +206,21 @@
       "name": "Spiritual Development",
       "department_code": "DEPT_26"
     }
+  },
+    {
+    "model": "devices.department",
+    "pk": 27,
+    "fields": {
+      "name": "MOHI SACCO",
+      "department_code": "DEPT_27"
+    }
+  },
+   {
+    "model": "devices.department",
+    "pk": 28,
+    "fields": {
+      "name": "AFRICA FIRE MISSION",
+      "department_code": "DEPT_28"
+    }
   }
 ]
