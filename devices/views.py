@@ -600,14 +600,14 @@ def export_to_excel(request):
     headers = [
         'Centre_code', 'Department Code', 'Hardware', 'System Model', 'Processor', 'RAM (GB)', 'HDD (GB)',
         'Serial Number', 'Assignee First Name', 'Assignee Last Name', 'Assignee Email',
-        'Device Condition', 'Status', 'Date', 'Added By', 'Approved By', 'Is Approved', 'Reason for Update'
+        'Device Condition', 'Status', 'Date', 'Added By', 'Approved By', 'Is Approved'
     ]
     ws.append(headers)
 
     for item in data:
         ws.append([
             item.centre.centre_code if item.centre else 'N/A',
-            item.department.code if item.department else 'N/A',
+            item.department.department_code if item.department else 'N/A',
             item.hardware or 'N/A',
             item.system_model or 'N/A',
             item.processor or 'N/A',
@@ -619,11 +619,11 @@ def export_to_excel(request):
             item.assignee_email_address or 'N/A',
             item.device_condition or 'N/A',
             item.status or 'N/A',
-            item.date.strftime('%Y-%m-%d') if item.date else 'N/A',
-            item.added_by.username if item.added_by else 'N/A',
-            item.approved_by.username if item.approved_by else 'N/A',
-            'Yes' if item.is_approved else 'No',
-            item.reason_for_update or 'N/A'
+            item.date.strftime('%Y-%m-%d') if item.date else '',
+            item.added_by.username if item.added_by else '',
+            item.approved_by.username if item.approved_by else '',
+            'Yes' if item.is_approved else 'No'
+            
         ])
 
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -656,14 +656,14 @@ def export_to_pdf(request):
     # Filter data with minimal fields to reduce memory usage
     if request.user.is_superuser and not request.user.is_trainer:
         data = Import.objects.only(
-            'centre__name', 'department__code', 'hardware', 'system_model', 'processor',
+            'centre__name', 'department__name', 'hardware', 'system_model', 'processor',
             'ram_gb', 'hdd_gb', 'serial_number', 'assignee_first_name',
             'assignee_last_name', 'assignee_email_address', 'device_condition',
             'status', 'date', 'reason_for_update'
         )
     elif request.user.is_trainer:
         data = Import.objects.filter(centre=request.user.centre).only(
-            'centre__name', 'department__code', 'hardware', 'system_model', 'processor',
+            'centre__name', 'department__name', 'hardware', 'system_model', 'processor',
             'ram_gb', 'hdd_gb', 'serial_number', 'assignee_first_name',
             'assignee_last_name', 'assignee_email_address', 'device_condition',
             'status', 'date', 'reason_for_update'
@@ -675,8 +675,8 @@ def export_to_pdf(request):
     if search_query:
         query = (
             Q(centre__name__icontains=search_query) |
-            Q(centre__centre_code__icontains=search_query) |
-            Q(department__code__icontains=search_query) |
+            Q(centre__centre_name__icontains=search_query) |
+            Q(department__name__icontains=search_query) |
             Q(hardware__icontains=search_query) |
             Q(system_model__icontains=search_query) |
             Q(processor__icontains=search_query) |
@@ -734,7 +734,11 @@ def export_to_pdf(request):
     cell_style = ParagraphStyle(name='Cell', fontName=font_name, fontSize=7, leading=8, alignment=TA_LEFT, wordWrap='CJK')
 
     # Add title and subtitle
-    elements.append(Paragraph('IT Inventory Report', title_style))
+    if request.user.is_superuser:
+        elements.append(Paragraph('MOHO IT Inventory Report', title_style))
+    elif request.user.is_trainer:
+        elements.append(Paragraph(f'{request.user.centre} IT Inventory Report', title_style))
+        
     elements.append(Paragraph(f'Generated on {datetime.now().strftime("%Y-%m-%d")}', subtitle_style))
     elements.append(Spacer(1, 6*mm))
 
@@ -763,7 +767,7 @@ def export_to_pdf(request):
         )
         centre_info = (
             f"<b>Centre:</b> {safe_str(item.centre.name if item.centre else 'N/A')}<br/>"
-            f"<b>Dept:</b> {safe_str(item.department.code if item.department else 'N/A')}"
+            f"<b>Dept:</b> {safe_str(item.department.department_code if item.department else 'N/A')}"
         )
         assignee_info = (
             f"<b>Name:</b> {safe_str(item.assignee_first_name)} {safe_str(item.assignee_last_name)}<br/>"
