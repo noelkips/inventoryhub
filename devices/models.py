@@ -39,7 +39,7 @@ class CustomUser(AbstractUser):
 class Import(models.Model):
     centre = models.ForeignKey(Centre, on_delete=models.SET_NULL, null=True, blank=True)
     # department = models.CharField(max_length=100, blank=True, null=True)
-    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, default=1)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
     hardware = models.CharField(max_length=100, blank=True, null=True)
     system_model = models.CharField(max_length=100, blank=True, null=True)
     processor = models.CharField(max_length=100, blank=True, null=True)
@@ -56,6 +56,8 @@ class Import(models.Model):
     approved_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='imports_approved')
     is_approved = models.BooleanField(default=False)
     reason_for_update = models.TextField(blank=True, null=True)
+    is_disposed = models.BooleanField(default=False)  
+    disposal_reason = models.TextField(blank=True, null=True) 
     history = HistoricalRecords()  # Enable audit trail for all changes to Import
 
     def save(self, *args, **kwargs):

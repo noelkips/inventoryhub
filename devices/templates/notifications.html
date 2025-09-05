@@ -3,19 +3,25 @@
 
 {% block content %}
 <div class="container mx-auto p-4">
-    <h2 class="text-2xl font-bold mb-4 text-gray-800">
-        Notifications
-        {% if notification_count > 0 %}
-            <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
-                {{ notification_count }} Unread
-            </span>
-        {% endif %}
-    </h2>
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold text-primary">
+            Notifications
+            {% if unread_count > 0 %}
+                <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+                    {{ unread_count }} Unread
+                </span>
+            {% endif %}
+        </h2>
+        <form action="{% url 'clear_all_notifications' %}" method="POST" class="inline">
+            {% csrf_token %}
+            <button type="submit" class="bg-error text-white px-4 py-2 rounded hover:bg-red-700 transition duration-200">Clear All Notifications</button>
+        </form>
+    </div>
 
     <!-- Debug Output -->
     {% if settings.DEBUG %}
         <div class="text-error mb-4">
-            Debug: notification_count = {{ notification_count|default:"Not set" }}
+            Debug: unread_count = {{ unread_count|default:"Not set" }}
         </div>
     {% endif %}
 
@@ -23,7 +29,7 @@
     {% if messages %}
         <div class="mb-4">
             {% for message in messages %}
-                <div class="bg-{% if message.tags == 'error' %}red{% else %}green{% endif %}-100 border border-{% if message.tags == 'error' %}red{% else %}green{% endif %}-400 text-{% if message.tags == 'error' %}red{% else %}green{% endif %}-700 px-4 py-3 rounded relative animate__animated animate__fadeIn" role="alert">
+                <div class="bg-{% if message.tags == 'error' %}error{% else %}accent{% endif %} text-white p-4 rounded mb-2 animate__animated animate__fadeIn" role="alert">
                     {{ message }}
                 </div>
             {% endfor %}
@@ -32,11 +38,11 @@
 
     <!-- Notifications Table -->
     <div class="bg-white p-4 rounded-lg shadow-md">
-        <h3 class="text-lg font-semibold mb-4 text-gray-800">All Notifications</h3>
+        <h3 class="text-lg font-semibold mb-4 text-primary">All Notifications</h3>
         <div class="overflow-x-auto">
             <table class="min-w-full bg-white border">
                 <thead>
-                    <tr class="bg-gray-200 text-gray-600">
+                    <tr class="bg-gray-100 text-gray">
                         <th class="py-3 px-4 border text-left">Date</th>
                         <th class="py-3 px-4 border text-left">Message</th>
                         <th class="py-3 px-4 border text-left">Status</th>
@@ -47,13 +53,13 @@
                 </thead>
                 <tbody>
                     {% for notification in notifications %}
-                        <tr class="{% if not notification.is_read %}bg-blue-50{% else %}bg-white{% endif %} hover:bg-gray-50">
+                        <tr class="{% if not notification.is_read %}bg-yellow-50{% else %}bg-white{% endif %} hover:bg-gray-50">
                             <td class="py-2 px-4 border">{{ notification.created_at|date:"Y-m-d H:i" }}</td>
                             <td class="py-2 px-4 border">
                                 {{ notification.message }}
                                 {% if notification.content_type and notification.content_type.model == 'pendingupdate' and notification.related_object %}
                                     <br>
-                                    <span class="text-sm text-gray-600">
+                                    <span class="text-sm text-gray">
                                         Device: {{ notification.related_object.import_record.serial_number|default:"N/A" }} |
                                         Reason: {{ notification.related_object.reason_for_update|default:"N/A" }}
                                     </span>
@@ -75,20 +81,24 @@
                             </td>
                             <td class="py-2 px-4 border">
                                 {% if notification.is_read %}
-                                    <span class="text-green-600">Read</span>
+                                    <span class="text-accent">Read</span>
                                 {% else %}
                                     <form action="{% url 'mark_notification_read' notification.pk %}" method="POST" class="inline">
                                         {% csrf_token %}
-                                        <button type="submit" class="text-blue-600 hover:underline">Mark as Read</button>
+                                        <button type="submit" class="text-accent hover:underline">Mark as Read</button>
                                     </form>
                                 {% endif %}
                             </td>
                             {% if user.is_superuser and not user.is_trainer %}
                                 <td class="py-2 px-4 border">
                                     {% if notification.content_type and notification.content_type.model == 'pendingupdate' and notification.related_object and notification.related_object.import_record %}
-                                        <form action="{% url 'import_approve' notification.related_object.import_record.pk %}" method="POST" class="inline">
+                                        <form action="{% url 'import_approve' notification.related_object.import_record.pk %}" method="POST" class="inline mr-2">
                                             {% csrf_token %}
-                                            <button type="submit" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition duration-200">Approve</button>
+                                            <button type="submit" class="bg-accent text-white px-3 py-1 rounded hover:bg-blue-700 transition duration-200">Approve</button>
+                                        </form>
+                                        <form action="{% url 'import_reject' notification.related_object.import_record.pk %}" method="POST" class="inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="bg-error text-white px-3 py-1 rounded hover:bg-red-700 transition duration-200">Reject</button>
                                         </form>
                                     {% elif settings.DEBUG %}
                                         <span class="text-error">No action: Missing related object or import record</span>
@@ -98,14 +108,14 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="{% if user.is_superuser and not user.is_trainer %}4{% else %}3{% endif %}" class="py-2 px-4 border text-center text-gray-600">No notifications found.</td>
+                            <td colspan="{% if user.is_superuser and not user.is_trainer %}4{% else %}3{% endif %}" class="py-2 px-4 border text-center text-gray">No notifications found.</td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
         <div class="mt-4">
-            <a href="{% url 'dashboard' %}" class="text-blue-600 hover:underline">Back to Dashboard</a>
+            <a href="{% url 'dashboard' %}" class="text-accent hover:underline">Back to Dashboard</a>
         </div>
     </div>
 </div>

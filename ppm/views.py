@@ -29,7 +29,7 @@ def ppm_device_list(request):
         devices = Import.objects.none()
         messages.warning(request, "No active PPM period. Please create and activate a period.")
     else:
-        devices = Import.objects.all()
+        devices = Import.objects.all(is_disposed=False, is_approved=True)
         if search_query:
             devices = devices.filter(
                 Q(serial_number__icontains=search_query) |

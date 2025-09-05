@@ -104,7 +104,7 @@ class ImportAdmin(admin.ModelAdmin):
         'get_approved_by', 'is_approved', 'reason_for_update'
     )
     search_fields = (
-        'centre__centre_code', 'department', 'hardware', 'system_model', 'processor',
+        'centre__name', 'department__name', 'hardware', 'system_model', 'processor',
         'ram_gb', 'hdd_gb', 'serial_number', 'assignee_first_name', 'assignee_last_name',
         'assignee_email_address', 'device_condition', 'status', 'added_by__username',
         'approved_by__username', 'reason_for_update'
