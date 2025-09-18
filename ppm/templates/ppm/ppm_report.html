@@ -1,0 +1,340 @@
+{% extends 'dashboard.html' %}
+
+{% block content %}
+
+{% load static %}
+
+<script type="text/javascript">
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+        return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+    }
+
+    function openModal(modalId) {
+        console.log('Opening modal:', modalId);
+        document.getElementById(modalId).classList.remove('hidden');
+    }
+
+    function closeModal(modalId) {
+        console.log('Closing modal:', modalId);
+        document.getElementById(modalId).classList.add('hidden');
+    }
+
+    function updateItemsPerPage(select) {
+        const itemsPerPage = select.value;
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('items_per_page', itemsPerPage);
+        urlParams.set('page', 1);
+        window.location.href = "{% url 'ppm_report' %}?" + urlParams.toString();
+    }
+
+    function validateForm(form) {
+        const reason = form.querySelector('[name="reason_for_update"]').value;
+        if (!reason) {
+            alert('Reason for update is required.');
+            return false;
+        }
+        const serialNumber = form.querySelector('[name="serial_number"]').value;
+        if (!serialNumber) {
+            alert('Serial number is required.');
+            return false;
+        }
+        return true;
+    }
+
+    function validateDisposalForm(form) {
+        const disposalReason = form.querySelector('[name="disposal_reason"]').value.trim();
+        if (!disposalReason) {
+            alert('Reason for disposal is required.');
+            return false;
+        }
+        return true;
+    }
+
+    function exportToExcel(scope) {
+        // Placeholder: No export_to_excel_ppm URL exists. Adjust as needed.
+        alert('Export to Excel functionality not implemented yet.');
+    }
+</script>
+
+<!-- Action Buttons -->
+<div class="mb-4 flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
+    <a href="{% url 'dashboard' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200 w-full sm:w-auto">Back to Dashboard</a>
+    <a href="?export=pdf&centre={{ centre_filter }}&search={{ search_query }}&items_per_page={{ items_per_page }}&scope={{ scope }}&page={{ tasks.number }}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition duration-200 w-full sm:w-auto">Export to PDF</a>
+</div>
+
+<!-- Messages -->
+{% if messages %}
+    <div class="mb-4">
+        {% for message in messages %}
+            <div class="bg-{% if message.tags == 'error' %}red{% else %}green{% endif %}-100 border border-{% if message.tags == 'error' %}red{% else %}green{% endif %}-400 text-{% if message.tags == 'error' %}red{% else %}green{% endif %}-700 px-4 py-3 rounded relative animate__animated animate__fadeIn" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<!-- Debug Output -->
+{% if settings.DEBUG %}
+    <div class="mb-4 text-error">
+        Debug: view_name = {{ view_name|default:"Not set" }} | total_tasks = {{ total_tasks|default:"Not set" }}
+    </div>
+{% endif %}
+
+<!-- Filter Form -->
+<div class="mb-4 flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
+    <div>
+        <label for="centre" class="form-label">Centre:</label>
+        <select name="centre" id="centre" class="border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="window.location.href='{% url 'ppm_report' %}?centre='+this.value+'&items_per_page={{ items_per_page }}&scope={{ scope }}&page={{ tasks.number }}&search={{ search_query }}'">
+            <option value="">All Centres</option>
+            {% for centre in centres %}
+                <option value="{{ centre.id }}" {% if centre_filter == centre.id|stringformat:"s" %}selected{% endif %}>
+                    {{ centre.name }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label for="search" class="form-label">Search:</label>
+        <input type="text" name="search" id="search" class="border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" value="{{ search_query }}" onchange="window.location.href='{% url 'ppm_report' %}?search='+this.value+'&centre={{ centre_filter }}&items_per_page={{ items_per_page }}&scope={{ scope }}&page={{ tasks.number }}'">
+    </div>
+    <div>
+        <label for="items_per_page" class="form-label">Items per Page:</label>
+        <select name="items_per_page" id="items_per_page" class="border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="updateItemsPerPage(this)">
+            {% for size in items_per_page_options %}
+                <option value="{{ size }}" {% if items_per_page|add:"0" == size|add:"0" %}selected{% endif %}>
+                    {{ size }} per page
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label for="scope" class="form-label">Scope:</label>
+        <select name="scope" id="scope" class="border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="window.location.href='{% url 'ppm_report' %}?scope='+this.value+'&centre={{ centre_filter }}&search={{ search_query }}&items_per_page={{ items_per_page }}&page={{ tasks.number }}'">
+            <option value="page" {% if scope == 'page' %}selected{% endif %}>Page</option>
+            <option value="all" {% if scope == 'all' %}selected{% endif %}>All</option>
+        </select>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="overflow-x-auto">
+    <table class="min-w-full bg-white border shadow-sm">
+        <thead>
+            <tr class="bg-gray-200 text-gray-600">
+                <th class="py-3 px-4 border text-left">Device Details</th>
+                <th class="py-3 px-4 border text-left">Centre</th>
+                <th class="py-3 px-4 border text-left">Assignee Info</th>
+                <th class="py-3 px-4 border text-left">Status & Date</th>
+                <th class="py-3 px-4 border text-left">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+                <tr class="hover:bg-gray-50 animate__animated animate__fadeIn transition duration-150">
+                    <td class="py-2 px-4 border">
+                        <strong>Serial:</strong> {{ task.device.serial_number|default:"N/A" }}<br>
+                        <strong>Hardware:</strong> {{ task.device.hardware|default:"N/A" }}
+                    </td>
+                    <td class="py-2 px-4 border">{{ task.device.centre.name|default:"N/A" }}</td>
+                    <td class="py-2 px-4 border">{{ task.device.assignee_first_name|default:"N/A" }} {{ task.device.assignee_last_name|default:"" }}</td>
+                    <td class="py-2 px-4 border">
+                        <p class="">Status: {% if task.completed_date %}Completed{% else %}Incomplete{% endif %}<br>
+                        Date Activity Done: {{ task.completed_date|date:'Y-m-d'|default:"N/A" }}</p>
+                    </td>
+                    <td class="py-2 px-4 border flex space-x-2">
+                        <button class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition duration-200" onclick="openModal('viewModal{{ task.id }}')">View</button>
+                        {% if user.is_superuser %}
+                            <button class="bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 transition duration-200" onclick="openModal('editModal{{ task.id }}')">Edit</button>
+                            <button class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition duration-200" onclick="openModal('deleteModal{{ task.id }}')">Delete</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                <!-- View Details Modal -->
+                <div id="viewModal{{ task.id }}" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+                    <div class="bg-white rounded-lg shadow-xl w-full max-w-7xl mx-4 md:mx-6 max-h-[80vh] md:max-h-[90vh] overflow-y-auto relative animate__animated animate__zoomIn">
+                        <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-t-lg flex justify-between items-center">
+                            <h3 class="text-xl font-semibold">PPM Task Details</h3>
+                            <button onclick="closeModal('viewModal{{ task.id }}')" class="text-white hover:text-gray-200 text-2xl">&times;</button>
+                        </div>
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div>
+                                    <p class="mb-2"><strong class="text-gray-700">Centre:</strong> {{ task.device.centre.name|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Department:</strong> {{ task.device.department.name|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Serial Number:</strong> {{ task.device.serial_number|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Hardware:</strong> {{ task.device.hardware|default:"N/A" }}</p>
+                                </div>
+                                <div>
+                                    <p class="mb-2"><strong class="text-gray-700">Assignee:</strong> {{ task.device.assignee_first_name|default:"N/A" }} {{ task.device.assignee_last_name|default:"" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Status:</strong> {% if task.completed_date %}Completed{% else %}Incomplete{% endif %}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Date Activity Done:</strong> {{ task.completed_date|date:'Y-m-d'|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Created By:</strong> {{ task.created_by|default:"N/A" }}</p>
+                                </div>
+                                <div>
+                                    <p class="mb-2"><strong class="text-gray-700">Tasks Performed:</strong> {{ task.activities.all|join:', '|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Remarks:</strong> {{ task.remarks|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Period:</strong> {{ task.period.name|default:"N/A" }}</p>
+                                </div>
+                            </div>
+                            <div class="mt-6 flex justify-end space-x-2">
+                                <button class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200" onclick="closeModal('viewModal{{ task.id }}')">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Edit Modal (Placeholder) -->
+                {% if user.is_superuser %}
+                    <div id="editModal{{ task.id }}" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+                        <div class="bg-white rounded-lg shadow-xl w-full max-w-7xl mx-4 md:mx-6 max-h-[80vh] md:max-h-[90vh] overflow-y-auto relative animate__animated animate__zoomIn">
+                            <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-t-lg flex justify-between items-center">
+                                <h3 class="text-xl font-semibold">Edit PPM Task</h3>
+                                <button onclick="closeModal('editModal{{ task.id }}')" class="text-white hover:text-gray-200 text-2xl">&times;</button>
+                            </div>
+                            <div class="p-6">
+                                <form action="#" method="POST" onsubmit="return validateForm(this)">
+                                    {% csrf_token %}
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div>
+                                            <div class="mb-4">
+                                                <label class="block text-gray-700 font-medium mb-1">Centre</label>
+                                                <select name="centre" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" disabled>
+                                                    <option value="{{ task.device.centre.id }}">{{ task.device.centre.name|default:"N/A" }}</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-4">
+                                                <label class="block text-gray-700 font-medium mb-1">Department</label>
+                                                <input type="text" name="department" value="{{ task.device.department.name|default:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" readonly>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="mb-4">
+                                                <label class="block text-gray-700 font-medium mb-1">Serial Number</label>
+                                                <input type="text" name="serial_number" value="{{ task.device.serial_number|default:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                            </div>
+                                            <div class="mb-4">
+                                                <label class="block text-gray-700 font-medium mb-1">Hardware</label>
+                                                <input type="text" name="hardware" value="{{ task.device.hardware|default:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                            </div>
+                                            <div class="mb-4">
+                                                <label class="block text-gray-700 font-medium mb-1">Assignee</label>
+                                                <input type="text" name="assignee" value="{{ task.device.assignee_first_name|default:'' }} {{ task.device.assignee_last_name|default:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="mb-4">
+                                                <label class="block text-gray-700 font-medium mb-1">Tasks Performed</label>
+                                                <input type="text" name="tasks" value="{{ task.activities.all|join:', '|default:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                            </div>
+                                            <div class="mb-4">
+                                                <label class="block text-gray-700 font-medium mb-1">Date Activity Done</label>
+                                                <input type="date" name="completed_date" value="{{ task.completed_date|date:'Y-m-d'|default:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                            </div>
+                                            <div class="mb-4">
+                                                <label class="block text-gray-700 font-medium mb-1">Reason for Update</label>
+                                                <textarea name="reason_for_update" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required>{{ task.reason_for_update|default:'' }}</textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-6 flex justify-end space-x-3">
+                                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200" onclick="alert('Edit functionality not implemented yet.'); return false;">Save</button>
+                                        <button type="button" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200" onclick="closeModal('editModal{{ task.id }}')">Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                <!-- Delete Modal (Placeholder) -->
+                {% if user.is_superuser %}
+                    <div id="deleteModal{{ task.id }}" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+                        <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md mx-4 animate__animated animate__zoomIn">
+                            <h3 class="text-lg font-bold mb-4 text-gray-800">Confirm Delete</h3>
+                            <p class="text-gray-600">Are you sure you want to delete this task (Serial: {{ task.device.serial_number|default:"N/A" }})?</p>
+                            <form action="#" method="POST">
+                                {% csrf_token %}
+                                <div class="flex space-x-3 mt-4">
+                                    <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition duration-200" onclick="alert('Delete functionality not implemented yet.'); return false;">Delete</button>
+                                    <button type="button" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200" onclick="closeModal('deleteModal{{ task.id }}')">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                {% endif %}
+            {% empty %}
+                <tr>
+                    <td colspan="5" class="py-2 px-4 border text-center text-gray-600">No tasks available for this centre.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Removed Approve All Modal since no matching URL -->
+
+<!-- Pagination and Items Per Page -->
+{% if paginator.num_pages > 1 or tasks %}
+    <div class="flex flex-col md:flex-row justify-between items-center mt-4 space-y-4 md:space-y-0">
+        <div class="text-gray-600">
+            Showing {{ tasks.start_index }} to {{ tasks.end_index }} of {{ total_tasks }} results
+        </div>
+        <div class="flex space-x-2 items-center">
+            <div>
+                <select onchange="updateItemsPerPage(this)" class="border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    {% for size in items_per_page_options %}
+                        <option value="{{ size }}" {% if items_per_page|add:"0" == size|add:"0" %}selected{% endif %}>
+                            {{ size }} per page
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if paginator.num_pages > 1 %}
+                <div class="flex space-x-1">
+                    {% if tasks.has_previous %}
+                        <a href="{% url 'ppm_report' %}?page=1&items_per_page={{ items_per_page }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}&centre={{ centre_filter }}&scope={{ scope }}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200">&laquo; First</a>
+                        <a href="{% url 'ppm_report' %}?page={{ tasks.previous_page_number }}&items_per_page={{ items_per_page }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}&centre={{ centre_filter }}&scope={{ scope }}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200">&lsaquo; Prev</a>
+                    {% endif %}
+                    {% for num in paginator.page_range %}
+                        {% if num >= tasks.number|add:-2 and num <= tasks.number|add:2 %}
+                            <a href="{% url 'ppm_report' %}?page={{ num }}&items_per_page={{ items_per_page }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}&centre={{ centre_filter }}&scope={{ scope }}" class="px-2 py-1 border rounded {% if num == tasks.number %}bg-blue-600 text-white{% else %}hover:bg-gray-200{% endif %} transition duration-200">{{ num }}</a>
+                        {% endif %}
+                    {% endfor %}
+                    {% if tasks.has_next %}
+                        <a href="{% url 'ppm_report' %}?page={{ tasks.next_page_number }}&items_per_page={{ items_per_page }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}&centre={{ centre_filter }}&scope={{ scope }}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200">Next &rsaquo;</a>
+                        <a href="{% url 'ppm_report' %}?page={{ paginator.num_pages }}&items_per_page={{ items_per_page }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}&centre={{ centre_filter }}&scope={{ scope }}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200">Last &raquo;</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+
+<!-- Removed Export Buttons section since PDF is now in Action Buttons -->
+
+{% endblock content %}

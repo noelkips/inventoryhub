@@ -13,4 +13,5 @@ urlpatterns = [
     path('ppm/manage_periods/', views.manage_periods, name='manage_periods'),
     path('ppm/period_edit/<int:period_id>/', views.period_edit, name='period_edit'),
     path('ppm/period_delete/<int:period_id>/', views.period_delete, name='period_delete'),
+    path('ppm/report/', views.ppm_report, name='ppm_report'),
 ]

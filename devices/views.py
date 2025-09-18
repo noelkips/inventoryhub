@@ -24,6 +24,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT
 
 from devices.forms import ClearanceForm
+from ppm.models import PPMTask
 from .models import CustomUser, Import, Centre, Notification, PendingUpdate, Department
 from django.contrib.auth.models import Group, Permission
 
@@ -263,6 +264,9 @@ def import_add(request):
                 return redirect('import_add')
     return render(request, 'import/add.html', {'centres': Centre.objects.all(), 'departments': Department.objects.all()})
 
+
+
+
 @login_required
 def import_update(request, pk):
     import_instance = get_object_or_404(Import, pk=pk)
@@ -272,41 +276,104 @@ def import_update(request, pk):
     if request.method == 'POST':
         try:
             with transaction.atomic():
-                centre_id = request.POST.get('centre')
+                # Log form data for debugging
+                logger.debug(f"Form data for device {import_instance.serial_number}: {request.POST}")
+
+                # Get form values
+                centre_id = request.POST.get('centre', '').strip()
+                department_id = request.POST.get('department', '').strip()
+                serial_number = request.POST.get('serial_number', '').strip()
+                hardware = request.POST.get('hardware', '').strip()
+                system_model = request.POST.get('system_model', '').strip()
+                processor = request.POST.get('processor', '').strip()
+                ram_gb = request.POST.get('ram_gb', '').strip()
+                hdd_gb = request.POST.get('hdd_gb', '').strip()
+                assignee_first_name = request.POST.get('assignee_first_name', '').strip()
+                assignee_last_name = request.POST.get('assignee_last_name', '').strip()
+                assignee_email_address = request.POST.get('assignee_email_address', '').strip()
+                device_condition = request.POST.get('device_condition', '').strip()
+                status = request.POST.get('status', '').strip()
+                reason_for_update = request.POST.get('reason_for_update', '').strip()
+                date_str = request.POST.get('date', '').strip()
+
+                # Validate centre
                 centre = Centre.objects.get(id=centre_id) if centre_id and centre_id != 'None' else None
                 if request.user.is_trainer and centre != request.user.centre:
                     messages.error(request, "You can only update records for your own centre.")
                     return redirect('display_approved_imports')
-                if request.user.is_trainer and not request.POST.get('reason_for_update'):
-                    messages.error(request, "Reason for update is required for trainers.")
-                    return redirect('display_approved_imports')
-                serial_number = request.POST.get('serial_number', '')
-                if serial_number and Import.objects.filter(serial_number=serial_number).exclude(id=pk).exists():
-                    messages.error(request, f"Serial number {serial_number} already exists.")
-                    return redirect('display_approved_imports')
-                department_id = request.POST.get('department')
+
+                # Validate department
                 department = Department.objects.get(id=department_id) if department_id and department_id != 'None' else None
                 if not department:
                     messages.error(request, "Department is required.")
                     return redirect('display_approved_imports')
+
+                # Validate serial number
+                if serial_number and Import.objects.filter(serial_number=serial_number).exclude(id=pk).exists():
+                    messages.error(request, f"Serial number {serial_number} already exists.")
+                    return redirect('display_approved_imports')
+
+                # Validate reason for update for trainers
+                if request.user.is_trainer and not reason_for_update:
+                    messages.error(request, "Reason for update is required for trainers.")
+                    return redirect('display_approved_imports')
+
+                # Parse date
+                date_value = None
+                if date_str:
+                    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'):
+                        try:
+                            date_value = datetime.strptime(date_str, fmt).date()
+                            break
+                        except ValueError:
+                            continue
+
+                # Collect fields to update (only changed fields)
+                fields_to_update = {}
+                form_data = {
+                    'centre': centre,
+                    'department': department,
+                    'hardware': hardware,
+                    'system_model': system_model,
+                    'processor': processor,
+                    'ram_gb': ram_gb,
+                    'hdd_gb': hdd_gb,
+                    'serial_number': serial_number,
+                    'assignee_first_name': assignee_first_name,
+                    'assignee_last_name': assignee_last_name,
+                    'assignee_email_address': assignee_email_address,
+                    'device_condition': device_condition,
+                    'status': status,
+                    'reason_for_update': reason_for_update,
+                    'date': date_value,
+                }
+
+                # Compare with current values
+                for field, new_value in form_data.items():
+                    current_value = getattr(import_instance, field, None)
+                    # Handle None/empty equivalence
+                    current_str = str(current_value) if current_value is not None else ''
+                    new_str = str(new_value) if new_value is not None else ''
+                    if field in ['centre', 'department']:
+                        if new_value != current_value:  # Compare objects directly
+                            fields_to_update[field] = new_value
+                    elif field == 'date':
+                        if new_value and new_value != current_value:
+                            fields_to_update[field] = new_value
+                    elif new_str and new_str != current_str and new_str != 'N/A':
+                        fields_to_update[field] = new_value
+
+                # Log fields to be updated
+                logger.debug(f"Fields to update for device {import_instance.serial_number}: {fields_to_update}")
+
+                if not fields_to_update:
+                    messages.info(request, "No changes detected.")
+                    return redirect('display_approved_imports')
+
                 if request.user.is_trainer:
                     pending_update = PendingUpdate.objects.create(
                         import_record=import_instance,
-                        centre=centre,
-                        department=department,
-                        hardware=request.POST.get('hardware', ''),
-                        system_model=request.POST.get('system_model', ''),
-                        processor=request.POST.get('processor', ''),
-                        ram_gb=request.POST.get('ram_gb', ''),
-                        hdd_gb=request.POST.get('hdd_gb', ''),
-                        serial_number=serial_number,
-                        assignee_first_name=request.POST.get('assignee_first_name', ''),
-                        assignee_last_name=request.POST.get('assignee_last_name', ''),
-                        assignee_email_address=request.POST.get('assignee_email_address', ''),
-                        device_condition=request.POST.get('device_condition', ''),
-                        status=request.POST.get('status', ''),
-                        date=datetime.strptime(request.POST.get('date'), '%Y-%m-%d').date() if request.POST.get('date') else None,
-                        reason_for_update=request.POST.get('reason_for_update', ''),
+                        **fields_to_update,
                         updated_by=request.user
                     )
                     import_instance.is_approved = False
@@ -323,27 +390,9 @@ def import_update(request, pk):
                     messages.success(request, "Update submitted for approval.")
                     return redirect('notifications_view')
                 else:
-                    import_instance.centre = centre
-                    import_instance.department = department
-                    import_instance.hardware = request.POST.get('hardware', '')
-                    import_instance.system_model = request.POST.get('system_model', '')
-                    import_instance.processor = request.POST.get('processor', '')
-                    import_instance.ram_gb = request.POST.get('ram_gb', '')
-                    import_instance.hdd_gb = request.POST.get('hdd_gb', '')
-                    import_instance.serial_number = serial_number
-                    import_instance.assignee_first_name = request.POST.get('assignee_first_name', '')
-                    import_instance.assignee_last_name = request.POST.get('assignee_last_name', '')
-                    import_instance.assignee_email_address = request.POST.get('assignee_email_address', '')
-                    import_instance.device_condition = request.POST.get('device_condition', '')
-                    import_instance.status = request.POST.get('status', '')
-                    date_str = request.POST.get('date', '')
-                    if date_str:
-                        for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'):
-                            try:
-                                import_instance.date = datetime.strptime(date_str, fmt).date()
-                                break
-                            except ValueError:
-                                continue
+                    # Only update changed fields
+                    for field, value in fields_to_update.items():
+                        setattr(import_instance, field, value)
                     import_instance.is_approved = True if request.user.is_superuser else import_instance.is_approved
                     import_instance.approved_by = request.user if request.user.is_superuser else import_instance.approved_by
                     import_instance.save()
@@ -353,13 +402,85 @@ def import_update(request, pk):
             messages.error(request, "Invalid department selected.")
             return redirect('display_approved_imports')
         except Exception as e:
-            logger.error(f"Error updating device: {str(e)}")
+            logger.error(f"Error updating device {import_instance.serial_number}: {str(e)}")
             messages.error(request, f"Error updating device: {str(e)}")
             return redirect('display_approved_imports')
     return render(request, 'import/edit.html', {
         'import_instance': import_instance,
         'centres': Centre.objects.all(),
         'departments': Department.objects.all()
+    })
+
+@login_required
+def device_history(request, pk):
+    device = get_object_or_404(Import, pk=pk)
+    history = device.history.all().order_by('-history_date')
+    history_data = []
+    
+    for record in history:
+        diff = {}
+        if record.prev_record:
+            changes = record.diff_against(record.prev_record)
+            for change in changes.changes:
+                if hasattr(change, 'field') and hasattr(change, 'old') and hasattr(change, 'new'):
+                    # Skip if old and new are the same or both None/N/A/empty
+                    old_str = str(change.old) if change.old is not None else ''
+                    new_str = str(change.new) if change.new is not None else ''
+                    if old_str == new_str or (old_str in ['', 'N/A', 'None'] and new_str in ['', 'N/A', 'None']):
+                        continue
+                    # Resolve human-readable values
+                    if change.field == 'centre':
+                        old_value = Centre.objects.get(pk=change.old).name if change.old and Centre.objects.filter(pk=change.old).exists() else 'N/A'
+                        new_value = Centre.objects.get(pk=change.new).name if change.new and Centre.objects.filter(pk=change.new).exists() else 'N/A'
+                    elif change.field == 'approved_by':
+                        old_value = CustomUser.objects.get(pk=change.old).username if change.old and CustomUser.objects.filter(pk=change.old).exists() else 'N/A'
+                        new_value = CustomUser.objects.get(pk=change.new).username if change.new and CustomUser.objects.filter(pk=change.new).exists() else 'N/A'
+                    elif change.field == 'added_by':
+                        old_value = CustomUser.objects.get(pk=change.old).username if change.old and CustomUser.objects.filter(pk=change.old).exists() else 'N/A'
+                        new_value = CustomUser.objects.get(pk=change.new).username if change.new and CustomUser.objects.filter(pk=change.new).exists() else 'N/A'
+                    elif change.field == 'department':
+                        old_value = Department.objects.get(pk=change.old).name if change.old and Department.objects.filter(pk=change.old).exists() else 'N/A'
+                        new_value = Department.objects.get(pk=change.new).name if change.new and Department.objects.filter(pk=change.new).exists() else 'N/A'
+                    elif change.field == 'is_approved':
+                        old_value = 'Yes' if change.old == 'True' else 'No' if change.old == 'False' else 'N/A'
+                        new_value = 'Yes' if change.new == 'True' else 'No' if change.new == 'False' else 'N/A'
+                    else:
+                        old_value = change.old if change.old is not None else 'N/A'
+                        new_value = change.new if change.new is not None else 'N/A'
+                    # Use human-readable field names
+                    field_names = {
+                        'centre': 'Centre',
+                        'department': 'Department',
+                        'hardware': 'Hardware',
+                        'system_model': 'System Model',
+                        'processor': 'Processor',
+                        'ram_gb': 'RAM (GB)',
+                        'hdd_gb': 'HDD (GB)',
+                        'serial_number': 'Serial Number',
+                        'assignee_first_name': 'Assignee First Name',
+                        'assignee_last_name': 'Assignee Last Name',
+                        'assignee_email_address': 'Assignee Email Address',
+                        'device_condition': 'Device Condition',
+                        'status': 'Status',
+                        'date': 'Date',
+                        'added_by': 'Added By',
+                        'approved_by': 'Approved By',
+                        'is_approved': 'Is Approved',
+                        'reason_for_update': 'Reason for Update',
+                        'disposal_reason': 'Disposal Reason',
+                    }
+                    field_name = field_names.get(change.field, change.field.replace('_', ' ').title())
+                    diff[field_name] = {'old': old_value, 'new': new_value}
+        history_data.append({
+            'record': record,
+            'diff': diff,
+            'change_type': record.get_history_type_display() or record.history_type,
+            'user': record.history_user.username if record.history_user else 'System'
+        })
+    
+    return render(request, 'import/device_history.html', {
+        'device': device,
+        'history': history_data
     })
 
 @login_required
@@ -468,7 +589,7 @@ def import_approve_all(request):
             query = (
                 Q(centre__name__icontains=search_query) |
                 Q(centre__centre_code__icontains=search_query) |
-                Q(department__code__icontains=search_query) |
+                Q(department__name__icontains=search_query) |
                 Q(hardware__icontains=search_query) |
                 Q(system_model__icontains=search_query) |
                 Q(processor__icontains=search_query) |
@@ -596,7 +717,7 @@ def export_to_excel(request):
         query = (
             Q(centre__name__icontains=search_query) |
             Q(centre__centre_code__icontains=search_query) |
-            Q(department__code__icontains=search_query) |
+            Q(department__name__icontains=search_query) |
             Q(hardware__icontains=search_query) |
             Q(system_model__icontains=search_query) |
             Q(processor__icontains=search_query) |
@@ -633,7 +754,7 @@ def export_to_excel(request):
     for item in data:
         ws.append([
             item.centre.centre_code if item.centre else 'N/A',
-            item.department.code if item.department else 'N/A',
+            item.department.department_code if item.department else 'N/A',
             item.hardware or 'N/A',
             item.system_model or 'N/A',
             item.processor or 'N/A',
@@ -678,14 +799,14 @@ def export_to_pdf(request):
 
     if request.user.is_superuser:
         data = Import.objects.only(
-            'centre__name', 'centre__centre_code', 'department__code', 'hardware', 'system_model', 'processor',
+            'centre__name', 'centre__centre_code', 'department__name', 'hardware', 'system_model', 'processor',
             'ram_gb', 'hdd_gb', 'serial_number', 'assignee_first_name', 'assignee_last_name',
             'assignee_email_address', 'device_condition', 'status', 'date', 'reason_for_update',
             'disposal_reason'
         )
     elif request.user.is_trainer:
         data = Import.objects.filter(centre=request.user.centre).only(
-            'centre__name', 'centre__centre_code', 'department__code', 'hardware', 'system_model', 'processor',
+            'centre__name', 'centre__centre_code', 'department__name', 'hardware', 'system_model', 'processor',
             'ram_gb', 'hdd_gb', 'serial_number', 'assignee_first_name', 'assignee_last_name',
             'assignee_email_address', 'device_condition', 'status', 'date', 'reason_for_update',
             'disposal_reason'
@@ -697,7 +818,7 @@ def export_to_pdf(request):
         query = (
             Q(centre__name__icontains=search_query) |
             Q(centre__centre_code__icontains=search_query) |
-            Q(department__code__icontains=search_query) |
+            Q(department__name__icontains=search_query) |
             Q(hardware__icontains=search_query) |
             Q(system_model__icontains=search_query) |
             Q(processor__icontains=search_query) |
@@ -759,7 +880,7 @@ def export_to_pdf(request):
         )
         centre_info = (
             f"<b>Centre:</b> {safe_str(item.centre.name if item.centre else 'N/A')}<br/>"
-            f"<b>Dept:</b> {safe_str(item.department.code if item.department else 'N/A')}"
+            f"<b>Dept:</b> {safe_str(item.department.name if item.department else 'N/A')}"
         )
         assignee_info = (
             f"<b>Name:</b> {safe_str(item.assignee_first_name)} {safe_str(item.assignee_last_name)}<br/>"
@@ -864,25 +985,7 @@ def change_password(request):
             return redirect('change_password')
     return render(request, 'accounts/change_password.html', {})
 
-@login_required
-def device_history(request, pk):
-    device = get_object_or_404(Import, pk=pk)
-    history = device.history.all().order_by('-history_date')
-    history_data = []
-    for record in history:
-        diff = {}
-        if record.prev_record:
-            changes = record.diff_against(record.prev_record)
-            for change in changes.changes:
-                if hasattr(change, 'field') and hasattr(change, 'old') and hasattr(change, 'new'):
-                    diff[change.field] = {'old': change.old, 'new': change.new}
-        history_data.append({
-            'record': record,
-            'diff': diff,
-            'change_type': record.get_history_type_display() or record.history_type,
-            'user': record.history_user.username if record.history_user else 'System'
-        })
-    return render(request, 'import/device_history.html', {'device': device, 'history': history_data})
+
 
 @login_required
 def display_approved_imports(request):
@@ -898,7 +1001,7 @@ def display_approved_imports(request):
         query = (
             Q(centre__name__icontains=search_query) |
             Q(centre__centre_code__icontains=search_query) |
-            Q(department__code__icontains=search_query) |
+            Q(department__name__icontains=search_query) |
             Q(hardware__icontains=search_query) |
             Q(system_model__icontains=search_query) |
             Q(processor__icontains=search_query) |
@@ -968,7 +1071,7 @@ def display_unapproved_imports(request):
         query = (
             Q(centre__name__icontains=search_query) |
             Q(centre__centre_code__icontains=search_query) |
-            Q(department__code__icontains=search_query) |
+            Q(department__name__icontains=search_query) |
             Q(hardware__icontains=search_query) |
             Q(system_model__icontains=search_query) |
             Q(processor__icontains=search_query) |
@@ -1038,7 +1141,7 @@ def display_disposed_imports(request):
         query = (
             Q(centre__name__icontains=search_query) |
             Q(centre__centre_code__icontains=search_query) |
-            Q(department__code__icontains=search_query) |
+            Q(department__name__icontains=search_query) |
             Q(hardware__icontains=search_query) |
             Q(system_model__icontains=search_query) |
             Q(processor__icontains=search_query) |
@@ -1114,9 +1217,18 @@ def dispose_device(request, device_id):
             messages.success(request, f"Device {device.serial_number} disposed successfully.")
             return redirect('display_approved_imports')
     return render(request, 'import/dispose_device.html', {'device': device})
+ 
+from django.db.models import Q, Count
 
 @login_required
 def dashboard_view(request):
+    # Initialize default counts
+    total_devices = pending_approvals = approved_imports = pending_updates = 0
+    total_ppm_tasks = completed_ppm_tasks = overdue_ppm_tasks = 0
+    recent_devices = []
+    ppm_tasks_by_status = {'Completed': 0, 'Incomplete': 0}
+    ppm_tasks_by_activity = {}
+
     if request.user.is_superuser and not request.user.is_trainer:
         total_devices = Import.objects.count()
         pending_approvals = Import.objects.filter(is_approved=False, is_disposed=False).count()
@@ -1125,19 +1237,42 @@ def dashboard_view(request):
         approved_imports = total_devices - pending_approvals
         recent_devices = Import.objects.order_by('-date')[:5]
         pending_updates = PendingUpdate.objects.count()
-    elif request.user.is_trainer:
-        if not request.user.centre:
-            total_devices = pending_approvals = approved_imports = pending_updates = 0
-            recent_devices = []
-        else:
-            total_devices = Import.objects.filter(centre=request.user.centre).count()
-            pending_approvals = Import.objects.filter(centre=request.user.centre, is_approved=False, is_disposed=False).count()
-            approved_imports = total_devices - pending_approvals
-            recent_devices = Import.objects.filter(centre=request.user.centre).order_by('-date')[:5]
-            pending_updates = PendingUpdate.objects.filter(import_record__centre=request.user.centre).count()
-    else:
-        total_devices = pending_approvals = approved_imports = pending_updates = 0
-        recent_devices = []
+        # PPM statistics
+        total_ppm_tasks = PPMTask.objects.count()
+        completed_ppm_tasks = PPMTask.objects.filter(completed_date__isnull=False).count()
+        overdue_ppm_tasks = PPMTask.objects.filter(
+            period__end_date__lt=timezone.now().date(),
+            completed_date__isnull=True
+        ).count()
+        ppm_tasks_by_status = {
+            'Completed': completed_ppm_tasks,
+            'Incomplete': total_ppm_tasks - completed_ppm_tasks
+        }
+        ppm_tasks_by_activity = PPMTask.objects.values('activities__name').annotate(count=Count('id')).order_by('-count')
+    elif request.user.is_trainer and request.user.centre:
+        total_devices = Import.objects.filter(centre=request.user.centre).count()
+        pending_approvals = Import.objects.filter(centre=request.user.centre, is_approved=False, is_disposed=False).count()
+        approved_imports = total_devices - pending_approvals
+        recent_devices = Import.objects.filter(centre=request.user.centre).order_by('-date')[:5]
+        pending_updates = PendingUpdate.objects.filter(import_record__centre=request.user.centre).count()
+        # PPM statistics
+        total_ppm_tasks = PPMTask.objects.filter(device__centre=request.user.centre).count()
+        completed_ppm_tasks = PPMTask.objects.filter(
+            device__centre=request.user.centre,
+            completed_date__isnull=False
+        ).count()
+        overdue_ppm_tasks = PPMTask.objects.filter(
+            device__centre=request.user.centre,
+            period__end_date__lt=timezone.now().date(),
+            completed_date__isnull=True
+        ).count()
+        ppm_tasks_by_status = {
+            'Completed': completed_ppm_tasks,
+            'Incomplete': total_ppm_tasks - completed_ppm_tasks
+        }
+        ppm_tasks_by_activity = PPMTask.objects.filter(
+            device__centre=request.user.centre
+        ).values('activities__name').annotate(count=Count('id')).order_by('-count')
 
     notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:5]
     unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
@@ -1152,6 +1287,11 @@ def dashboard_view(request):
         'recent_devices': recent_devices,
         'notifications': notifications,
         'unread_count': unread_count,
+        'total_ppm_tasks': total_ppm_tasks,
+        'completed_ppm_tasks': completed_ppm_tasks,
+        'overdue_ppm_tasks': overdue_ppm_tasks,
+        'ppm_tasks_by_status': ppm_tasks_by_status,
+        'ppm_tasks_by_activity': ppm_tasks_by_activity,
     })
 
 @login_required
