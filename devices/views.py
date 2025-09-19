@@ -412,78 +412,6 @@ def import_update(request, pk):
     })
 
 @login_required
-def device_history(request, pk):
-    device = get_object_or_404(Import, pk=pk)
-    history = device.history.all().order_by('-history_date')
-    history_data = []
-    
-    for record in history:
-        diff = {}
-        if record.prev_record:
-            changes = record.diff_against(record.prev_record)
-            for change in changes.changes:
-                if hasattr(change, 'field') and hasattr(change, 'old') and hasattr(change, 'new'):
-                    # Skip if old and new are the same or both None/N/A/empty
-                    old_str = str(change.old) if change.old is not None else ''
-                    new_str = str(change.new) if change.new is not None else ''
-                    if old_str == new_str or (old_str in ['', 'N/A', 'None'] and new_str in ['', 'N/A', 'None']):
-                        continue
-                    # Resolve human-readable values
-                    if change.field == 'centre':
-                        old_value = Centre.objects.get(pk=change.old).name if change.old and Centre.objects.filter(pk=change.old).exists() else 'N/A'
-                        new_value = Centre.objects.get(pk=change.new).name if change.new and Centre.objects.filter(pk=change.new).exists() else 'N/A'
-                    elif change.field == 'approved_by':
-                        old_value = CustomUser.objects.get(pk=change.old).username if change.old and CustomUser.objects.filter(pk=change.old).exists() else 'N/A'
-                        new_value = CustomUser.objects.get(pk=change.new).username if change.new and CustomUser.objects.filter(pk=change.new).exists() else 'N/A'
-                    elif change.field == 'added_by':
-                        old_value = CustomUser.objects.get(pk=change.old).username if change.old and CustomUser.objects.filter(pk=change.old).exists() else 'N/A'
-                        new_value = CustomUser.objects.get(pk=change.new).username if change.new and CustomUser.objects.filter(pk=change.new).exists() else 'N/A'
-                    elif change.field == 'department':
-                        old_value = Department.objects.get(pk=change.old).name if change.old and Department.objects.filter(pk=change.old).exists() else 'N/A'
-                        new_value = Department.objects.get(pk=change.new).name if change.new and Department.objects.filter(pk=change.new).exists() else 'N/A'
-                    elif change.field == 'is_approved':
-                        old_value = 'Yes' if change.old == 'True' else 'No' if change.old == 'False' else 'N/A'
-                        new_value = 'Yes' if change.new == 'True' else 'No' if change.new == 'False' else 'N/A'
-                    else:
-                        old_value = change.old if change.old is not None else 'N/A'
-                        new_value = change.new if change.new is not None else 'N/A'
-                    # Use human-readable field names
-                    field_names = {
-                        'centre': 'Centre',
-                        'department': 'Department',
-                        'hardware': 'Hardware',
-                        'system_model': 'System Model',
-                        'processor': 'Processor',
-                        'ram_gb': 'RAM (GB)',
-                        'hdd_gb': 'HDD (GB)',
-                        'serial_number': 'Serial Number',
-                        'assignee_first_name': 'Assignee First Name',
-                        'assignee_last_name': 'Assignee Last Name',
-                        'assignee_email_address': 'Assignee Email Address',
-                        'device_condition': 'Device Condition',
-                        'status': 'Status',
-                        'date': 'Date',
-                        'added_by': 'Added By',
-                        'approved_by': 'Approved By',
-                        'is_approved': 'Is Approved',
-                        'reason_for_update': 'Reason for Update',
-                        'disposal_reason': 'Disposal Reason',
-                    }
-                    field_name = field_names.get(change.field, change.field.replace('_', ' ').title())
-                    diff[field_name] = {'old': old_value, 'new': new_value}
-        history_data.append({
-            'record': record,
-            'diff': diff,
-            'change_type': record.get_history_type_display() or record.history_type,
-            'user': record.history_user.username if record.history_user else 'System'
-        })
-    
-    return render(request, 'import/device_history.html', {
-        'device': device,
-        'history': history_data
-    })
-
-@login_required
 @user_passes_test(lambda u: u.is_superuser and not u.is_trainer)
 def import_approve(request, pk):
     import_instance = get_object_or_404(Import, pk=pk)
@@ -491,6 +419,10 @@ def import_approve(request, pk):
         with transaction.atomic():
             pending_update = PendingUpdate.objects.filter(import_record=import_instance).order_by('-created_at').first()
             if pending_update:
+                # Save pk before deleting
+                pending_update_id = pending_update.pk  
+
+                # Apply updates
                 import_instance.centre = pending_update.centre
                 import_instance.department = pending_update.department
                 import_instance.hardware = pending_update.hardware
@@ -504,34 +436,48 @@ def import_approve(request, pk):
                 import_instance.assignee_email_address = pending_update.assignee_email_address
                 import_instance.device_condition = pending_update.device_condition
                 import_instance.status = pending_update.status
-                import_instance.date = pending_update.date
+                import_instance.date = pending_update.date if pending_update.date else timezone.now().date()
                 import_instance.reason_for_update = pending_update.reason_for_update
                 import_instance.is_approved = True
                 import_instance.approved_by = request.user
                 import_instance.save()
+
+                # Delete pending update after saving
                 pending_update.delete()
-                # Mark related notifications as read for all admins
+
+                # Mark related notifications as read (for admins only)
                 content_type = ContentType.objects.get_for_model(PendingUpdate)
                 Notification.objects.filter(
                     content_type=content_type,
-                    object_id=pk,
+                    object_id=pending_update_id,
+                    user__is_superuser=True,
+                    user__is_trainer=False,
                     is_read=False
-                ).update(is_read=True)
+                ).update(is_read=True, responded_by=request.user)
+
                 messages.success(request, f"Device {import_instance.serial_number} update approved.")
             else:
                 import_instance.is_approved = True
                 import_instance.approved_by = request.user
                 import_instance.save()
-                # Mark related notifications as read for all admins
+
+                # Mark related notifications as read (for admins only)
                 content_type = ContentType.objects.get_for_model(Import)
                 Notification.objects.filter(
                     content_type=content_type,
                     object_id=import_instance.pk,
+                    user__is_superuser=True,
+                    user__is_trainer=False,
                     is_read=False
-                ).update(is_read=True)
+                ).update(is_read=True, responded_by=request.user)
+
                 messages.success(request, f"Device {import_instance.serial_number} approved.")
+
             return redirect('display_unapproved_imports')
+
     return redirect('display_unapproved_imports')
+
+
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser and not u.is_trainer)
@@ -541,27 +487,54 @@ def import_reject(request, pk):
         with transaction.atomic():
             pending_update = PendingUpdate.objects.filter(import_record=import_instance).order_by('-created_at').first()
             if pending_update:
-                serial_number = pending_update.serial_number
-                pending_update.delete()
-                # Mark related notifications as read for all admins
+                pending_update.pending_clarification = True
+                pending_update.save()
+                # Notify trainer for clarification (single notification)
+                trainer = pending_update.updated_by
+                if trainer:
+                    content_type = ContentType.objects.get_for_model(PendingUpdate)
+                    if not Notification.objects.filter(user=trainer, content_type=content_type, object_id=pending_update.pk).exists():
+                        Notification.objects.create(
+                            user=trainer,
+                            message=f"Your update for device {pending_update.serial_number} was rejected. Please provide clarification.",
+                            content_type=content_type,
+                            object_id=pending_update.pk
+                        )
+                # Mark notifications as read for admins only
                 content_type = ContentType.objects.get_for_model(PendingUpdate)
                 Notification.objects.filter(
                     content_type=content_type,
-                    object_id=pk,
+                    object_id=pending_update.pk,
+                    user__is_superuser=True,
+                    user__is_trainer=False,
                     is_read=False
-                ).update(is_read=True)
-                messages.success(request, f"Update for device {serial_number} rejected.")
+                ).update(is_read=True, responded_by=request.user)
+                messages.success(request, f"Update for device {pending_update.serial_number} sent back for clarification.")
             else:
-                serial_number = import_instance.serial_number
-                import_instance.delete()
-                # Mark related notifications as read for all admins
+                # For new import requests, mark as pending clarification
+                import_instance.pending_clarification = True
+                import_instance.save()
+                # Notify trainer for clarification (single notification)
+                trainer = import_instance.added_by
+                if trainer:
+                    content_type = ContentType.objects.get_for_model(Import)
+                    if not Notification.objects.filter(user=trainer, content_type=content_type, object_id=import_instance.pk).exists():
+                        Notification.objects.create(
+                            user=trainer,
+                            message=f"Your import request for device {import_instance.serial_number} was rejected. Please provide clarification.",
+                            content_type=content_type,
+                            object_id=import_instance.pk
+                        )
+                # Mark notifications as read for admins only
                 content_type = ContentType.objects.get_for_model(Import)
                 Notification.objects.filter(
                     content_type=content_type,
-                    object_id=pk,
+                    object_id=import_instance.pk,
+                    user__is_superuser=True,
+                    user__is_trainer=False,
                     is_read=False
-                ).update(is_read=True)
-                messages.success(request, f"Device {serial_number} rejected and deleted.")
+                ).update(is_read=True, responded_by=request.user)
+                messages.success(request, f"Import request for device {import_instance.serial_number} sent back for clarification.")
             return redirect('display_unapproved_imports')
     return redirect('display_unapproved_imports')
 
@@ -632,7 +605,7 @@ def import_approve_all(request):
                     item.assignee_email_address = pending_update.assignee_email_address
                     item.device_condition = pending_update.device_condition
                     item.status = pending_update.status
-                    item.date = pending_update.date
+                    item.date = pending_update.date if pending_update.date else item.date or timezone.now().date()
                     item.reason_for_update = pending_update.reason_for_update
                     item.is_approved = True
                     item.approved_by = request.user
@@ -642,8 +615,10 @@ def import_approve_all(request):
                     Notification.objects.filter(
                         content_type=content_type,
                         object_id=pending_update.pk,
+                        user__is_superuser=True,
+                        user__is_trainer=False,
                         is_read=False
-                    ).update(is_read=True)
+                    ).update(is_read=True, responded_by=request.user)
                     approved_count += 1
                 elif not item.is_approved:
                     item.is_approved = True
@@ -653,8 +628,10 @@ def import_approve_all(request):
                     Notification.objects.filter(
                         content_type=content_type,
                         object_id=item.pk,
+                        user__is_superuser=True,
+                        user__is_trainer=False,
                         is_read=False
-                    ).update(is_read=True)
+                    ).update(is_read=True, responded_by=request.user)
                     approved_count += 1
 
         if approved_count > 0:
@@ -682,11 +659,121 @@ def import_delete(request, pk):
             Notification.objects.filter(
                 content_type=content_type,
                 object_id=pk,
+                user__is_superuser=True,
+                user__is_trainer=False,
                 is_read=False
-            ).update(is_read=True)
+            ).update(is_read=True, responded_by=request.user)
             messages.success(request, f"Device {serial_number} deleted successfully.")
         return redirect('display_approved_imports')
     return redirect('display_approved_imports')
+
+@login_required
+def notifications_view(request):
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+    # For admins, exclude notifications already responded to unless it's an unresponded approval request
+    if request.user.is_superuser and not request.user.is_trainer:
+        content_types = [ContentType.objects.get_for_model(Import), ContentType.objects.get_for_model(PendingUpdate)]
+        notifications = notifications.exclude(
+            responded_by__isnull=False
+        ).filter(
+            content_type__in=content_types,
+            is_read=False
+        ) | notifications.filter(
+            responded_by__isnull=True,
+            content_type__in=content_types,
+            is_read=False
+        )
+    return render(request, 'notifications.html', {'notifications': notifications})
+
+@login_required
+def mark_notification_read(request, pk):
+    notification = get_object_or_404(Notification, pk=pk, user=request.user)
+    if request.method == 'POST':
+        notification.is_read = True
+        notification.save()
+        messages.success(request, "Notification marked as read.")
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/dashboard/'))
+    return HttpResponseRedirect('/dashboard/')
+
+@login_required
+def clear_all_notifications(request):
+    if request.method == 'POST':
+        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        messages.success(request, "All notifications cleared.")
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/dashboard/'))
+    return HttpResponseRedirect('/dashboard/')
+
+@login_required
+def device_history(request, pk):
+    device = get_object_or_404(Import, pk=pk)
+    history = device.history.all().order_by('-history_date')
+    history_data = []
+    
+    for record in history:
+        diff = {}
+        if record.prev_record:
+            changes = record.diff_against(record.prev_record)
+            for change in changes.changes:
+                if hasattr(change, 'field') and hasattr(change, 'old') and hasattr(change, 'new'):
+                    # Skip if old and new are the same or both None/N/A/empty
+                    old_str = str(change.old) if change.old is not None else ''
+                    new_str = str(change.new) if change.new is not None else ''
+                    if old_str == new_str or (old_str in ['', 'N/A', 'None'] and new_str in ['', 'N/A', 'None']):
+                        continue
+                    # Resolve human-readable values
+                    if change.field == 'centre':
+                        old_value = Centre.objects.get(pk=change.old).name if change.old and Centre.objects.filter(pk=change.old).exists() else 'N/A'
+                        new_value = Centre.objects.get(pk=change.new).name if change.new and Centre.objects.filter(pk=change.new).exists() else 'N/A'
+                    elif change.field == 'approved_by':
+                        old_value = CustomUser.objects.get(pk=change.old).username if change.old and CustomUser.objects.filter(pk=change.old).exists() else 'N/A'
+                        new_value = CustomUser.objects.get(pk=change.new).username if change.new and CustomUser.objects.filter(pk=change.new).exists() else 'N/A'
+                    elif change.field == 'added_by':
+                        old_value = CustomUser.objects.get(pk=change.old).username if change.old and CustomUser.objects.filter(pk=change.old).exists() else 'N/A'
+                        new_value = CustomUser.objects.get(pk=change.new).username if change.new and CustomUser.objects.filter(pk=change.new).exists() else 'N/A'
+                    elif change.field == 'department':
+                        old_value = Department.objects.get(pk=change.old).name if change.old and Department.objects.filter(pk=change.old).exists() else 'N/A'
+                        new_value = Department.objects.get(pk=change.new).name if change.new and Department.objects.filter(pk=change.new).exists() else 'N/A'
+                    elif change.field == 'is_approved':
+                        old_value = 'Yes' if change.old == 'True' else 'No' if change.old == 'False' else 'N/A'
+                        new_value = 'Yes' if change.new == 'True' else 'No' if change.new == 'False' else 'N/A'
+                    else:
+                        old_value = change.old if change.old is not None else 'N/A'
+                        new_value = change.new if change.new is not None else 'N/A'
+                    # Use human-readable field names
+                    field_names = {
+                        'centre': 'Centre',
+                        'department': 'Department',
+                        'hardware': 'Hardware',
+                        'system_model': 'System Model',
+                        'processor': 'Processor',
+                        'ram_gb': 'RAM (GB)',
+                        'hdd_gb': 'HDD (GB)',
+                        'serial_number': 'Serial Number',
+                        'assignee_first_name': 'Assignee First Name',
+                        'assignee_last_name': 'Assignee Last Name',
+                        'assignee_email_address': 'Assignee Email Address',
+                        'device_condition': 'Device Condition',
+                        'status': 'Status',
+                        'date': 'Date',
+                        'added_by': 'Added By',
+                        'approved_by': 'Approved By',
+                        'is_approved': 'Is Approved',
+                        'reason_for_update': 'Reason for Update',
+                        'disposal_reason': 'Disposal Reason',
+                    }
+                    field_name = field_names.get(change.field, change.field.replace('_', ' ').title())
+                    diff[field_name] = {'old': old_value, 'new': new_value}
+        history_data.append({
+            'record': record,
+            'diff': diff,
+            'change_type': record.get_history_type_display() or record.history_type,
+            'user': record.history_user.username if record.history_user else 'System'
+        })
+    
+    return render(request, 'import/device_history.html', {
+        'device': device,
+        'history': history_data
+    })
 
 @login_required
 def export_to_excel(request):
@@ -989,12 +1076,15 @@ def change_password(request):
 
 @login_required
 def display_approved_imports(request):
+   
     if request.user.is_superuser:
         data = Import.objects.filter(is_approved=True, is_disposed=False)
     elif request.user.is_trainer:
         data = Import.objects.filter(centre=request.user.centre, is_approved=True, is_disposed=False) if request.user.centre else Import.objects.none()
+        
     else:
         data = Import.objects.none()
+       
 
     search_query = request.GET.get('search', '').strip()
     if search_query:
@@ -1218,6 +1308,24 @@ def dispose_device(request, device_id):
             return redirect('display_approved_imports')
     return render(request, 'import/dispose_device.html', {'device': device})
  
+@login_required
+def mark_notification_read(request, pk):
+    notification = get_object_or_404(Notification, pk=pk, user=request.user)
+    if request.method == 'POST':
+        notification.is_read = True
+        notification.save()
+        messages.success(request, "Notification marked as read.")
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/dashboard/'))
+    return HttpResponseRedirect('/dashboard/')
+
+@login_required
+def clear_all_notifications(request):
+    if request.method == 'POST':
+        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        messages.success(request, "All notifications cleared.")
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/dashboard/'))
+    return HttpResponseRedirect('/dashboard/')
+
 from django.db.models import Q, Count
 
 @login_required
@@ -1294,28 +1402,8 @@ def dashboard_view(request):
         'ppm_tasks_by_activity': ppm_tasks_by_activity,
     })
 
-@login_required
-def notifications_view(request):
-    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
-    return render(request, 'notifications.html', {'notifications': notifications})
 
-@login_required
-def mark_notification_read(request, pk):
-    notification = get_object_or_404(Notification, pk=pk, user=request.user)
-    if request.method == 'POST':
-        notification.is_read = True
-        notification.save()
-        messages.success(request, "Notification marked as read.")
-        return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/dashboard/'))
-    return HttpResponseRedirect('/dashboard/')
 
-@login_required
-def clear_all_notifications(request):
-    if request.method == 'POST':
-        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
-        messages.success(request, "All notifications cleared.")
-        return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/dashboard/'))
-    return HttpResponseRedirect('/dashboard/')
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -1570,3 +1658,6 @@ def download_clearance_form(request, device_id):
     elements.append(Paragraph(f'Reason: {clearance.reason or "N/A"}', normal_style))
     doc.build(elements)
     return response
+
+
+

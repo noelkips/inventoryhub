@@ -38,7 +38,6 @@ class CustomUser(AbstractUser):
     
 class Import(models.Model):
     centre = models.ForeignKey(Centre, on_delete=models.SET_NULL, null=True, blank=True)
-    # department = models.CharField(max_length=100, blank=True, null=True)
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
     hardware = models.CharField(max_length=100, blank=True, null=True)
     system_model = models.CharField(max_length=100, blank=True, null=True)
@@ -51,17 +50,16 @@ class Import(models.Model):
     assignee_email_address = models.EmailField(blank=True, null=True)
     device_condition = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=50, blank=True, null=True)
-    date = models.DateField(auto_now_add=True)  # Auto-generate date on creation
+    date = models.DateField(auto_now_add=True)
     added_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='imports_added')
     approved_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='imports_approved')
     is_approved = models.BooleanField(default=False)
     reason_for_update = models.TextField(blank=True, null=True)
     is_disposed = models.BooleanField(default=False)  
     disposal_reason = models.TextField(blank=True, null=True) 
-    history = HistoricalRecords()  # Enable audit trail for all changes to Import
+    history = HistoricalRecords()
 
     def save(self, *args, **kwargs):
-        # Set _history_user to the user from kwargs if provided
         if 'user' in kwargs:
             self._history_user = kwargs.pop('user')
         super().save(*args, **kwargs)
@@ -77,17 +75,13 @@ class Clearance(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        # Get the user from kwargs if provided
         user = kwargs.pop('user', None)
-        # Clear assignee fields, set status to 'Available', and department to default (id=1)
         self.device.assignee_first_name = None
         self.device.assignee_last_name = None
         self.device.assignee_email_address = None
         self.device.status = 'Available'
-        self.device.department_id = 1  # Set to default department (id=1)
-        # Set reason_for_update for history tracking
+        self.device.department_id = 1
         self.device.reason_for_update = f"Device cleared by {self.cleared_by.username if self.cleared_by else 'Unknown'}"
-        # Pass the user to Import's save for history tracking
         self.device.save(user=user)
         super().save(*args, **kwargs)
 
@@ -98,7 +92,6 @@ class Clearance(models.Model):
 class PendingUpdate(models.Model):
     import_record = models.ForeignKey(Import, on_delete=models.CASCADE, related_name='pending_updates')
     centre = models.ForeignKey(Centre, on_delete=models.SET_NULL, null=True, blank=True)
-    # department = models.CharField(max_length=100, blank=True, null=True)
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, default=1)
     hardware = models.CharField(max_length=100, blank=True, null=True)
     system_model = models.CharField(max_length=100, blank=True, null=True)
@@ -115,6 +108,7 @@ class PendingUpdate(models.Model):
     reason_for_update = models.TextField()
     updated_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    pending_clarification = models.BooleanField(default=False)  # New field
 
     def __str__(self):
         return f"Pending update for {self.import_record.serial_number} by {self.updated_by}"
@@ -123,13 +117,12 @@ class Report(models.Model):
     def __str__(self):
         return "Report"
 
-
-
 class Notification(models.Model):
     user = models.ForeignKey('CustomUser', on_delete=models.CASCADE, related_name='notifications')
     message = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
+    responded_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='responded_notifications')  # New field
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
     object_id = models.PositiveIntegerField(null=True, blank=True)
     related_object = GenericForeignKey('content_type', 'object_id')
