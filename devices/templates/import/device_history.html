@@ -36,7 +36,7 @@
     </div>
 
     <!-- Change History -->
-    <div class="bg-white p-3 sm:p-4 rounded-lg shadow-md">
+    <div class="bg-white p-3 sm:p-4 rounded-lg shadow-md mb-6">
         <h3 class="text-base sm:text-lg font-semibold mb-4 text-gray-800">Change History</h3>
         {% if history %}
             <div class="overflow-x-auto">
@@ -73,6 +73,39 @@
             </div>
         {% else %}
             <p class="text-gray-600 text-sm sm:text-base">No history records found.</p>
+        {% endif %}
+    </div>
+
+    <!-- Previous Users History -->
+    <div class="bg-white p-3 sm:p-4 rounded-lg shadow-md">
+        <h3 class="text-base sm:text-lg font-semibold mb-4 text-gray-800">Previous Users</h3>
+        {% if user_history %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border text-sm sm:text-base">
+                    <thead>
+                        <tr class="bg-gray-200 text-gray-600">
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Assignee Name</th>
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Email</th>
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Assigned By</th>
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Assigned Date</th>
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Cleared Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in user_history %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ entry.assignee_name }}</td>
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ entry.email }}</td>
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ entry.assigned_by }}</td>
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ entry.assigned_date|date:"Y-m-d" }}</td>
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ entry.cleared_date|date:"Y-m-d"|default:"N/A" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-gray-600 text-sm sm:text-base">No previous users recorded.</p>
         {% endif %}
     </div>
 </div>

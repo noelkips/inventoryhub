@@ -60,12 +60,26 @@ class Import(models.Model):
     history = HistoricalRecords()
 
     def save(self, *args, **kwargs):
-        if 'user' in kwargs:
-            self._history_user = kwargs.pop('user')
+        # Pass the user from kwargs to HistoricalRecords
+        user = kwargs.pop('user', None)
+        if user and not hasattr(self, '_history_user'):  # Avoid overriding if already set by HistoricalRecords
+            kwargs['update_fields'] = kwargs.get('update_fields', [])
         super().save(*args, **kwargs)
     
     def __str__(self):
         return f"{self.serial_number} ({self.centre.name if self.centre else 'No Centre'})"
+
+class DeviceUserHistory(models.Model):
+    device = models.ForeignKey(Import, on_delete=models.CASCADE, related_name='user_history')
+    assignee_first_name = models.CharField(max_length=50, blank=True, null=True)
+    assignee_last_name = models.CharField(max_length=50, blank=True, null=True)
+    assignee_email_address = models.EmailField(blank=True, null=True)
+    assigned_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='assignments_made')
+    assigned_date = models.DateTimeField(auto_now_add=True)
+    cleared_date = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.assignee_first_name} {self.assignee_last_name} on {self.device.serial_number}"
 
 class Clearance(models.Model):
     device = models.ForeignKey(Import, on_delete=models.CASCADE, related_name='clearances')

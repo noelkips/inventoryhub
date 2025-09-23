@@ -1,0 +1,454 @@
+{% extends 'dashboard.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <h2 class="text-2xl font-bold mb-4 text-gray-800">Disposed IT Inventory</h2>
+
+    <!-- Single Search Bar -->
+    <div class="mb-4">
+        <form method="GET" action="{% url 'display_disposed_imports' %}" class="flex space-x-2">
+            <input type="text" name="search" value="{{ report_data.search_query|default:'' }}" placeholder="Search all fields..." class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200">Search</button>
+        </form>
+        {% if report_data.search_query and not data_with_pending %}
+            <p class="text-red-600 mt-2">No results found for "{{ report_data.search_query }}". Please try a different search term or check for typos.</p>
+        {% endif %}
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="mt-6 bg-white rounded-lg shadow-sm p-4">
+        <h3 class="text-lg font-medium text-gray-700 mb-4">Quick Stats</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-3 border-b">
+                <p class="text-sm text-gray-600">Total Disposed Devices</p>
+                <p class="text-lg font-semibold">{{ total_devices|default:"0" }}</p>
+            </div>
+            <div class="p-3 border-b">
+                <p class="text-sm text-gray-600">Approved Disposed</p>
+                <p class="text-lg font-semibold">{{ approved_imports|default:"0" }}</p>
+            </div>
+            <div class="p-3 border-b">
+                <p class="text-sm text-gray-600">Unapproved Disposed</p>
+                <p class="text-lg font-semibold">{{ unapproved_count|default:"0" }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="mb-4 flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
+        <a href="#" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition duration-200 w-full sm:w-auto" onclick="openModal('addDeviceModal')">Add New Device</a>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="mb-4">
+        {% for message in messages %}
+        <div class="bg-{% if message.tags == 'error' %}red{% else %}green{% endif %}-100 border border-{% if message.tags == 'error' %}red{% else %}green{% endif %}-400 text-{% if message.tags == 'error' %}red{% else %}green{% endif %}-700 px-4 py-3 rounded relative animate__animated animate__fadeIn" role="alert">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Debug Output -->
+    {% if settings.DEBUG %}
+    <div class="mb-4 text-error">
+        Debug: view_name = {{ view_name|default:"Not set" }} | notification_count = {{ notification_count|default:"Not set" }} | unapproved_count = {{ unapproved_count|default:"Not set" }}
+    </div>
+    {% endif %}
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border shadow-sm">
+            <thead>
+                <tr class="bg-gray-200 text-gray-600">
+                    <th class="py-3 px-4 border text-left">Device Details</th>
+                    <th class="py-3 px-4 border text-left">Centre</th>
+                    <th class="py-3 px-4 border text-left">Assignee Info</th>
+                    <th class="py-3 px-4 border text-left">Status & Date</th>
+                    <th class="py-3 px-4 border text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if data_with_pending %}
+                {% for entry in data_with_pending %}
+                {% with item=entry.item %}
+                <tr class="hover:bg-gray-50 animate__animated animate__fadeIn transition duration-150">
+                    <td class="py-2 px-4 border">
+                        <strong>Serial:</strong> {{ item.serial_number|default:"N/A" }}<br>
+                        <strong>Hardware:</strong> {{ item.hardware|default:"N/A" }}<br>
+                        <strong>Disposal Reason:</strong> {{ item.disposal_reason|default:"N/A" }}
+                    </td>
+                    <td class="py-2 px-4 border">{{ item.centre.name|default:"N/A" }}</td>
+                    <td class="py-2 px-4 border">{{ item.assignee_first_name|default:"N/A" }} {{ item.assignee_last_name|default:"" }}</td>
+                    <td class="py-2 px-4 border">
+                        <p class="">Date added: {{ item.date|default:"N/A" }}<br>
+                        <strong>Status:</strong> {{ item.status|default:"N/A" }}
+                        </p>
+                    </td>
+                    <td class="py-2 px-4 border flex space-x-2">
+                        <button class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition duration-200" onclick="openModal('viewModal{{ item.id }}')">View</button>
+                        {% if user.is_superuser or user.is_trainer %}
+                        <button class="bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 transition duration-200" onclick="openModal('editModal{{ item.id }}')">Edit</button>
+                        {% endif %}
+                        <a href="{% url 'device_history' item.id %}" class="text-blue-600 hover:underline">View History</a>
+                    </td>
+                </tr>
+                <!-- View Details Modal -->
+                <div id="viewModal{{ item.id }}" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+                    <div class="bg-white rounded-lg shadow-xl w-full max-w-7xl mx-4 md:mx-6 max-h-[80vh] md:max-h-[90vh] overflow-y-auto relative animate__animated animate__zoomIn">
+                        <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-t-lg flex justify-between items-center">
+                            <h3 class="text-xl font-semibold">Device Details</h3>
+                            <button onclick="closeModal('viewModal{{ item.id }}')" class="text-white hover:text-gray-200 text-2xl">&times;</button>
+                        </div>
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div>
+                                    <p class="mb-2"><strong class="text-gray-700">Centre:</strong> {{ item.centre.name|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Department:</strong> {{ item.department.name|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Hardware:</strong> {{ item.hardware|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">System Model:</strong> {{ item.system_model|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Processor:</strong> {{ item.processor|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">RAM (GB):</strong> {{ item.ram_gb|default:"N/A" }}</p>
+                                </div>
+                                <div>
+                                    <p class="mb-2"><strong class="text-gray-700">HDD (GB):</strong> {{ item.hdd_gb|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Serial Number:</strong> {{ item.serial_number|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Assignee First Name:</strong> {{ item.assignee_first_name|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Assignee Last Name:</strong> {{ item.assignee_last_name|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Assignee Email:</strong> {{ item.assignee_email_address|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Device Condition:</strong> {{ item.device_condition|default:"N/A" }}</p>
+                                </div>
+                                <div>
+                                    <p class="mb-2"><strong class="text-gray-700">Status:</strong> {{ item.status|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Date:</strong> {{ item.date|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Added By:</strong> {{ item.added_by|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Approved By:</strong> {{ item.approved_by|default:"N/A" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Is Approved:</strong> {{ item.is_approved|yesno:"Yes,No" }}</p>
+                                    <p class="mb-2"><strong class="text-gray-700">Disposal Reason:</strong> {{ item.disposal_reason|default:"N/A" }}</p>
+                                </div>
+                            </div>
+                            <div class="mt-6 flex justify-end space-x-2">
+                                <a href="{% url 'download_clearance_form' item.id %}" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition duration-200">Download Clearance Form</a>
+                                <button class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200" onclick="closeModal('viewModal{{ item.id }}')">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Edit Modal -->
+                {% if user.is_superuser or user.is_trainer %}
+                <div id="editModal{{ item.id }}" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+                    <div class="bg-white rounded-lg shadow-xl w-full max-w-7xl mx-4 md:mx-6 max-h-[80vh] md:max-h-[90vh] overflow-y-auto relative animate__animated animate__zoomIn">
+                        <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-t-lg flex justify-between items-center">
+                            <h3 class="text-xl font-semibold">Edit Device</h3>
+                            <button onclick="closeModal('editModal{{ item.id }}')" class="text-white hover:text-gray-200 text-2xl">&times;</button>
+                        </div>
+                        <div class="p-6">
+                            <form action="{% url 'import_update' item.id %}" method="POST" onsubmit="return validateForm(this)">
+                                {% csrf_token %}
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div>
+                                        <div class="mb-4">
+                                            <label class="block text-gray-700 font-medium mb-1">Centre</label>
+                                            <select name="centre" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" {% if user.is_trainer %}disabled{% endif %}>
+                                                <option value="None">Select Centre</option>
+                                                {% for centre in centres %}
+                                                <option value="{{ centre.id }}" {% if centre == item.centre %}selected{% endif %}>{{ centre.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            {% if user.is_trainer %}
+                                            <input type="hidden" name="centre" value="{{ user.centre.id }}">
+                                            {% endif %}
+                                        </div>
+                                        <div class="mb-4">
+                                            <label class="block text-gray-700 font-medium mb-1">Department</label>
+                                            <select name="department" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                                <option value="">Select Department</option>
+                                                {% for dept in departments %}
+                                                <option value="{{ dept.id }}" {% if dept.id == item.department.id %}selected{% endif %}>{{ dept.name }} ({{ dept.department_code }})</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="mb-4">
+                                            <label class="block text-gray-700 font-medium mb-1">Hardware</label>
+                                            <input type="text" name="hardware" value="{{ item.hardware|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        </div>
+                                        <div class="mb-4">
+                                            <label class="block text-gray-700 font-medium mb-1">System Model</label>
+                                            <input type="text" name="system_model" value="{{ item.system_model|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        </div>
+                                        <div class="mb-4">
+                                            <label class="block text-gray-700 font-medium mb-1">Processor</label>
+                                            <input type="text" name="processor" value="{{ item.processor|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="mb-4">
+                                            <label class="block text-gray-700 font-medium mb-1">RAM (GB)</label>
+                                            <input type="text" name="ram_gb" value="{{ item.ram_gb|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        </div>
+                                        <div class="mb-4">
+                                            <label class="block text-gray-700 font-medium mb-1">HDD (GB)</label>
+                                            <input type="text" name="hdd_gb" value="{{ item.hdd_gb|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        </div>
+                                        <div class="mb-4">
+                                            <label class="block text-gray-700 font-medium mb-1">Serial Number</label>
+                                            <input type="text" name="serial_number" value="{{ item.serial_number|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                        </div>
+                                        <div class="mb-4">
+                                            <label class="block text-gray-700 font-medium mb-1">Assignee First Name</label>
+                                            <input type="text" name="assignee_first_name" value="{{ item.assignee_first_name|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        </div>
+                                        <div class="mb-4">
+                                            <label class="block text-gray-700 font-medium mb-1">Assignee Last Name</label>
+                                            <input type="text" name="assignee_last_name" value="{{ item.assignee_last_name|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="mb-4">
+                                            <label class="block text-gray-700 font-medium mb-1">Assignee Email</label>
+                                            <input type="email" name="assignee_email_address" value="{{ item.assignee_email_address|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        </div>
+                                        <div class="mb-4">
+                                            <label class="block text-gray-700 font-medium mb-1">Device Condition</label>
+                                            <input type="text" name="device_condition" value="{{ item.device_condition|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        </div>
+                                        <div class="mb-4">
+                                            <label class="block text-gray-700 font-medium mb-1">Status</label>
+                                            <input type="text" name="status" value="{{ item.status|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        </div>
+                                        <div class="mb-4">
+                                            <label class="block text-gray-700 font-medium mb-1">Date</label>
+                                            <input type="date" name="date" value="{{ item.date|date:'Y-m-d' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        </div>
+                                        {% if user.is_trainer %}
+                                        <div class="mb-4">
+                                            <label class="block text-gray-700 font-medium mb-1">Reason for Update</label>
+                                            <textarea name="reason_for_update" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required>{{ item.reason_for_update|default_if_none:'' }}</textarea>
+                                        </div>
+                                        {% endif %}
+                                        {% if user.is_superuser %}
+                                        <div class="mb-4">
+                                            <label class="block text-gray-700 font-medium mb-1">
+                                                <input type="checkbox" name="is_approved" {% if item.is_approved %}checked{% endif %} class="mr-2"> Approve
+                                            </label>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="mt-6 flex justify-end space-x-3">
+                                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200">Save</button>
+                                    <button type="button" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200" onclick="closeModal('editModal{{ item.id }}')">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endwith %}
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="5" class="py-2 px-4 border text-center text-gray-600">No records found.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Add Device Modal -->
+    <div id="addDeviceModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-7xl mx-4 md:mx-6 max-h-[80vh] md:max-h-[90vh] overflow-y-auto relative animate__animated animate__zoomIn">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-t-lg flex justify-between items-center">
+                <h3 class="text-xl font-semibold">Add New Device</h3>
+                <button onclick="closeModal('addDeviceModal')" class="text-white hover:text-gray-200 text-2xl">&times;</button>
+            </div>
+            <div class="p-6">
+                <form action="{% url 'import_add' %}" method="POST" onsubmit="return validateForm(this)">
+                    {% csrf_token %}
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 font-medium mb-1">Centre</label>
+                                <select name="centre" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" {% if user.is_trainer %}disabled{% endif %} required>
+                                    <option value="None">Select Centre</option>
+                                    {% for centre in centres %}
+                                    <option value="{{ centre.id }}">{{ centre.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% if user.is_trainer %}
+                                <input type="hidden" name="centre" value="{{ user.centre.id }}">
+                                {% endif %}
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 font-medium mb-1">Department</label>
+                                <select name="department" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                    <option value="">Select Department</option>
+                                    {% for dept in departments %}
+                                    <option value="{{ dept.id }}">{{ dept.name }} ({{ dept.department_code }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 font-medium mb-1">Hardware</label>
+                                <input type="text" name="hardware" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 font-medium mb-1">System Model</label>
+                                <input type="text" name="system_model" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 font-medium mb-1">Processor</label>
+                                <input type="text" name="processor" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 font-medium mb-1">RAM (GB)</label>
+                                <input type="text" name="ram_gb" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 font-medium mb-1">HDD (GB)</label>
+                                <input type="text" name="hdd_gb" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 font-medium mb-1">Serial Number</label>
+                                <input type="text" name="serial_number" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 font-medium mb-1">Assignee First Name</label>
+                                <input type="text" name="assignee_first_name" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 font-medium mb-1">Assignee Last Name</label>
+                                <input type="text" name="assignee_last_name" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 font-medium mb-1">Assignee Email</label>
+                                <input type="email" name="assignee_email_address" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 font-medium mb-1">Device Condition</label>
+                                <input type="text" name="device_condition" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 font-medium mb-1">Status</label>
+                                <input type="text" name="status" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 font-medium mb-1">Date</label>
+                                <input type="date" name="date" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            {% if user.is_trainer %}
+                            <div class="mb-4">
+                                <label class="block text-gray-700 font-medium mb-1">Reason for Update</label>
+                                <textarea name="reason_for_update" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required></textarea>
+                            </div>
+                            {% endif %}
+                            {% if user.is_superuser %}
+                            <div class="mb-4">
+                                <label class="block text-gray-700 font-medium mb-1">
+                                    <input type="checkbox" name="is_approved" class="mr-2"> Approve
+                                </label>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200">Save</button>
+                        <button type="button" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200" onclick="closeModal('addDeviceModal')">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% include 'import/displaycsv_base.html' %}
+</div>
+{% endblock %}
+
+<script type="text/javascript">
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+        return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                    row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                    headerRowIndex = 0;
+                }
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+    }
+
+    function openModal(modalId) {
+        console.log('Opening modal:', modalId);
+        document.getElementById(modalId).classList.remove('hidden');
+    }
+
+    function closeModal(modalId) {
+        console.log('Closing modal:', modalId);
+        document.getElementById(modalId).classList.add('hidden');
+    }
+
+    function updateItemsPerPage(select) {
+        const itemsPerPage = select.value;
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('items_per_page', itemsPerPage);
+        urlParams.set('page', 1);
+        window.location.href = "{% url 'display_disposed_imports' %}?" + urlParams.toString();
+    }
+
+    function validateForm(form) {
+        {% if user.is_trainer %}
+        const reason = form.querySelector('[name="reason_for_update"]').value;
+        if (!reason) {
+            alert('Reason for update is required.');
+            return false;
+        }
+        {% endif %}
+        const serialNumber = form.querySelector('[name="serial_number"]').value;
+        if (!serialNumber) {
+            alert('Serial number is required.');
+            return false;
+        }
+        return true;
+    }
+
+    function validateDisposalForm(form) {
+        const disposalReason = form.querySelector('[name="disposal_reason"]').value.trim();
+        if (!disposalReason) {
+            alert('Reason for disposal is required.');
+            return false;
+        }
+        return true;
+    }
+
+    function exportToExcel(scope) {
+        const url = scope === 'all' 
+            ? "{% url 'export_to_excel' %}?scope=all{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}"
+            : "{% url 'export_to_excel' %}?scope=page&page={{ data.number }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}&items_per_page={{ report_data.items_per_page }}";
+        window.location.href = url;
+    }
+</script>

@@ -25,9 +25,11 @@ from reportlab.lib.enums import TA_LEFT
 
 from devices.forms import ClearanceForm
 from ppm.models import PPMTask
-from .models import CustomUser, Import, Centre, Notification, PendingUpdate, Department
+from .models import CustomUser, DeviceUserHistory, Import, Centre, Notification, PendingUpdate, Department
 from django.contrib.auth.models import Group, Permission
-
+from django.shortcuts import render, get_object_or_404, redirect
+from django.utils import timezone
+from .models import Import, DeviceUserHistory
 # Set up logging for debugging
 logger = logging.getLogger(__name__)
 
@@ -263,8 +265,6 @@ def import_add(request):
                 messages.error(request, f"Error adding device: {str(e)}")
                 return redirect('import_add')
     return render(request, 'import/add.html', {'centres': Centre.objects.all(), 'departments': Department.objects.all()})
-
-
 
 
 @login_required
@@ -685,15 +685,6 @@ def notifications_view(request):
         )
     return render(request, 'notifications.html', {'notifications': notifications})
 
-@login_required
-def mark_notification_read(request, pk):
-    notification = get_object_or_404(Notification, pk=pk, user=request.user)
-    if request.method == 'POST':
-        notification.is_read = True
-        notification.save()
-        messages.success(request, "Notification marked as read.")
-        return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/dashboard/'))
-    return HttpResponseRedirect('/dashboard/')
 
 @login_required
 def clear_all_notifications(request):
@@ -702,6 +693,8 @@ def clear_all_notifications(request):
         messages.success(request, "All notifications cleared.")
         return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/dashboard/'))
     return HttpResponseRedirect('/dashboard/')
+
+
 
 @login_required
 def device_history(request, pk):
@@ -763,17 +756,49 @@ def device_history(request, pk):
                     }
                     field_name = field_names.get(change.field, change.field.replace('_', ' ').title())
                     diff[field_name] = {'old': old_value, 'new': new_value}
+        
+        # Determine the user who made the change
+        user = record.history_user.username if record.history_user else None
+        if not user:
+            # If history_user is not set, log a warning and use a fallback (should be rare with proper save)
+            import logging
+            logging.warning(f"No history_user found for record ID {record.id} on device {device.serial_number} at {timezone.now()}")
+            user = request.user.username if request.user.is_authenticated else 'Unknown'
+        else:
+            user = record.history_user.username
+
         history_data.append({
             'record': record,
             'diff': diff,
             'change_type': record.get_history_type_display() or record.history_type,
-            'user': record.history_user.username if record.history_user else 'System'
+            'user': user
         })
-    
+
+    # Fetch user history
+    user_history = device.user_history.all().order_by('assigned_date').values(
+        'assignee_first_name',
+        'assignee_last_name',
+        'assignee_email_address',
+        'assigned_by__username',
+        'assigned_date',
+        'cleared_date'
+    )
+    user_history_data = [
+        {
+            'assignee_name': f"{entry['assignee_first_name'] or ''} {entry['assignee_last_name'] or ''}".strip() or 'N/A',
+            'email': entry['assignee_email_address'] or 'N/A',
+            'assigned_by': entry['assigned_by__username'] or 'N/A',
+            'assigned_date': entry['assigned_date'],
+            'cleared_date': entry['cleared_date']
+        } for entry in user_history
+    ]
+
     return render(request, 'import/device_history.html', {
         'device': device,
-        'history': history_data
+        'history': history_data,
+        'user_history': user_history_data
     })
+
 
 @login_required
 def export_to_excel(request):
@@ -1318,13 +1343,7 @@ def mark_notification_read(request, pk):
         return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/dashboard/'))
     return HttpResponseRedirect('/dashboard/')
 
-@login_required
-def clear_all_notifications(request):
-    if request.method == 'POST':
-        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
-        messages.success(request, "All notifications cleared.")
-        return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/dashboard/'))
-    return HttpResponseRedirect('/dashboard/')
+
 
 from django.db.models import Q, Count
 
@@ -1611,6 +1630,7 @@ def update_group_permissions(request):
         return redirect('manage_users')
     return redirect('manage_users')
 
+
 @login_required
 def clear_user(request, device_id):
     device = get_object_or_404(Import, id=device_id)
@@ -1618,19 +1638,43 @@ def clear_user(request, device_id):
         form = ClearanceForm(request.POST)
         if form.is_valid():
             with transaction.atomic():
+                # Capture previous user details for history
+                if device.assignee_first_name or device.assignee_last_name or device.assignee_email_address:
+                    DeviceUserHistory.objects.create(
+                        device=device,
+                        assignee_first_name=device.assignee_first_name,
+                        assignee_last_name=device.assignee_last_name,
+                        assignee_email_address=device.assignee_email_address,
+                        assigned_by=device.added_by or request.user,  # Use added_by or current user if none
+                        cleared_date=timezone.now()
+                    )
+
                 clearance = form.save(commit=False)
                 clearance.device = device
                 clearance.cleared_by = request.user
+                clearance.remarks = form.cleaned_data['remarks'] or "Device cleared"
                 clearance.save()
-                device.assignee_first_name = ''
-                device.assignee_last_name = ''
-                device.assignee_email_address = ''
+                
+                # Update device status without losing user info in history
+                device.status = 'Available'
+                device.department_id = 1  # Default department
+                device.assignee_first_name = None
+                device.assignee_last_name = None
+                device.assignee_email_address = None
+                device.reason_for_update = f"Device cleared by {request.user.username} at {timezone.now().date()}"
                 device.save()
+                
                 messages.success(request, f"Device {device.serial_number} cleared successfully.")
                 return redirect('display_approved_imports')
     else:
         form = ClearanceForm()
     return render(request, 'import/clear_user.html', {'form': form, 'device': device})
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, mm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+import random
+from django.utils import timezone
 
 @login_required
 def download_clearance_form(request, device_id):
@@ -1644,20 +1688,139 @@ def download_clearance_form(request, device_id):
     response['Content-Disposition'] = f'attachment; filename="clearance_form_{device.serial_number}.pdf"'
     doc = SimpleDocTemplate(response, pagesize=A4, rightMargin=20*mm, leftMargin=20*mm, topMargin=20*mm, bottomMargin=20*mm)
     elements = []
+
+    # Styles
     styles = getSampleStyleSheet()
     title_style = styles['Heading1']
     normal_style = styles['Normal']
+    footer_style = ParagraphStyle(
+        name='FooterStyle',
+        parent=normal_style,
+        fontSize=10,
+        alignment=1  # Center alignment
+    )
+    remarks_style = ParagraphStyle(
+        name='RemarksStyle',
+        parent=normal_style,
+        fontSize=10,
+        wordWrap='CJK',  # Enables word wrapping
+        leading=12,  # Line spacing
+        alignment=0  # Left alignment
+    )
 
-    elements.append(Paragraph('Device Clearance Form', title_style))
+    # Meaningful Title
+    elements.append(Paragraph(f'Clearance Form for Device {device.serial_number} - MOHI IT Inventory', title_style))
     elements.append(Spacer(1, 12))
-    elements.append(Paragraph(f'Device Serial Number: {device.serial_number}', normal_style))
-    elements.append(Paragraph(f'Hardware: {device.hardware or "N/A"}', normal_style))
-    elements.append(Paragraph(f'Centre: {device.centre.name if device.centre else "N/A"}', normal_style))
-    elements.append(Paragraph(f'Cleared By: {clearance.cleared_by.username}', normal_style))
-    elements.append(Paragraph(f'Clearance Date: {clearance.created_at.strftime("%Y-%m-%d")}', normal_style))
-    elements.append(Paragraph(f'Reason: {clearance.reason or "N/A"}', normal_style))
-    doc.build(elements)
+
+    # Device Details Table with Wrapped Remarks
+    data = [
+        ['Field', 'Value'],
+        ['Device Serial Number', device.serial_number or 'N/A'],
+        ['Hardware', device.hardware or 'N/A'],
+        ['Centre', device.centre.name if device.centre else 'N/A'],
+        ['Department', device.department.name if device.department else 'N/A'],
+        ['Status', device.status or 'N/A'],
+        ['Date', device.date.strftime("%Y-%m-%d") if device.date else 'N/A'],
+        ['Cleared By', clearance.cleared_by.username],
+        ['Clearance Date', clearance.created_at.strftime("%Y-%m-%d")],
+        ['Approved By', device.approved_by.username if device.approved_by else 'N/A'],
+    ]
+    # Add Remarks as a Paragraph for wrapping
+    remarks = device.reason_for_update or clearance.remarks or 'N/A'
+    data.append(['Remarks', Paragraph(remarks, remarks_style)])
+
+    table = Table(data, colWidths=[100*mm, 100*mm])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Align content to top to handle multi-line remarks
+    ]))
+    elements.append(table)
+    elements.append(Spacer(1, 12))
+
+    # User History Table
+    user_history = device.user_history.all().order_by('assigned_date')
+    if user_history.exists():
+        history_data = [['Assignee Name', 'Email', 'Assigned By', 'Assigned Date', 'Cleared Date']]
+        for history in user_history:
+            assignee_name = f"{history.assignee_first_name or ''} {history.assignee_last_name or ''}".strip() or 'N/A'
+            history_data.append([
+                assignee_name,
+                history.assignee_email_address or 'N/A',
+                history.assigned_by.username if history.assigned_by else 'N/A',
+                history.assigned_date.strftime("%Y-%m-%d") if history.assigned_date else 'N/A',
+                history.cleared_date.strftime("%Y-%m-%d") if history.cleared_date else 'N/A',
+            ])
+        history_table = Table(history_data, colWidths=[40*mm, 40*mm, 40*mm, 40*mm, 40*mm])
+        history_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ]))
+        elements.append(Paragraph('User History', normal_style))
+        elements.append(Spacer(1, 6))
+        elements.append(history_table)
+        elements.append(Spacer(1, 12))
+
+    # Footer with Signature Section
+    elements.append(Paragraph('Signature Section', footer_style))
+    elements.append(Spacer(1, 6))
+    signature_data = [
+        ['Cleared By Signature:', ''],
+        ['Date:', ''],
+        ['Approved By Name & Signature:', ''],
+        ['Date:', ''],
+    ]
+    signature_table = Table(signature_data, colWidths=[80*mm, 120*mm])
+    signature_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+    ]))
+    elements.append(signature_table)
+
+    # Watermark function with increased repetition and reduced overlap
+    def add_watermark(canvas, doc):
+        watermark_text = "MOHI IT"
+        canvas.saveState()
+        canvas.setFont("Helvetica", 20)  # Reduced font size
+        canvas.setFillGray(0.95, 0.95)  # Reduced clarity
+        page_width, page_height = doc.pagesize
+        grid_size = 80  # Reduced grid size for more instances
+        placed_positions = []  # Track placed positions to avoid overlap
+
+        for x in range(0, int(page_width), grid_size):
+            for y in range(0, int(page_height), grid_size):
+                # Add random offset within grid cell
+                offset_x = random.randint(-40, 40)
+                offset_y = random.randint(-40, 40)
+                adjusted_x = x + offset_x
+                adjusted_y = y + offset_y
+                # Check if position is within bounds and not too close to existing positions
+                if (10 <= adjusted_x <= page_width - 10 and 
+                    10 <= adjusted_y <= page_height - 10 and 
+                    not any(abs(adjusted_x - px) < 50 or abs(adjusted_y - py) < 50 for px, py in placed_positions)):
+                    canvas.rotate(45)  # Diagonal effect
+                    canvas.drawString(adjusted_x, adjusted_y, watermark_text)
+                    canvas.rotate(-45)  # Reset rotation
+                    placed_positions.append((adjusted_x, adjusted_y))
+
+        canvas.restoreState()
+
+    # Build the PDF with watermark on all pages
+    doc.build(elements, onFirstPage=add_watermark, onLaterPages=add_watermark)
+
     return response
-
-
-
