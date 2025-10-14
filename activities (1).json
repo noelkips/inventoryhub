@@ -1,0 +1,90 @@
+[
+{
+  "model": "ppm.ppmactivity",
+  "pk": 1,
+  "fields": {
+    "name": "Physical Cleaning and Dust Removal",
+    "description": "Dust and debris can accumulate in hardware components, causing overheating and reduced performance. Use compressed air, anti-static brushes, or vacuum systems to clean server racks, workstations, and peripherals. Focus on cooling fans, vents, and heat sinks.\r\nNB: For deeper cleaning, IT may open the laptop (if permitted by warranty) to clean internal components like heat sinks."
+  }
+},
+{
+  "model": "ppm.ppmactivity",
+  "pk": 2,
+  "fields": {
+    "name": "Hardware Inspections and Diagnostics",
+    "description": "Run diagnostic tools provided by manufacturers (e.g., Dell SupportAssist, HP PC Hardware Diagnostics) to test components for errors. Visually inspect ports, hinges, and screens for physical damage.\r\nChecks for signs of wear, corrosion, or potential failure in components; i.e use diagnostic tools (e.g., Dell iDRAC, HP iLO) to monitor hardware health metrics like temperature, fan speed, and voltage. Physically inspect cables, connectors, and components for damage."
+  }
+},
+{
+  "model": "ppm.ppmactivity",
+  "pk": 3,
+  "fields": {
+    "name": "Firmware Updates",
+    "description": "Updating firmware for hardware components like BIOS, RAID controllers, or network switches to ensure compatibility, security, and performance; i.e Download and apply manufacturer-provided firmware updates during scheduled maintenance windows to minimize disruption."
+  }
+},
+{
+  "model": "ppm.ppmactivity",
+  "pk": 4,
+  "fields": {
+    "name": "Battery Health Checks and Maintenance",
+    "description": "Laptop batteries degrade over time, impacting performance and mobility; i.e. use built-in tools (e.g., Windows Battery Report, macOS System Information) or third-party software (e.g., BatteryInfoView) to monitor battery health, charge cycles, and capacity. Calibrate batteries periodically by fully charging and discharging them. Advise the user to replace batteries if the capacity falls below 80%."
+  }
+},
+{
+  "model": "ppm.ppmactivity",
+  "pk": 5,
+  "fields": {
+    "name": "Storage Maintenance and Upgrades",
+    "description": "Monitoring and maintaining storage devices (HDDs or SSDs) to prevent failures and optimize performance; i.e. use tools like CrystalDiskInfo to monitor SMART data for drive health. Replace drives showing signs of failure (e.g., high reallocated sector counts). Upgrade to SSDs for older laptops with HDDs to boost performance."
+  }
+},
+{
+  "model": "ppm.ppmactivity",
+  "pk": 6,
+  "fields": {
+    "name": "Keyboard, Trackpad, and Port Inspections",
+    "description": "Checking input devices and ports for functionality and damage; i.e. Test keyboards (online keyboard tester websites)and trackpads for responsiveness. Clean sticky keys with isopropyl alcohol. Inspect USB, HDMI, and charging ports for wear or loose connections. "
+  }
+},
+{
+  "model": "ppm.ppmactivity",
+  "pk": 7,
+  "fields": {
+    "name": "Cabling and Adapter Checks",
+    "description": "Inspecting power adapters and cables for damage or wear. Inspecting power adapters and cables for damage or wear"
+  }
+},
+{
+  "model": "ppm.ppmactivity",
+  "pk": 8,
+  "fields": {
+    "name": "System Updates and Patching",
+    "description": "Apply software updates, security patches, and firmware upgrades to operating systems and applications\r\nEnsure all software installed is on the policy list of software to be installed to our users"
+  }
+},
+{
+  "model": "ppm.ppmactivity",
+  "pk": 9,
+  "fields": {
+    "name": "Antivirus and Malware Protection Updates",
+    "description": "Update antivirus definitions and run regular malware scans. Ensuring tools like CrowdStrike or Windows Defender are updated and scanning endpoints"
+  }
+},
+{
+  "model": "ppm.ppmactivity",
+  "pk": 10,
+  "fields": {
+    "name": "Network Monitoring and Optimization",
+    "description": "Monitor network performance and proactively address bottlenecks or vulnerabilities. Using tools like SolarWinds or PRTG to monitor bandwidth usage and reconfigure routers to prevent congestion."
+  }
+},
+{
+  "model": "ppm.ppmactivity",
+  "pk": 11,
+  "fields": {
+    "name": "NO ACTIVITY PERFORMED",
+    "description": "SCENARIO WHERE DEVICE IS NOT FOUND"
+  }
+}
+]

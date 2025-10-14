@@ -1,4 +1,5 @@
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+{% load static %}
+
 <script type="text/javascript">
     var gk_isXlsx = false;
     var gk_xlsxFileLookup = {};
@@ -12,22 +13,14 @@
                 var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
                 var firstSheetName = workbook.SheetNames[0];
                 var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
                 var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
                 var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row
                 var headerRowIndex = filteredData.findIndex((row, index) =>
-                    row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
                 );
-                // Fallback
                 if (headerRowIndex === -1 || headerRowIndex > 25) {
-                    headerRowIndex = 0;
+                  headerRowIndex = 0;
                 }
-
-                // Convert filtered JSON back to CSV
                 var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
                 csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
                 return csv;
@@ -68,6 +61,15 @@
         const serialNumber = form.querySelector('[name="serial_number"]').value;
         if (!serialNumber) {
             alert('Serial number is required.');
+            return false;
+        }
+        return true;
+    }
+
+    function validateDisposalForm(form) {
+        const disposalReason = form.querySelector('[name="disposal_reason"]').value.trim();
+        if (!disposalReason) {
+            alert('Reason for disposal is required.');
             return false;
         }
         return true;
@@ -131,13 +133,21 @@
                         <td class="py-2 px-4 border">{{ item.centre.name|default:"N/A" }}</td>
                         <td class="py-2 px-4 border">{{ item.assignee_first_name|default:"N/A" }} {{ item.assignee_last_name|default:"" }}</td>
                         <td class="py-2 px-4 border">
-                            <strong>Status:</strong> {{ item.status|default:"N/A" }}<br>
-                            <strong>Date:</strong> {{ item.date|default:"N/A" }}
+                            <p class="">Date added: {{ item.date|default:"N/A" }}<br>
+                            {% if item.status == 'Available' %}
+                                <button class="bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 transition duration-200" onclick="openModal('editModal{{ item.id }}')">Reassign user</button>
+                            {% else %}
+                                <strong>Status:</strong> {{ item.status|default:"N/A" }}
+                            {% endif %}
+                            </p>
                         </td>
                         <td class="py-2 px-4 border flex space-x-2">
                             <button class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition duration-200" onclick="openModal('viewModal{{ item.id }}')">View</button>
                             {% if user.is_superuser or user.is_trainer %}
                                 <button class="bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 transition duration-200" onclick="openModal('editModal{{ item.id }}')">Edit</button>
+                            {% endif %}
+                            {% if user.is_superuser and not user.is_trainer %}
+                                <button class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition duration-200" onclick="openModal('disposeModal{{ item.id }}')">Dispose</button>
                             {% endif %}
                             {% if user.is_superuser and not user.is_trainer %}
                                 <button class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition duration-200" onclick="openModal('deleteModal{{ item.id }}')">Delete</button>
@@ -159,7 +169,7 @@
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div>
                                         <p class="mb-2"><strong class="text-gray-700">Centre:</strong> {{ item.centre.name|default:"N/A" }}</p>
-                                        <p class="mb-2"><strong class="text-gray-700">Department:</strong> {{ item.department|default:"N/A" }}</p>
+                                        <p class="mb-2"><strong class="text-gray-700">Department:</strong> {{ item.department.name|default:"N/A" }}</p>
                                         <p class="mb-2"><strong class="text-gray-700">Hardware:</strong> {{ item.hardware|default:"N/A" }}</p>
                                         <p class="mb-2"><strong class="text-gray-700">System Model:</strong> {{ item.system_model|default:"N/A" }}</p>
                                         <p class="mb-2"><strong class="text-gray-700">Processor:</strong> {{ item.processor|default:"N/A" }}</p>
@@ -182,7 +192,9 @@
                                         <p class="mb-2"><strong class="text-gray-700">Reason for Update:</strong> {{ item.reason_for_update|default:"N/A" }}</p>
                                     </div>
                                 </div>
-                                <div class="mt-6 flex justify-end">
+                                <div class="mt-6 flex justify-end space-x-2">
+                                    <a href="{% url 'clear_user' item.id %}" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition duration-200">Clear User</a>
+                                    <a href="{% url 'download_clearance_form' item.id %}" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition duration-200">Download Clearance Form</a>
                                     <button class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200" onclick="closeModal('viewModal{{ item.id }}')">Close</button>
                                 </div>
                             </div>
@@ -215,7 +227,12 @@
                                                 </div>
                                                 <div class="mb-4">
                                                     <label class="block text-gray-700 font-medium mb-1">Department</label>
-                                                    <input type="text" name="department" value="{{ item.department|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                    <select name="department" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                                        <option value="">Select Department</option>
+                                                        {% for dept in departments %}
+                                                            <option value="{{ dept.id }}" {% if dept.id == item.department.id %}selected{% endif %}>{{ dept.name }} ({{ dept.department_code }})</option>
+                                                        {% endfor %}
+                                                    </select>
                                                 </div>
                                                 <div class="mb-4">
                                                     <label class="block text-gray-700 font-medium mb-1">Hardware</label>
@@ -290,6 +307,26 @@
                                         </div>
                                     </form>
                                 </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    <!-- Dispose Modal (Admins only) -->
+                    {% if user.is_superuser and not user.is_trainer %}
+                        <div id="disposeModal{{ item.id }}" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+                            <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md mx-4 animate__animated animate__zoomIn">
+                                <h3 class="text-lg font-bold mb-4 text-gray-800">Dispose Device</h3>
+                                <p class="text-gray-600 mb-4">Are you sure you want to dispose this device (Serial: {{ item.serial_number|default:"N/A" }})?</p>
+                                <form action="{% url 'dispose_device' item.id %}" method="POST" onsubmit="return validateDisposalForm(this)">
+                                    {% csrf_token %}
+                                    <div class="mb-4">
+                                        <label class="block text-gray-700 font-medium mb-1" for="disposal_reason_{{ item.id }}">Reason for Disposal</label>
+                                        <textarea id="disposal_reason_{{ item.id }}" name="disposal_reason" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" rows="4" required></textarea>
+                                    </div>
+                                    <div class="flex space-x-3 mt-4">
+                                        <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition duration-200">Dispose</button>
+                                        <button type="button" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200" onclick="closeModal('disposeModal{{ item.id }}')">Cancel</button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     {% endif %}

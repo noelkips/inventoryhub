@@ -3,27 +3,26 @@
 
 {% block content %}
 <div class="container mx-auto p-4">
-    <h2 class="text-2xl font-bold mb-4 text-gray-800">
-        Notifications
-        {% if notification_count > 0 %}
-            <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
-                {{ notification_count }} Unread
-            </span>
-        {% endif %}
-    </h2>
-
-    <!-- Debug Output -->
-    {% if settings.DEBUG %}
-        <div class="text-error mb-4">
-            Debug: notification_count = {{ notification_count|default:"Not set" }}
-        </div>
-    {% endif %}
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold text-primary">
+            Notifications
+            {% if notifications|length > 0 %}
+                <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+                    {{ notifications|length }} Unread
+                </span>
+            {% endif %}
+        </h2>
+        <form action="{% url 'clear_all_notifications' %}" method="POST" class="inline">
+            {% csrf_token %}
+            <button type="submit" class="bg-error text-white px-4 py-2 rounded hover:bg-red-700 transition duration-200">Clear All Notifications</button>
+        </form>
+    </div>
 
     <!-- Messages -->
     {% if messages %}
         <div class="mb-4">
             {% for message in messages %}
-                <div class="bg-{% if message.tags == 'error' %}red{% else %}green{% endif %}-100 border border-{% if message.tags == 'error' %}red{% else %}green{% endif %}-400 text-{% if message.tags == 'error' %}red{% else %}green{% endif %}-700 px-4 py-3 rounded relative animate__animated animate__fadeIn" role="alert">
+                <div class="bg-{% if message.tags == 'error' %}error{% else %}accent{% endif %} text-white p-4 rounded mb-2 animate__animated animate__fadeIn" role="alert">
                     {{ message }}
                 </div>
             {% endfor %}
@@ -32,11 +31,11 @@
 
     <!-- Notifications Table -->
     <div class="bg-white p-4 rounded-lg shadow-md">
-        <h3 class="text-lg font-semibold mb-4 text-gray-800">All Notifications</h3>
+        <h3 class="text-lg font-semibold mb-4 text-primary">All Notifications</h3>
         <div class="overflow-x-auto">
             <table class="min-w-full bg-white border">
                 <thead>
-                    <tr class="bg-gray-200 text-gray-600">
+                    <tr class="bg-gray-100 text-gray">
                         <th class="py-3 px-4 border text-left">Date</th>
                         <th class="py-3 px-4 border text-left">Message</th>
                         <th class="py-3 px-4 border text-left">Status</th>
@@ -47,66 +46,154 @@
                 </thead>
                 <tbody>
                     {% for notification in notifications %}
-                        <tr class="{% if not notification.is_read %}bg-blue-50{% else %}bg-white{% endif %} hover:bg-gray-50">
+                        <tr class="{% if not notification.is_read %}bg-yellow-50{% else %}bg-white{% endif %} hover:bg-gray-50">
                             <td class="py-2 px-4 border">{{ notification.created_at|date:"Y-m-d H:i" }}</td>
                             <td class="py-2 px-4 border">
                                 {{ notification.message }}
                                 {% if notification.content_type and notification.content_type.model == 'pendingupdate' and notification.related_object %}
                                     <br>
-                                    <span class="text-sm text-gray-600">
+                                    <span class="text-sm text-gray">
                                         Device: {{ notification.related_object.import_record.serial_number|default:"N/A" }} |
                                         Reason: {{ notification.related_object.reason_for_update|default:"N/A" }}
                                     </span>
-                                    {% if settings.DEBUG %}
-                                        <br>
-                                        <span class="text-sm text-error">
-                                            Debug: Related object exists: {{ notification.related_object|yesno:"Yes,No" }}
-                                            {% if notification.related_object %}
-                                                | Import PK: {{ notification.related_object.import_record.pk|default:"N/A" }}
-                                            {% endif %}
-                                        </span>
-                                    {% endif %}
-                                {% elif settings.DEBUG %}
+                                    <button type="button" class="text-accent hover:underline mt-2" data-modal-toggle="device-modal-{{ notification.pk }}">View Details</button>
+                                {% elif notification.content_type and notification.content_type.model == 'import' and notification.related_object %}
                                     <br>
-                                    <span class="text-sm text-error">
-                                        Debug: No related object or not a PendingUpdate
+                                    <span class="text-sm text-gray">
+                                        Device: {{ notification.related_object.serial_number|default:"N/A" }}
                                     </span>
+                                    <button type="button" class="text-accent hover:underline mt-2" data-modal-toggle="device-modal-{{ notification.pk }}">View Details</button>
                                 {% endif %}
                             </td>
                             <td class="py-2 px-4 border">
                                 {% if notification.is_read %}
-                                    <span class="text-green-600">Read</span>
+                                    <span class="text-accent">Read</span>
                                 {% else %}
                                     <form action="{% url 'mark_notification_read' notification.pk %}" method="POST" class="inline">
                                         {% csrf_token %}
-                                        <button type="submit" class="text-blue-600 hover:underline">Mark as Read</button>
+                                        <button type="submit" class="text-accent hover:underline">Mark as Read</button>
                                     </form>
                                 {% endif %}
                             </td>
                             {% if user.is_superuser and not user.is_trainer %}
                                 <td class="py-2 px-4 border">
                                     {% if notification.content_type and notification.content_type.model == 'pendingupdate' and notification.related_object and notification.related_object.import_record %}
-                                        <form action="{% url 'import_approve' notification.related_object.import_record.pk %}" method="POST" class="inline">
+                                        <form action="{% url 'import_approve' notification.related_object.import_record.pk %}" method="POST" class="inline mr-2">
                                             {% csrf_token %}
-                                            <button type="submit" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition duration-200">Approve</button>
+                                            <button type="submit" class="bg-accent text-white px-3 py-1 rounded hover:bg-blue-700 transition duration-200">Approve</button>
                                         </form>
-                                    {% elif settings.DEBUG %}
-                                        <span class="text-error">No action: Missing related object or import record</span>
+                                        <form action="{% url 'import_reject' notification.related_object.import_record.pk %}" method="POST" class="inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="bg-error text-white px-3 py-1 rounded hover:bg-red-700 transition duration-200">Reject</button>
+                                        </form>
+                                    {% elif notification.content_type and notification.content_type.model == 'import' and notification.related_object %}
+                                        <form action="{% url 'import_approve' notification.related_object.pk %}" method="POST" class="inline mr-2">
+                                            {% csrf_token %}
+                                            <button type="submit" class="bg-accent text-white px-3 py-1 rounded hover:bg-blue-700 transition duration-200">Approve</button>
+                                        </form>
+                                        <form action="{% url 'import_reject' notification.related_object.pk %}" method="POST" class="inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="bg-error text-white px-3 py-1 rounded hover:bg-red-700 transition duration-200">Reject</button>
+                                        </form>
                                     {% endif %}
                                 </td>
                             {% endif %}
                         </tr>
+                        <!-- Modal for Device Details -->
+                        <div id="device-modal-{{ notification.pk }}" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50" data-modal>
+                            <div class="relative w-full max-w-2xl max-h-full mx-auto mt-20">
+                                <div class="relative bg-white rounded-lg shadow">
+                                    <div class="flex items-start justify-between p-4 border-b rounded-t">
+                                        <h3 class="text-xl font-semibold text-gray-900">
+                                            Device Details
+                                        </h3>
+                                        <button type="button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center" data-modal-hide="device-modal-{{ notification.pk }}">
+                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                                        </button>
+                                    </div>
+                                    <div class="p-6 space-y-6">
+                                        {% if notification.content_type.model == 'pendingupdate' and notification.related_object %}
+                                            {% with import_instance=notification.related_object.import_record pending_update=notification.related_object %}
+                                                <p><strong>Centre:</strong> {{ import_instance.centre|default:"N/A" }}</p>
+                                                <p><strong>Department:</strong> {{ import_instance.department|default:"N/A" }}</p>
+                                                <p><strong>Hardware:</strong> {% if import_instance.hardware != pending_update.hardware %}<span class="bg-yellow-200">{{ pending_update.hardware }}</span>{% else %}{{ import_instance.hardware|default:"N/A" }}{% endif %}</p>
+                                                <p><strong>System Model:</strong> {% if import_instance.system_model != pending_update.system_model %}<span class="bg-yellow-200">{{ pending_update.system_model }}</span>{% else %}{{ import_instance.system_model|default:"N/A" }}{% endif %}</p>
+                                                <p><strong>Processor:</strong> {% if import_instance.processor != pending_update.processor %}<span class="bg-yellow-200">{{ pending_update.processor }}</span>{% else %}{{ import_instance.processor|default:"N/A" }}{% endif %}</p>
+                                                <p><strong>RAM (GB):</strong> {% if import_instance.ram_gb != pending_update.ram_gb %}<span class="bg-yellow-200">{{ pending_update.ram_gb }}</span>{% else %}{{ import_instance.ram_gb|default:"N/A" }}{% endif %}</p>
+                                                <p><strong>HDD (GB):</strong> {% if import_instance.hdd_gb != pending_update.hdd_gb %}<span class="bg-yellow-200">{{ pending_update.hdd_gb }}</span>{% else %}{{ import_instance.hdd_gb|default:"N/A" }}{% endif %}</p>
+                                                <p><strong>Serial Number:</strong> {% if import_instance.serial_number != pending_update.serial_number %}<span class="bg-yellow-200">{{ pending_update.serial_number }}</span>{% else %}{{ import_instance.serial_number|default:"N/A" }}{% endif %}</p>
+                                                <p><strong>Assignee First Name:</strong> {% if import_instance.assignee_first_name != pending_update.assignee_first_name %}<span class="bg-yellow-200">{{ pending_update.assignee_first_name }}</span>{% else %}{{ import_instance.assignee_first_name|default:"N/A" }}{% endif %}</p>
+                                                <p><strong>Assignee Last Name:</strong> {% if import_instance.assignee_last_name != pending_update.assignee_last_name %}<span class="bg-yellow-200">{{ pending_update.assignee_last_name }}</span>{% else %}{{ import_instance.assignee_last_name|default:"N/A" }}{% endif %}</p>
+                                                <p><strong>Assignee Email:</strong> {% if import_instance.assignee_email_address != pending_update.assignee_email_address %}<span class="bg-yellow-200">{{ pending_update.assignee_email_address }}</span>{% else %}{{ import_instance.assignee_email_address|default:"N/A" }}{% endif %}</p>
+                                                <p><strong>Device Condition:</strong> {% if import_instance.device_condition != pending_update.device_condition %}<span class="bg-yellow-200">{{ pending_update.device_condition }}</span>{% else %}{{ import_instance.device_condition|default:"N/A" }}{% endif %}</p>
+                                                <p><strong>Status:</strong> {% if import_instance.status != pending_update.status %}<span class="bg-yellow-200">{{ pending_update.status }}</span>{% else %}{{ import_instance.status|default:"N/A" }}{% endif %}</p>
+                                                <p><strong>Date:</strong> {% if import_instance.date != pending_update.date %}<span class="bg-yellow-200">{{ pending_update.date|date:"Y-m-d" }}</span>{% else %}{{ import_instance.date|date:"Y-m-d"|default:"N/A" }}{% endif %}</p>
+                                                <p><strong>Reason for Update:</strong> {{ pending_update.reason_for_update|default:"N/A" }}</p>
+                                            {% endwith %}
+                                        {% elif notification.content_type.model == 'import' and notification.related_object %}
+                                            {% with import_instance=notification.related_object %}
+                                                <p><strong>Centre:</strong> {{ import_instance.centre|default:"N/A" }}</p>
+                                                <p><strong>Department:</strong> {{ import_instance.department|default:"N/A" }}</p>
+                                                <p><strong>Hardware:</strong> {{ import_instance.hardware|default:"N/A" }}</p>
+                                                <p><strong>System Model:</strong> {{ import_instance.system_model|default:"N/A" }}</p>
+                                                <p><strong>Processor:</strong> {{ import_instance.processor|default:"N/A" }}</p>
+                                                <p><strong>RAM (GB):</strong> {{ import_instance.ram_gb|default:"N/A" }}</p>
+                                                <p><strong>HDD (GB):</strong> {{ import_instance.hdd_gb|default:"N/A" }}</p>
+                                                <p><strong>Serial Number:</strong> {{ import_instance.serial_number|default:"N/A" }}</p>
+                                                <p><strong>Assignee First Name:</strong> {{ import_instance.assignee_first_name|default:"N/A" }}</p>
+                                                <p><strong>Assignee Last Name:</strong> {{ import_instance.assignee_last_name|default:"N/A" }}</p>
+                                                <p><strong>Assignee Email:</strong> {{ import_instance.assignee_email_address|default:"N/A" }}</p>
+                                                <p><strong>Device Condition:</strong> {{ import_instance.device_condition|default:"N/A" }}</p>
+                                                <p><strong>Status:</strong> {{ import_instance.status|default:"N/A" }}</p>
+                                                <p><strong>Date:</strong> {{ import_instance.date|date:"Y-m-d"|default:"N/A" }}</p>
+                                            {% endwith %}
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex items-center p-6 space-x-2 border-t border-gray-200 rounded-b">
+                                        <button type="button" class="text-white bg-accent hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center" data-modal-hide="device-modal-{{ notification.pk }}">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     {% empty %}
                         <tr>
-                            <td colspan="{% if user.is_superuser and not user.is_trainer %}4{% else %}3{% endif %}" class="py-2 px-4 border text-center text-gray-600">No notifications found.</td>
+                            <td colspan="{% if user.is_superuser and not user.is_trainer %}4{% else %}3{% endif %}" class="py-2 px-4 border text-center text-gray">No notifications found.</td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
         <div class="mt-4">
-            <a href="{% url 'dashboard' %}" class="text-blue-600 hover:underline">Back to Dashboard</a>
+            <a href="{% url 'dashboard' %}" class="text-accent hover:underline">Back to Dashboard</a>
         </div>
     </div>
 </div>
+
+<script>
+    // Modal toggle functionality
+    document.querySelectorAll('[data-modal-toggle]').forEach(button => {
+        button.addEventListener('click', () => {
+            const modalId = button.getAttribute('data-modal-toggle');
+            const modal = document.getElementById(modalId);
+            modal.classList.toggle('hidden');
+        });
+    });
+
+    document.querySelectorAll('[data-modal-hide]').forEach(button => {
+        button.addEventListener('click', () => {
+            const modalId = button.getAttribute('data-modal-hide');
+            const modal = document.getElementById(modalId);
+            modal.classList.add('hidden');
+        });
+    });
+
+    // Close modal when clicking outside
+    document.addEventListener('click', (event) => {
+        document.querySelectorAll('[data-modal]').forEach(modal => {
+            if (!modal.querySelector('.relative').contains(event.target) && !event.target.hasAttribute('data-modal-toggle')) {
+                modal.classList.add('hidden');
+            }
+        });
+    });
+</script>
 {% endblock %}

@@ -1,0 +1,9484 @@
+[
+{
+  "model": "ppm.ppmtask",
+  "pk": 1,
+  "fields": {
+    "device": 1822,
+    "period": 1,
+    "completed_date": "2025-09-04",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-06T15:58:13.948Z",
+    "updated_at": "2025-09-08T04:14:13.711Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 2,
+  "fields": {
+    "device": 1823,
+    "period": 1,
+    "completed_date": "2025-09-04",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T04:13:50.681Z",
+    "updated_at": "2025-09-08T04:13:50.681Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 3,
+  "fields": {
+    "device": 1824,
+    "period": 1,
+    "completed_date": "2025-09-04",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T04:15:37.917Z",
+    "updated_at": "2025-09-08T04:15:37.917Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 4,
+  "fields": {
+    "device": 1825,
+    "period": 1,
+    "completed_date": "2025-09-04",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T04:16:24.463Z",
+    "updated_at": "2025-09-08T04:16:24.463Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 5,
+  "fields": {
+    "device": 1826,
+    "period": 1,
+    "completed_date": "2025-09-04",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T04:17:15.696Z",
+    "updated_at": "2025-09-08T04:17:15.696Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 6,
+  "fields": {
+    "device": 1827,
+    "period": 1,
+    "completed_date": "2025-09-04",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T04:18:07.711Z",
+    "updated_at": "2025-09-08T04:18:07.711Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 7,
+  "fields": {
+    "device": 1828,
+    "period": 1,
+    "completed_date": "2025-09-04",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T04:19:22.964Z",
+    "updated_at": "2025-09-08T04:19:22.964Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 8,
+  "fields": {
+    "device": 1829,
+    "period": 1,
+    "completed_date": "2025-09-04",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T04:21:50.450Z",
+    "updated_at": "2025-09-08T04:31:18.566Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 9,
+  "fields": {
+    "device": 1928,
+    "period": 1,
+    "completed_date": "2025-09-04",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T04:47:56.634Z",
+    "updated_at": "2025-09-08T04:47:56.634Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 10,
+  "fields": {
+    "device": 1929,
+    "period": 1,
+    "completed_date": "2025-09-04",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T04:50:32.114Z",
+    "updated_at": "2025-09-08T04:50:32.114Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 11,
+  "fields": {
+    "device": 1930,
+    "period": 1,
+    "completed_date": "2025-09-04",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T04:51:37.897Z",
+    "updated_at": "2025-09-08T04:51:37.897Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 12,
+  "fields": {
+    "device": 1932,
+    "period": 1,
+    "completed_date": "2025-09-04",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T04:53:39.725Z",
+    "updated_at": "2025-09-08T04:53:39.725Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 13,
+  "fields": {
+    "device": 1933,
+    "period": 1,
+    "completed_date": "2025-09-04",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T04:55:18.125Z",
+    "updated_at": "2025-09-08T04:55:18.125Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 14,
+  "fields": {
+    "device": 1479,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T07:49:51.191Z",
+    "updated_at": "2025-09-08T07:49:52.570Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 15,
+  "fields": {
+    "device": 1480,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T07:55:15.444Z",
+    "updated_at": "2025-09-08T07:55:15.444Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 16,
+  "fields": {
+    "device": 1481,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T07:56:08.737Z",
+    "updated_at": "2025-09-08T07:56:08.737Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 17,
+  "fields": {
+    "device": 1482,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T07:56:52.269Z",
+    "updated_at": "2025-09-08T07:56:52.269Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 18,
+  "fields": {
+    "device": 1483,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T07:57:40.107Z",
+    "updated_at": "2025-09-08T07:57:40.107Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 19,
+  "fields": {
+    "device": 1484,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T07:58:36.430Z",
+    "updated_at": "2025-09-08T07:58:36.430Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 20,
+  "fields": {
+    "device": 1485,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T07:59:22.624Z",
+    "updated_at": "2025-09-08T07:59:22.624Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 21,
+  "fields": {
+    "device": 1486,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T08:00:05.115Z",
+    "updated_at": "2025-09-08T08:00:05.115Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 22,
+  "fields": {
+    "device": 1487,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T08:02:38.961Z",
+    "updated_at": "2025-09-08T08:02:38.961Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 23,
+  "fields": {
+    "device": 1488,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T08:03:42.222Z",
+    "updated_at": "2025-09-08T08:03:49.168Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 24,
+  "fields": {
+    "device": 1489,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T08:06:39.214Z",
+    "updated_at": "2025-09-08T08:06:39.214Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 25,
+  "fields": {
+    "device": 1490,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T08:09:34.900Z",
+    "updated_at": "2025-09-08T08:09:34.900Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 26,
+  "fields": {
+    "device": 1495,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T08:11:38.413Z",
+    "updated_at": "2025-09-08T08:11:38.413Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 27,
+  "fields": {
+    "device": 1493,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T08:40:42.145Z",
+    "updated_at": "2025-09-08T08:40:42.145Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 28,
+  "fields": {
+    "device": 1494,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T08:43:51.459Z",
+    "updated_at": "2025-09-08T08:43:51.459Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 29,
+  "fields": {
+    "device": 1938,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T09:01:11.659Z",
+    "updated_at": "2025-09-08T09:01:11.659Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 30,
+  "fields": {
+    "device": 1939,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T09:02:14.751Z",
+    "updated_at": "2025-09-08T09:02:14.752Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 31,
+  "fields": {
+    "device": 1940,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T09:03:28.798Z",
+    "updated_at": "2025-09-08T09:03:28.798Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 32,
+  "fields": {
+    "device": 1941,
+    "period": 1,
+    "completed_date": "2025-09-03",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-08T09:04:23.513Z",
+    "updated_at": "2025-09-08T09:04:23.513Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 33,
+  "fields": {
+    "device": 304,
+    "period": 1,
+    "completed_date": "2025-09-05",
+    "remarks": "Good condition",
+    "created_by": 1,
+    "created_at": "2025-09-08T09:12:59.085Z",
+    "updated_at": "2025-09-08T09:12:59.085Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 34,
+  "fields": {
+    "device": 1872,
+    "period": 1,
+    "completed_date": "2025-09-05",
+    "remarks": "Good condition",
+    "created_by": 1,
+    "created_at": "2025-09-08T09:14:49.734Z",
+    "updated_at": "2025-09-08T09:14:49.734Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 35,
+  "fields": {
+    "device": 1873,
+    "period": 1,
+    "completed_date": "2025-09-05",
+    "remarks": "Space bar not working",
+    "created_by": 1,
+    "created_at": "2025-09-08T09:16:30.612Z",
+    "updated_at": "2025-09-08T09:16:50.721Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 36,
+  "fields": {
+    "device": 1875,
+    "period": 1,
+    "completed_date": "2025-09-05",
+    "remarks": "Good condition",
+    "created_by": 1,
+    "created_at": "2025-09-08T09:18:26.078Z",
+    "updated_at": "2025-09-08T09:18:26.078Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 37,
+  "fields": {
+    "device": 1876,
+    "period": 1,
+    "completed_date": "2025-09-05",
+    "remarks": "Good condition",
+    "created_by": 1,
+    "created_at": "2025-09-08T09:19:30.683Z",
+    "updated_at": "2025-09-08T09:19:30.683Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 38,
+  "fields": {
+    "device": 1877,
+    "period": 1,
+    "completed_date": "2025-09-05",
+    "remarks": "Touchpad issue",
+    "created_by": 1,
+    "created_at": "2025-09-08T09:20:32.123Z",
+    "updated_at": "2025-09-09T08:30:31.557Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 39,
+  "fields": {
+    "device": 1879,
+    "period": 1,
+    "completed_date": "2025-09-05",
+    "remarks": "Good condition",
+    "created_by": 1,
+    "created_at": "2025-09-08T09:22:00.873Z",
+    "updated_at": "2025-09-08T09:22:00.873Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 40,
+  "fields": {
+    "device": 1868,
+    "period": 1,
+    "completed_date": "2025-09-05",
+    "remarks": "Good condition",
+    "created_by": 1,
+    "created_at": "2025-09-08T09:23:30.667Z",
+    "updated_at": "2025-09-08T09:23:30.667Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 41,
+  "fields": {
+    "device": 305,
+    "period": 1,
+    "completed_date": "2025-09-05",
+    "remarks": "Suggest a new battery",
+    "created_by": 1,
+    "created_at": "2025-09-08T09:24:34.384Z",
+    "updated_at": "2025-09-08T09:24:34.384Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 42,
+  "fields": {
+    "device": 1869,
+    "period": 1,
+    "completed_date": "2025-09-05",
+    "remarks": "Charger needs to be replaced",
+    "created_by": 1,
+    "created_at": "2025-09-08T09:25:40.676Z",
+    "updated_at": "2025-09-09T08:30:18.395Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 43,
+  "fields": {
+    "device": 1870,
+    "period": 1,
+    "completed_date": "2025-09-05",
+    "remarks": "Battery needs to be replaced.\r\nScrews missing",
+    "created_by": 1,
+    "created_at": "2025-09-08T09:27:31.219Z",
+    "updated_at": "2025-09-08T09:27:31.219Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 44,
+  "fields": {
+    "device": 306,
+    "period": 1,
+    "completed_date": "2025-09-05",
+    "remarks": "Touchpad has issues",
+    "created_by": 1,
+    "created_at": "2025-09-08T09:29:11.910Z",
+    "updated_at": "2025-09-08T09:29:11.910Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 45,
+  "fields": {
+    "device": 1871,
+    "period": 1,
+    "completed_date": "2025-09-05",
+    "remarks": "Good condition",
+    "created_by": 1,
+    "created_at": "2025-09-08T09:30:25.613Z",
+    "updated_at": "2025-09-08T09:30:25.613Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 130,
+  "fields": {
+    "device": 1864,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "Good Condition",
+    "created_by": 8,
+    "created_at": "2025-09-09T08:24:26.128Z",
+    "updated_at": "2025-09-09T08:24:26.128Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 131,
+  "fields": {
+    "device": 1867,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "Good condition",
+    "created_by": 8,
+    "created_at": "2025-09-09T08:24:56.600Z",
+    "updated_at": "2025-09-09T08:24:56.600Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 216,
+  "fields": {
+    "device": 1866,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "The laptop battery needs to be replaced.",
+    "created_by": 8,
+    "created_at": "2025-09-09T08:25:54.463Z",
+    "updated_at": "2025-09-09T08:25:54.463Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 217,
+  "fields": {
+    "device": 1865,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "Good Condition",
+    "created_by": 8,
+    "created_at": "2025-09-09T08:27:19.784Z",
+    "updated_at": "2025-09-09T08:27:19.784Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 218,
+  "fields": {
+    "device": 87,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:48.768Z",
+    "updated_at": "2025-09-09T10:09:48.768Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 219,
+  "fields": {
+    "device": 88,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:48.817Z",
+    "updated_at": "2025-09-09T10:09:48.817Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 220,
+  "fields": {
+    "device": 89,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:48.862Z",
+    "updated_at": "2025-09-09T10:09:48.862Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 221,
+  "fields": {
+    "device": 90,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:48.906Z",
+    "updated_at": "2025-09-09T10:09:48.906Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 222,
+  "fields": {
+    "device": 91,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:48.950Z",
+    "updated_at": "2025-09-09T10:09:48.950Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 223,
+  "fields": {
+    "device": 92,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "Mouse not working",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:48.996Z",
+    "updated_at": "2025-09-10T05:55:12.557Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 224,
+  "fields": {
+    "device": 93,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.040Z",
+    "updated_at": "2025-09-09T10:09:49.040Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 225,
+  "fields": {
+    "device": 94,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.082Z",
+    "updated_at": "2025-09-09T10:09:49.082Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 226,
+  "fields": {
+    "device": 95,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.126Z",
+    "updated_at": "2025-09-09T10:09:49.126Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 227,
+  "fields": {
+    "device": 96,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.166Z",
+    "updated_at": "2025-09-09T10:09:49.166Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 228,
+  "fields": {
+    "device": 97,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.210Z",
+    "updated_at": "2025-09-09T10:09:49.210Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 229,
+  "fields": {
+    "device": 98,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.254Z",
+    "updated_at": "2025-09-09T10:09:49.254Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 230,
+  "fields": {
+    "device": 99,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.295Z",
+    "updated_at": "2025-09-09T10:09:49.295Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 231,
+  "fields": {
+    "device": 100,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.342Z",
+    "updated_at": "2025-09-09T10:09:49.342Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 232,
+  "fields": {
+    "device": 101,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.385Z",
+    "updated_at": "2025-09-09T10:09:49.385Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 233,
+  "fields": {
+    "device": 102,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.428Z",
+    "updated_at": "2025-09-09T10:09:49.428Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 234,
+  "fields": {
+    "device": 103,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.470Z",
+    "updated_at": "2025-09-09T10:09:49.470Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 235,
+  "fields": {
+    "device": 104,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.511Z",
+    "updated_at": "2025-09-09T10:09:49.511Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 236,
+  "fields": {
+    "device": 105,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.553Z",
+    "updated_at": "2025-09-09T10:09:49.553Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 237,
+  "fields": {
+    "device": 106,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.598Z",
+    "updated_at": "2025-09-09T10:09:49.598Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 238,
+  "fields": {
+    "device": 107,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.641Z",
+    "updated_at": "2025-09-09T10:09:49.641Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 239,
+  "fields": {
+    "device": 108,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.683Z",
+    "updated_at": "2025-09-09T10:09:49.683Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 240,
+  "fields": {
+    "device": 109,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.725Z",
+    "updated_at": "2025-09-09T10:09:49.725Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 241,
+  "fields": {
+    "device": 110,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.768Z",
+    "updated_at": "2025-09-09T10:09:49.768Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 242,
+  "fields": {
+    "device": 111,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.809Z",
+    "updated_at": "2025-09-09T10:09:49.809Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 243,
+  "fields": {
+    "device": 112,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.850Z",
+    "updated_at": "2025-09-09T10:09:49.850Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 244,
+  "fields": {
+    "device": 113,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.891Z",
+    "updated_at": "2025-09-09T10:09:49.891Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 245,
+  "fields": {
+    "device": 114,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.933Z",
+    "updated_at": "2025-09-09T10:09:49.933Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 246,
+  "fields": {
+    "device": 115,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:49.975Z",
+    "updated_at": "2025-09-09T10:09:49.975Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 247,
+  "fields": {
+    "device": 116,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.018Z",
+    "updated_at": "2025-09-09T10:09:50.018Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 248,
+  "fields": {
+    "device": 117,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.058Z",
+    "updated_at": "2025-09-09T10:09:50.058Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 249,
+  "fields": {
+    "device": 118,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.097Z",
+    "updated_at": "2025-09-09T10:09:50.097Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 250,
+  "fields": {
+    "device": 119,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.137Z",
+    "updated_at": "2025-09-09T10:09:50.137Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 251,
+  "fields": {
+    "device": 120,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.178Z",
+    "updated_at": "2025-09-09T10:09:50.178Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 252,
+  "fields": {
+    "device": 121,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.221Z",
+    "updated_at": "2025-09-09T10:09:50.221Z",
+    "activities": [
+      1,
+      6,
+      7,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 253,
+  "fields": {
+    "device": 122,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.264Z",
+    "updated_at": "2025-09-09T10:09:50.264Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 254,
+  "fields": {
+    "device": 123,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.304Z",
+    "updated_at": "2025-09-09T10:09:50.304Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 255,
+  "fields": {
+    "device": 124,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.353Z",
+    "updated_at": "2025-09-09T10:09:50.353Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 256,
+  "fields": {
+    "device": 125,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "Flower cable needs replacement",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.391Z",
+    "updated_at": "2025-09-10T05:58:38.177Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 257,
+  "fields": {
+    "device": 126,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.432Z",
+    "updated_at": "2025-09-09T10:09:50.432Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 258,
+  "fields": {
+    "device": 127,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.479Z",
+    "updated_at": "2025-09-09T10:09:50.479Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 259,
+  "fields": {
+    "device": 128,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.519Z",
+    "updated_at": "2025-09-09T10:09:50.519Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 260,
+  "fields": {
+    "device": 129,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.560Z",
+    "updated_at": "2025-09-09T10:09:50.560Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 261,
+  "fields": {
+    "device": 130,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.602Z",
+    "updated_at": "2025-09-09T10:09:50.602Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 262,
+  "fields": {
+    "device": 131,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.642Z",
+    "updated_at": "2025-09-09T10:09:50.642Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 263,
+  "fields": {
+    "device": 132,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.684Z",
+    "updated_at": "2025-09-09T10:09:50.684Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 264,
+  "fields": {
+    "device": 133,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.726Z",
+    "updated_at": "2025-09-09T10:09:50.726Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 265,
+  "fields": {
+    "device": 134,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.770Z",
+    "updated_at": "2025-09-09T10:09:50.770Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 266,
+  "fields": {
+    "device": 135,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.811Z",
+    "updated_at": "2025-09-09T10:09:50.811Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 267,
+  "fields": {
+    "device": 136,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.852Z",
+    "updated_at": "2025-09-09T10:09:50.852Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 268,
+  "fields": {
+    "device": 137,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.895Z",
+    "updated_at": "2025-09-09T10:09:50.895Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 269,
+  "fields": {
+    "device": 138,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.937Z",
+    "updated_at": "2025-09-09T10:09:50.937Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 270,
+  "fields": {
+    "device": 139,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:50.977Z",
+    "updated_at": "2025-09-09T10:09:50.977Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 271,
+  "fields": {
+    "device": 140,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.018Z",
+    "updated_at": "2025-09-09T10:09:51.018Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 272,
+  "fields": {
+    "device": 141,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.058Z",
+    "updated_at": "2025-09-09T10:09:51.058Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 273,
+  "fields": {
+    "device": 142,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.101Z",
+    "updated_at": "2025-09-09T10:09:51.101Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 274,
+  "fields": {
+    "device": 143,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.142Z",
+    "updated_at": "2025-09-09T10:09:51.142Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 275,
+  "fields": {
+    "device": 144,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.184Z",
+    "updated_at": "2025-09-09T10:09:51.184Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 276,
+  "fields": {
+    "device": 145,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.227Z",
+    "updated_at": "2025-09-09T10:09:51.227Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 277,
+  "fields": {
+    "device": 146,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.268Z",
+    "updated_at": "2025-09-09T10:09:51.268Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 278,
+  "fields": {
+    "device": 147,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.308Z",
+    "updated_at": "2025-09-09T10:09:51.308Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 279,
+  "fields": {
+    "device": 148,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.349Z",
+    "updated_at": "2025-09-09T10:09:51.350Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 280,
+  "fields": {
+    "device": 149,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "Flower cable needs replacement",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.390Z",
+    "updated_at": "2025-09-10T05:59:41.865Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 281,
+  "fields": {
+    "device": 150,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.437Z",
+    "updated_at": "2025-09-09T10:09:51.437Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 282,
+  "fields": {
+    "device": 151,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.480Z",
+    "updated_at": "2025-09-09T10:09:51.480Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 283,
+  "fields": {
+    "device": 152,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.523Z",
+    "updated_at": "2025-09-09T10:09:51.523Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 284,
+  "fields": {
+    "device": 153,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.567Z",
+    "updated_at": "2025-09-09T10:09:51.567Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 285,
+  "fields": {
+    "device": 154,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.611Z",
+    "updated_at": "2025-09-09T10:09:51.611Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 286,
+  "fields": {
+    "device": 155,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.655Z",
+    "updated_at": "2025-09-09T10:09:51.655Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 287,
+  "fields": {
+    "device": 156,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.695Z",
+    "updated_at": "2025-09-09T10:09:51.695Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 288,
+  "fields": {
+    "device": 157,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.734Z",
+    "updated_at": "2025-09-10T06:05:36.562Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 289,
+  "fields": {
+    "device": 158,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.776Z",
+    "updated_at": "2025-09-10T06:06:08.615Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 290,
+  "fields": {
+    "device": 159,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "Different format for keyboard",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.816Z",
+    "updated_at": "2025-09-10T06:07:46.786Z",
+    "activities": [
+      1,
+      2,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 291,
+  "fields": {
+    "device": 160,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.862Z",
+    "updated_at": "2025-09-10T06:09:46.969Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 292,
+  "fields": {
+    "device": 161,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.902Z",
+    "updated_at": "2025-09-10T06:10:14.945Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 293,
+  "fields": {
+    "device": 162,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "Flickering screen,\r\nTouchpad issue",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.940Z",
+    "updated_at": "2025-09-10T06:11:32.935Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 294,
+  "fields": {
+    "device": 163,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "Battery issue",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:51.981Z",
+    "updated_at": "2025-09-10T06:12:08.314Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 295,
+  "fields": {
+    "device": 164,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:52.024Z",
+    "updated_at": "2025-09-10T06:12:46.039Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 296,
+  "fields": {
+    "device": 165,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:52.067Z",
+    "updated_at": "2025-09-10T06:13:16.415Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 297,
+  "fields": {
+    "device": 1942,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:52.110Z",
+    "updated_at": "2025-09-10T06:28:53.515Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 298,
+  "fields": {
+    "device": 1943,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "keyboard key (<) needs replacement",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:52.149Z",
+    "updated_at": "2025-09-10T06:27:57.259Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 299,
+  "fields": {
+    "device": 1944,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "screen bezzles seem to have an issue",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:52.188Z",
+    "updated_at": "2025-09-10T06:08:55.711Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 300,
+  "fields": {
+    "device": 1945,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:52.231Z",
+    "updated_at": "2025-09-10T06:30:18.154Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 301,
+  "fields": {
+    "device": 1946,
+    "period": 1,
+    "completed_date": "2025-09-08",
+    "remarks": "In good condition",
+    "created_by": 7,
+    "created_at": "2025-09-09T10:09:52.272Z",
+    "updated_at": "2025-09-10T06:30:43.161Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 302,
+  "fields": {
+    "device": 1947,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "CRACKED SCREEN, BATTERY ISSUE",
+    "created_by": 7,
+    "created_at": "2025-09-10T06:25:46.009Z",
+    "updated_at": "2025-09-10T06:25:46.009Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 303,
+  "fields": {
+    "device": 674,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 2,
+    "created_at": "2025-09-10T06:47:37.931Z",
+    "updated_at": "2025-09-10T06:48:47.828Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 304,
+  "fields": {
+    "device": 675,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 2,
+    "created_at": "2025-09-10T06:48:15.728Z",
+    "updated_at": "2025-09-10T06:48:27.156Z",
+    "activities": [
+      1,
+      2,
+      3,
+      5,
+      6,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 305,
+  "fields": {
+    "device": 676,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 2,
+    "created_at": "2025-09-10T06:49:12.310Z",
+    "updated_at": "2025-09-10T06:49:12.310Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 306,
+  "fields": {
+    "device": 677,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem\r\nCharger is faulty,the battery needs to be replaced",
+    "created_by": 2,
+    "created_at": "2025-09-10T06:50:08.355Z",
+    "updated_at": "2025-09-10T06:50:08.355Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 307,
+  "fields": {
+    "device": 679,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem\r\nSome key caps are missing",
+    "created_by": 2,
+    "created_at": "2025-09-10T06:50:52.208Z",
+    "updated_at": "2025-09-10T06:50:52.208Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 308,
+  "fields": {
+    "device": 680,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 2,
+    "created_at": "2025-09-10T06:51:21.447Z",
+    "updated_at": "2025-09-10T06:51:21.447Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 309,
+  "fields": {
+    "device": 681,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John And Ephrem",
+    "created_by": 2,
+    "created_at": "2025-09-10T06:56:37.796Z",
+    "updated_at": "2025-09-10T06:56:37.796Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 310,
+  "fields": {
+    "device": 682,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 2,
+    "created_at": "2025-09-10T06:57:19.291Z",
+    "updated_at": "2025-09-10T06:57:19.291Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 311,
+  "fields": {
+    "device": 603,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 2,
+    "created_at": "2025-09-10T06:57:54.757Z",
+    "updated_at": "2025-09-10T06:57:54.757Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 312,
+  "fields": {
+    "device": 604,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 2,
+    "created_at": "2025-09-10T06:58:40.291Z",
+    "updated_at": "2025-09-10T06:58:40.291Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 313,
+  "fields": {
+    "device": 1948,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 2,
+    "created_at": "2025-09-10T07:00:34.920Z",
+    "updated_at": "2025-09-10T07:00:34.920Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 314,
+  "fields": {
+    "device": 1949,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 2,
+    "created_at": "2025-09-10T07:00:49.630Z",
+    "updated_at": "2025-09-10T07:00:49.630Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 315,
+  "fields": {
+    "device": 605,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T07:06:42.556Z",
+    "updated_at": "2025-09-10T07:06:42.556Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 316,
+  "fields": {
+    "device": 606,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T07:10:23.997Z",
+    "updated_at": "2025-09-10T07:10:23.997Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 317,
+  "fields": {
+    "device": 607,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T07:11:04.516Z",
+    "updated_at": "2025-09-10T07:11:04.516Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 318,
+  "fields": {
+    "device": 608,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T07:11:52.013Z",
+    "updated_at": "2025-09-10T07:11:52.013Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 319,
+  "fields": {
+    "device": 609,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T07:12:40.844Z",
+    "updated_at": "2025-09-10T07:12:40.844Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 320,
+  "fields": {
+    "device": 610,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T07:13:55.071Z",
+    "updated_at": "2025-09-10T07:13:55.071Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 321,
+  "fields": {
+    "device": 611,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T07:14:42.953Z",
+    "updated_at": "2025-09-10T07:14:42.953Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 322,
+  "fields": {
+    "device": 612,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T07:15:16.044Z",
+    "updated_at": "2025-09-10T07:15:16.044Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 323,
+  "fields": {
+    "device": 613,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T07:16:50.579Z",
+    "updated_at": "2025-09-10T07:17:51.589Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 324,
+  "fields": {
+    "device": 614,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T07:17:44.157Z",
+    "updated_at": "2025-09-10T07:17:44.157Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 325,
+  "fields": {
+    "device": 615,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T07:18:32.322Z",
+    "updated_at": "2025-09-10T07:18:32.322Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 326,
+  "fields": {
+    "device": 616,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T07:19:37.546Z",
+    "updated_at": "2025-09-10T07:19:37.546Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 327,
+  "fields": {
+    "device": 617,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T11:11:25.718Z",
+    "updated_at": "2025-09-10T11:11:25.718Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 328,
+  "fields": {
+    "device": 618,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T11:12:05.806Z",
+    "updated_at": "2025-09-10T11:12:05.806Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 329,
+  "fields": {
+    "device": 619,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T11:12:38.626Z",
+    "updated_at": "2025-09-10T11:12:38.626Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 330,
+  "fields": {
+    "device": 620,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T11:13:06.986Z",
+    "updated_at": "2025-09-10T11:13:06.986Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 331,
+  "fields": {
+    "device": 621,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T11:13:40.614Z",
+    "updated_at": "2025-09-10T11:13:40.614Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 332,
+  "fields": {
+    "device": 622,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T11:14:12.257Z",
+    "updated_at": "2025-09-10T11:14:12.257Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 333,
+  "fields": {
+    "device": 623,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T11:14:53.309Z",
+    "updated_at": "2025-09-10T11:14:53.309Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 334,
+  "fields": {
+    "device": 624,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T11:15:18.915Z",
+    "updated_at": "2025-09-10T11:15:18.915Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 335,
+  "fields": {
+    "device": 625,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T11:15:42.124Z",
+    "updated_at": "2025-09-10T11:15:42.124Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 336,
+  "fields": {
+    "device": 626,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T11:16:24.078Z",
+    "updated_at": "2025-09-10T11:16:24.078Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 337,
+  "fields": {
+    "device": 627,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T11:16:47.944Z",
+    "updated_at": "2025-09-10T11:16:47.944Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 338,
+  "fields": {
+    "device": 628,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By Ephrem and John",
+    "created_by": 10,
+    "created_at": "2025-09-10T11:17:16.242Z",
+    "updated_at": "2025-09-10T11:17:16.242Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 339,
+  "fields": {
+    "device": 629,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T11:17:47.809Z",
+    "updated_at": "2025-09-10T11:17:47.809Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 340,
+  "fields": {
+    "device": 630,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T11:18:18.686Z",
+    "updated_at": "2025-09-10T11:18:18.686Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 341,
+  "fields": {
+    "device": 631,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T11:18:39.533Z",
+    "updated_at": "2025-09-10T11:18:39.533Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 342,
+  "fields": {
+    "device": 632,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By Ephrem and John",
+    "created_by": 10,
+    "created_at": "2025-09-10T11:19:07.280Z",
+    "updated_at": "2025-09-10T11:19:07.280Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 343,
+  "fields": {
+    "device": 633,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T11:46:07.333Z",
+    "updated_at": "2025-09-10T11:46:07.333Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 344,
+  "fields": {
+    "device": 634,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-10T11:48:03.560Z",
+    "updated_at": "2025-09-10T11:48:03.560Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 345,
+  "fields": {
+    "device": 635,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:04:49.559Z",
+    "updated_at": "2025-09-15T05:04:49.559Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 346,
+  "fields": {
+    "device": 636,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:05:20.489Z",
+    "updated_at": "2025-09-15T05:05:20.489Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 347,
+  "fields": {
+    "device": 637,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:06:09.487Z",
+    "updated_at": "2025-09-15T05:06:09.488Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 348,
+  "fields": {
+    "device": 638,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By Ephrem and John",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:07:57.743Z",
+    "updated_at": "2025-09-15T05:07:57.743Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 349,
+  "fields": {
+    "device": 639,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:08:21.247Z",
+    "updated_at": "2025-09-15T05:08:21.247Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 350,
+  "fields": {
+    "device": 640,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:08:46.933Z",
+    "updated_at": "2025-09-15T05:08:46.933Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 351,
+  "fields": {
+    "device": 641,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:09:05.961Z",
+    "updated_at": "2025-09-15T05:09:05.961Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 352,
+  "fields": {
+    "device": 642,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:09:32.948Z",
+    "updated_at": "2025-09-15T05:09:32.948Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 353,
+  "fields": {
+    "device": 643,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:10:09.465Z",
+    "updated_at": "2025-09-15T05:10:09.465Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 354,
+  "fields": {
+    "device": 644,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:10:38.594Z",
+    "updated_at": "2025-09-15T05:10:38.594Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 355,
+  "fields": {
+    "device": 645,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:11:14.265Z",
+    "updated_at": "2025-09-15T05:11:14.265Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 356,
+  "fields": {
+    "device": 646,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:12:25.746Z",
+    "updated_at": "2025-09-15T05:12:25.746Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 357,
+  "fields": {
+    "device": 647,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:12:52.657Z",
+    "updated_at": "2025-09-15T05:12:52.657Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 358,
+  "fields": {
+    "device": 648,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:13:30.293Z",
+    "updated_at": "2025-09-15T05:13:30.293Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 359,
+  "fields": {
+    "device": 649,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:13:56.620Z",
+    "updated_at": "2025-09-15T05:13:56.620Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 360,
+  "fields": {
+    "device": 650,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:14:23.766Z",
+    "updated_at": "2025-09-15T05:14:23.766Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 361,
+  "fields": {
+    "device": 651,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:15:23.472Z",
+    "updated_at": "2025-09-15T05:15:23.472Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 362,
+  "fields": {
+    "device": 652,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:15:53.849Z",
+    "updated_at": "2025-09-15T05:15:53.849Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 363,
+  "fields": {
+    "device": 653,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By Ephrem and John",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:16:22.635Z",
+    "updated_at": "2025-09-15T05:16:22.635Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 364,
+  "fields": {
+    "device": 654,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:16:48.265Z",
+    "updated_at": "2025-09-15T05:16:48.265Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 365,
+  "fields": {
+    "device": 655,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:17:11.043Z",
+    "updated_at": "2025-09-15T05:17:11.043Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 366,
+  "fields": {
+    "device": 656,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:17:36.022Z",
+    "updated_at": "2025-09-15T05:17:36.022Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 367,
+  "fields": {
+    "device": 657,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:18:00.989Z",
+    "updated_at": "2025-09-15T05:18:00.989Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 368,
+  "fields": {
+    "device": 658,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:18:27.265Z",
+    "updated_at": "2025-09-15T05:18:27.265Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 369,
+  "fields": {
+    "device": 659,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:18:50.433Z",
+    "updated_at": "2025-09-15T05:18:50.773Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 370,
+  "fields": {
+    "device": 660,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:19:12.663Z",
+    "updated_at": "2025-09-15T05:19:12.663Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 371,
+  "fields": {
+    "device": 661,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:19:36.306Z",
+    "updated_at": "2025-09-15T05:19:36.306Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 372,
+  "fields": {
+    "device": 662,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:19:56.985Z",
+    "updated_at": "2025-09-15T05:19:56.985Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 373,
+  "fields": {
+    "device": 663,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:20:49.685Z",
+    "updated_at": "2025-09-15T05:21:07.328Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 374,
+  "fields": {
+    "device": 664,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:21:28.671Z",
+    "updated_at": "2025-09-15T05:21:39.520Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 375,
+  "fields": {
+    "device": 665,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:22:12.194Z",
+    "updated_at": "2025-09-15T05:22:12.194Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 376,
+  "fields": {
+    "device": 666,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:22:35.942Z",
+    "updated_at": "2025-09-15T05:22:35.942Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 377,
+  "fields": {
+    "device": 667,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:22:59.078Z",
+    "updated_at": "2025-09-15T05:22:59.078Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 378,
+  "fields": {
+    "device": 668,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:23:16.928Z",
+    "updated_at": "2025-09-15T05:23:16.928Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 379,
+  "fields": {
+    "device": 669,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:23:50.340Z",
+    "updated_at": "2025-09-15T05:23:50.340Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 380,
+  "fields": {
+    "device": 670,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:24:35.940Z",
+    "updated_at": "2025-09-15T05:24:35.940Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 381,
+  "fields": {
+    "device": 671,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:25:07.678Z",
+    "updated_at": "2025-09-15T05:25:07.678Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 382,
+  "fields": {
+    "device": 672,
+    "period": 1,
+    "completed_date": "2025-09-09",
+    "remarks": "By John and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-15T05:25:34.581Z",
+    "updated_at": "2025-09-15T05:25:34.581Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 383,
+  "fields": {
+    "device": 167,
+    "period": 1,
+    "completed_date": "2025-09-15",
+    "remarks": "By Ezra, John and Noel",
+    "created_by": 2,
+    "created_at": "2025-09-15T11:46:14.889Z",
+    "updated_at": "2025-09-15T11:46:21.138Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 384,
+  "fields": {
+    "device": 177,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "User has not signed",
+    "created_by": 7,
+    "created_at": "2025-09-15T11:47:44.710Z",
+    "updated_at": "2025-09-15T12:20:28.647Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 385,
+  "fields": {
+    "device": 168,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Has a faulty charger",
+    "created_by": 2,
+    "created_at": "2025-09-15T11:58:14.519Z",
+    "updated_at": "2025-09-15T11:58:14.519Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 386,
+  "fields": {
+    "device": 169,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Faulty charger",
+    "created_by": 2,
+    "created_at": "2025-09-15T11:59:42.939Z",
+    "updated_at": "2025-09-15T11:59:42.939Z",
+    "activities": [
+      1,
+      2
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 387,
+  "fields": {
+    "device": 170,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "By Ezra, John and Noel",
+    "created_by": 2,
+    "created_at": "2025-09-15T12:03:25.004Z",
+    "updated_at": "2025-09-15T12:03:25.004Z",
+    "activities": [
+      1,
+      2,
+      6
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 388,
+  "fields": {
+    "device": 171,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Faulty charger",
+    "created_by": 2,
+    "created_at": "2025-09-15T12:04:16.375Z",
+    "updated_at": "2025-09-15T12:04:16.375Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 389,
+  "fields": {
+    "device": 172,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Faulty charger",
+    "created_by": 2,
+    "created_at": "2025-09-15T12:04:37.145Z",
+    "updated_at": "2025-09-15T12:04:37.145Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 390,
+  "fields": {
+    "device": 173,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Faulty keyboard, some keys are not working",
+    "created_by": 2,
+    "created_at": "2025-09-15T12:05:16.877Z",
+    "updated_at": "2025-09-15T12:05:16.877Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 391,
+  "fields": {
+    "device": 166,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Faulty charger",
+    "created_by": 2,
+    "created_at": "2025-09-15T12:05:57.096Z",
+    "updated_at": "2025-09-15T12:05:57.096Z",
+    "activities": [
+      1,
+      2,
+      4,
+      6
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 392,
+  "fields": {
+    "device": 178,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Good",
+    "created_by": 7,
+    "created_at": "2025-09-15T12:10:18.637Z",
+    "updated_at": "2025-09-15T12:20:36.502Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 393,
+  "fields": {
+    "device": 179,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Good",
+    "created_by": 7,
+    "created_at": "2025-09-15T12:11:47.686Z",
+    "updated_at": "2025-09-15T12:22:11.077Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 394,
+  "fields": {
+    "device": 180,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Good",
+    "created_by": 7,
+    "created_at": "2025-09-15T12:12:25.225Z",
+    "updated_at": "2025-09-15T12:21:54.527Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 395,
+  "fields": {
+    "device": 181,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Faulty Charger",
+    "created_by": 7,
+    "created_at": "2025-09-15T12:14:14.159Z",
+    "updated_at": "2025-09-15T12:21:02.573Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 396,
+  "fields": {
+    "device": 182,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Good",
+    "created_by": 7,
+    "created_at": "2025-09-15T12:17:05.342Z",
+    "updated_at": "2025-09-15T12:21:39.473Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 397,
+  "fields": {
+    "device": 183,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Good",
+    "created_by": 7,
+    "created_at": "2025-09-15T12:19:05.586Z",
+    "updated_at": "2025-09-15T12:19:05.586Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 398,
+  "fields": {
+    "device": 184,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Good",
+    "created_by": 7,
+    "created_at": "2025-09-15T12:19:26.533Z",
+    "updated_at": "2025-09-15T12:19:26.533Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 399,
+  "fields": {
+    "device": 185,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Good",
+    "created_by": 7,
+    "created_at": "2025-09-15T12:19:51.211Z",
+    "updated_at": "2025-09-15T12:24:57.344Z",
+    "activities": [
+      1,
+      2
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 400,
+  "fields": {
+    "device": 176,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "By Ezra, John and Noel",
+    "created_by": 2,
+    "created_at": "2025-09-15T12:20:08.287Z",
+    "updated_at": "2025-09-15T12:25:02.393Z",
+    "activities": [
+      1,
+      2
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 401,
+  "fields": {
+    "device": 186,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Good",
+    "created_by": 7,
+    "created_at": "2025-09-15T12:20:18.355Z",
+    "updated_at": "2025-09-15T12:25:18.317Z",
+    "activities": [
+      1,
+      2
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 402,
+  "fields": {
+    "device": 175,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "By Ezra, John and Noel",
+    "created_by": 2,
+    "created_at": "2025-09-15T12:20:42.520Z",
+    "updated_at": "2025-09-15T12:25:11.939Z",
+    "activities": [
+      1,
+      2
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 403,
+  "fields": {
+    "device": 1950,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Serial number not visible",
+    "created_by": 7,
+    "created_at": "2025-09-15T12:36:59.018Z",
+    "updated_at": "2025-09-15T12:36:59.018Z",
+    "activities": [
+      1,
+      2
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 404,
+  "fields": {
+    "device": 196,
+    "period": 1,
+    "completed_date": "2025-09-10",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:29:21.265Z",
+    "updated_at": "2025-09-18T11:31:07.598Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 405,
+  "fields": {
+    "device": 198,
+    "period": 1,
+    "completed_date": "2025-09-10",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:30:47.895Z",
+    "updated_at": "2025-09-18T11:30:47.895Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 406,
+  "fields": {
+    "device": 202,
+    "period": 1,
+    "completed_date": "2025-09-10",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:32:02.673Z",
+    "updated_at": "2025-09-18T11:32:02.673Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 407,
+  "fields": {
+    "device": 203,
+    "period": 1,
+    "completed_date": "2025-09-10",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:33:47.621Z",
+    "updated_at": "2025-09-18T11:33:47.621Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 408,
+  "fields": {
+    "device": 204,
+    "period": 1,
+    "completed_date": "2025-09-10",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:34:36.819Z",
+    "updated_at": "2025-09-18T11:34:36.819Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 409,
+  "fields": {
+    "device": 206,
+    "period": 1,
+    "completed_date": "2025-09-10",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:36:48.910Z",
+    "updated_at": "2025-09-18T11:36:48.910Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 410,
+  "fields": {
+    "device": 207,
+    "period": 1,
+    "completed_date": "2025-09-10",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:37:44.294Z",
+    "updated_at": "2025-09-18T11:37:44.294Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 411,
+  "fields": {
+    "device": 208,
+    "period": 1,
+    "completed_date": "2025-09-10",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:38:38.505Z",
+    "updated_at": "2025-09-18T11:38:38.505Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 412,
+  "fields": {
+    "device": 210,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:39:53.705Z",
+    "updated_at": "2025-09-18T11:39:53.705Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 413,
+  "fields": {
+    "device": 211,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:42:40.300Z",
+    "updated_at": "2025-09-18T11:42:40.300Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 414,
+  "fields": {
+    "device": 212,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:44:16.101Z",
+    "updated_at": "2025-09-18T11:44:16.101Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 415,
+  "fields": {
+    "device": 213,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:45:24.441Z",
+    "updated_at": "2025-09-18T11:45:24.441Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 416,
+  "fields": {
+    "device": 214,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:46:10.139Z",
+    "updated_at": "2025-09-18T11:46:10.139Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 417,
+  "fields": {
+    "device": 215,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:47:04.404Z",
+    "updated_at": "2025-09-18T11:47:04.404Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 418,
+  "fields": {
+    "device": 216,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:47:45.329Z",
+    "updated_at": "2025-09-18T11:47:45.329Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 419,
+  "fields": {
+    "device": 217,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:48:59.994Z",
+    "updated_at": "2025-09-18T11:48:59.994Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 420,
+  "fields": {
+    "device": 218,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:49:48.118Z",
+    "updated_at": "2025-09-18T11:49:48.118Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 421,
+  "fields": {
+    "device": 221,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Battery Issue. ",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:51:17.578Z",
+    "updated_at": "2025-09-18T11:51:17.578Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 422,
+  "fields": {
+    "device": 220,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:53:16.251Z",
+    "updated_at": "2025-09-18T11:53:16.251Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 423,
+  "fields": {
+    "device": 223,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:55:02.893Z",
+    "updated_at": "2025-09-18T11:55:02.894Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 424,
+  "fields": {
+    "device": 224,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:55:59.865Z",
+    "updated_at": "2025-09-18T11:55:59.865Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 425,
+  "fields": {
+    "device": 225,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:57:21.884Z",
+    "updated_at": "2025-09-18T11:57:21.884Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 426,
+  "fields": {
+    "device": 227,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T11:59:39.353Z",
+    "updated_at": "2025-09-18T11:59:39.353Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 427,
+  "fields": {
+    "device": 228,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:01:05.293Z",
+    "updated_at": "2025-09-18T12:01:05.293Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 428,
+  "fields": {
+    "device": 229,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:01:54.851Z",
+    "updated_at": "2025-09-18T12:01:54.851Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 429,
+  "fields": {
+    "device": 230,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:02:44.850Z",
+    "updated_at": "2025-09-18T12:07:35.615Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 430,
+  "fields": {
+    "device": 231,
+    "period": 1,
+    "completed_date": "2025-09-11",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:10:22.185Z",
+    "updated_at": "2025-09-18T12:10:52.804Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 431,
+  "fields": {
+    "device": 332,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:11:46.288Z",
+    "updated_at": "2025-09-18T12:11:46.288Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 432,
+  "fields": {
+    "device": 233,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:14:58.532Z",
+    "updated_at": "2025-09-18T12:14:58.532Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 433,
+  "fields": {
+    "device": 241,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:18:13.896Z",
+    "updated_at": "2025-09-18T12:18:13.896Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 434,
+  "fields": {
+    "device": 242,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:19:16.188Z",
+    "updated_at": "2025-09-18T12:19:16.188Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 435,
+  "fields": {
+    "device": 245,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:20:07.560Z",
+    "updated_at": "2025-09-18T12:20:07.560Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 436,
+  "fields": {
+    "device": 247,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:21:12.501Z",
+    "updated_at": "2025-09-18T12:21:12.501Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 437,
+  "fields": {
+    "device": 248,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:22:09.934Z",
+    "updated_at": "2025-09-18T12:22:09.934Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 438,
+  "fields": {
+    "device": 249,
+    "period": 1,
+    "completed_date": null,
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:22:54.385Z",
+    "updated_at": "2025-09-18T12:22:54.385Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 439,
+  "fields": {
+    "device": 251,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:24:23.643Z",
+    "updated_at": "2025-09-18T12:24:23.643Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 440,
+  "fields": {
+    "device": 252,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:26:14.877Z",
+    "updated_at": "2025-09-18T12:26:14.877Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 441,
+  "fields": {
+    "device": 253,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:32:32.512Z",
+    "updated_at": "2025-09-18T12:32:32.512Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 442,
+  "fields": {
+    "device": 255,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:45:26.541Z",
+    "updated_at": "2025-09-18T12:45:26.541Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 443,
+  "fields": {
+    "device": 256,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:46:45.085Z",
+    "updated_at": "2025-09-18T12:46:45.085Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 444,
+  "fields": {
+    "device": 257,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:47:33.247Z",
+    "updated_at": "2025-09-18T12:47:33.247Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 445,
+  "fields": {
+    "device": 262,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:48:36.923Z",
+    "updated_at": "2025-09-18T12:48:36.923Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 446,
+  "fields": {
+    "device": 263,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:49:36.456Z",
+    "updated_at": "2025-09-18T12:49:36.456Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 447,
+  "fields": {
+    "device": 264,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:51:06.424Z",
+    "updated_at": "2025-09-18T12:51:06.424Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 448,
+  "fields": {
+    "device": 265,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:53:18.853Z",
+    "updated_at": "2025-09-18T12:53:18.853Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 449,
+  "fields": {
+    "device": 266,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:54:05.107Z",
+    "updated_at": "2025-09-18T12:54:05.107Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 450,
+  "fields": {
+    "device": 271,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T12:57:54.373Z",
+    "updated_at": "2025-09-18T12:57:54.373Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 451,
+  "fields": {
+    "device": 276,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T13:04:23.558Z",
+    "updated_at": "2025-09-18T13:04:23.558Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 452,
+  "fields": {
+    "device": 323,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T13:05:39.705Z",
+    "updated_at": "2025-09-18T13:05:39.705Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 453,
+  "fields": {
+    "device": 327,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T13:06:30.472Z",
+    "updated_at": "2025-09-18T13:06:30.472Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 454,
+  "fields": {
+    "device": 285,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T13:07:48.436Z",
+    "updated_at": "2025-09-18T13:07:48.437Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 455,
+  "fields": {
+    "device": 281,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T13:08:50.389Z",
+    "updated_at": "2025-09-18T13:08:50.389Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 456,
+  "fields": {
+    "device": 282,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T13:11:00.335Z",
+    "updated_at": "2025-09-18T13:11:00.335Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 457,
+  "fields": {
+    "device": 283,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T13:11:56.524Z",
+    "updated_at": "2025-09-18T13:11:56.524Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 458,
+  "fields": {
+    "device": 286,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T13:13:06.658Z",
+    "updated_at": "2025-09-18T13:13:06.658Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 459,
+  "fields": {
+    "device": 288,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T13:14:44.776Z",
+    "updated_at": "2025-09-18T13:14:44.776Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 460,
+  "fields": {
+    "device": 289,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done\r\n",
+    "created_by": 4,
+    "created_at": "2025-09-18T13:15:45.644Z",
+    "updated_at": "2025-09-18T13:15:45.644Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 461,
+  "fields": {
+    "device": 309,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T13:16:37.764Z",
+    "updated_at": "2025-09-18T13:16:37.764Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 462,
+  "fields": {
+    "device": 311,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T13:17:42.364Z",
+    "updated_at": "2025-09-18T13:17:42.364Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 463,
+  "fields": {
+    "device": 312,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T13:18:27.863Z",
+    "updated_at": "2025-09-18T13:18:27.863Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 464,
+  "fields": {
+    "device": 313,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T13:19:55.159Z",
+    "updated_at": "2025-09-18T13:19:55.159Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 465,
+  "fields": {
+    "device": 314,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T13:20:49.890Z",
+    "updated_at": "2025-09-18T13:20:49.890Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 466,
+  "fields": {
+    "device": 319,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T13:22:47.403Z",
+    "updated_at": "2025-09-18T13:22:47.403Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 467,
+  "fields": {
+    "device": 1960,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T14:28:39.550Z",
+    "updated_at": "2025-09-18T14:28:39.550Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 468,
+  "fields": {
+    "device": 246,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Flickering screen ",
+    "created_by": 4,
+    "created_at": "2025-09-18T14:29:38.726Z",
+    "updated_at": "2025-09-18T14:29:38.726Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 469,
+  "fields": {
+    "device": 1241,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T14:30:19.245Z",
+    "updated_at": "2025-09-18T14:30:19.245Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 470,
+  "fields": {
+    "device": 320,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T14:31:12.970Z",
+    "updated_at": "2025-09-18T14:31:12.970Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 471,
+  "fields": {
+    "device": 321,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T14:32:09.590Z",
+    "updated_at": "2025-09-18T14:32:09.591Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 472,
+  "fields": {
+    "device": 201,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Screen issue",
+    "created_by": 4,
+    "created_at": "2025-09-18T14:32:59.047Z",
+    "updated_at": "2025-09-18T14:33:13.732Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 473,
+  "fields": {
+    "device": 199,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T14:33:55.431Z",
+    "updated_at": "2025-09-18T14:33:55.431Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 474,
+  "fields": {
+    "device": 315,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T14:40:17.354Z",
+    "updated_at": "2025-09-18T14:40:17.354Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 475,
+  "fields": {
+    "device": 316,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T14:40:44.201Z",
+    "updated_at": "2025-09-18T14:40:44.202Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 476,
+  "fields": {
+    "device": 1951,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T14:42:07.872Z",
+    "updated_at": "2025-09-18T14:42:07.872Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 477,
+  "fields": {
+    "device": 1952,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T14:42:48.003Z",
+    "updated_at": "2025-09-18T14:42:48.003Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 478,
+  "fields": {
+    "device": 1953,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T14:43:27.556Z",
+    "updated_at": "2025-09-18T14:43:27.556Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 479,
+  "fields": {
+    "device": 1954,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T14:43:57.481Z",
+    "updated_at": "2025-09-18T14:43:57.481Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 480,
+  "fields": {
+    "device": 1955,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T14:44:17.418Z",
+    "updated_at": "2025-09-18T14:44:17.418Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 481,
+  "fields": {
+    "device": 1956,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T14:44:41.637Z",
+    "updated_at": "2025-09-18T14:44:41.638Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 482,
+  "fields": {
+    "device": 1957,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T14:45:05.236Z",
+    "updated_at": "2025-09-18T14:45:05.237Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 483,
+  "fields": {
+    "device": 1958,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T14:45:22.531Z",
+    "updated_at": "2025-09-18T14:45:22.531Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 484,
+  "fields": {
+    "device": 1959,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-18T14:45:44.598Z",
+    "updated_at": "2025-09-18T14:45:44.598Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 485,
+  "fields": {
+    "device": 318,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-19T12:26:40.913Z",
+    "updated_at": "2025-09-19T14:18:47.314Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 486,
+  "fields": {
+    "device": 1962,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-19T14:18:02.290Z",
+    "updated_at": "2025-09-19T14:18:02.290Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 487,
+  "fields": {
+    "device": 1963,
+    "period": 1,
+    "completed_date": "2025-09-12",
+    "remarks": "Done",
+    "created_by": 4,
+    "created_at": "2025-09-19T14:23:59.487Z",
+    "updated_at": "2025-09-19T14:23:59.487Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 488,
+  "fields": {
+    "device": 1,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:14.935Z",
+    "updated_at": "2025-09-23T10:32:55.549Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 489,
+  "fields": {
+    "device": 2,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:14.993Z",
+    "updated_at": "2025-09-23T10:32:55.588Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 490,
+  "fields": {
+    "device": 3,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.041Z",
+    "updated_at": "2025-09-23T10:32:55.642Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 491,
+  "fields": {
+    "device": 4,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.083Z",
+    "updated_at": "2025-09-23T10:32:55.675Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 492,
+  "fields": {
+    "device": 5,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.133Z",
+    "updated_at": "2025-09-23T10:32:55.710Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 493,
+  "fields": {
+    "device": 6,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.182Z",
+    "updated_at": "2025-09-23T10:32:55.749Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 494,
+  "fields": {
+    "device": 7,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.233Z",
+    "updated_at": "2025-09-23T10:32:55.785Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 495,
+  "fields": {
+    "device": 8,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.281Z",
+    "updated_at": "2025-09-23T10:32:55.824Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 496,
+  "fields": {
+    "device": 9,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.325Z",
+    "updated_at": "2025-09-23T10:32:55.857Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 497,
+  "fields": {
+    "device": 10,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.373Z",
+    "updated_at": "2025-09-23T10:32:55.893Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 498,
+  "fields": {
+    "device": 11,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.425Z",
+    "updated_at": "2025-09-23T10:32:55.928Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 499,
+  "fields": {
+    "device": 12,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.476Z",
+    "updated_at": "2025-09-23T10:32:55.961Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 500,
+  "fields": {
+    "device": 13,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.527Z",
+    "updated_at": "2025-09-23T10:32:56.003Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 501,
+  "fields": {
+    "device": 14,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.578Z",
+    "updated_at": "2025-09-23T10:32:56.040Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 502,
+  "fields": {
+    "device": 15,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.630Z",
+    "updated_at": "2025-09-23T10:32:56.076Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 503,
+  "fields": {
+    "device": 16,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.679Z",
+    "updated_at": "2025-09-23T10:32:56.116Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 504,
+  "fields": {
+    "device": 17,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "The system unit power adapter (charger) is faulty \r\n",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.727Z",
+    "updated_at": "2025-09-23T11:54:11.004Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 505,
+  "fields": {
+    "device": 18,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.775Z",
+    "updated_at": "2025-09-23T10:32:56.184Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 506,
+  "fields": {
+    "device": 19,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.821Z",
+    "updated_at": "2025-09-23T10:32:56.218Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 507,
+  "fields": {
+    "device": 20,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.865Z",
+    "updated_at": "2025-09-23T10:32:56.254Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 508,
+  "fields": {
+    "device": 21,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.913Z",
+    "updated_at": "2025-09-23T10:32:56.288Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 509,
+  "fields": {
+    "device": 22,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:15.959Z",
+    "updated_at": "2025-09-23T10:32:56.325Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 510,
+  "fields": {
+    "device": 23,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.010Z",
+    "updated_at": "2025-09-23T10:32:56.357Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 511,
+  "fields": {
+    "device": 24,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.058Z",
+    "updated_at": "2025-09-23T10:32:56.396Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 512,
+  "fields": {
+    "device": 25,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.108Z",
+    "updated_at": "2025-09-23T10:32:56.429Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 513,
+  "fields": {
+    "device": 26,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.156Z",
+    "updated_at": "2025-09-23T10:32:56.463Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 514,
+  "fields": {
+    "device": 27,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.203Z",
+    "updated_at": "2025-09-23T10:32:56.497Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 515,
+  "fields": {
+    "device": 28,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.247Z",
+    "updated_at": "2025-09-23T10:32:56.532Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 516,
+  "fields": {
+    "device": 29,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.297Z",
+    "updated_at": "2025-09-23T10:32:56.563Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 517,
+  "fields": {
+    "device": 30,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.345Z",
+    "updated_at": "2025-09-23T10:32:56.596Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 518,
+  "fields": {
+    "device": 31,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.392Z",
+    "updated_at": "2025-09-23T10:32:56.628Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 519,
+  "fields": {
+    "device": 32,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.440Z",
+    "updated_at": "2025-09-23T10:32:56.661Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 520,
+  "fields": {
+    "device": 33,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.487Z",
+    "updated_at": "2025-09-23T10:32:56.695Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 521,
+  "fields": {
+    "device": 34,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.534Z",
+    "updated_at": "2025-09-23T10:32:56.729Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 522,
+  "fields": {
+    "device": 35,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.579Z",
+    "updated_at": "2025-09-23T10:32:56.763Z",
+    "activities": [
+      6,
+      7
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 523,
+  "fields": {
+    "device": 36,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.626Z",
+    "updated_at": "2025-09-23T10:32:56.797Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 524,
+  "fields": {
+    "device": 37,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.672Z",
+    "updated_at": "2025-09-23T10:32:56.830Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 525,
+  "fields": {
+    "device": 38,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.722Z",
+    "updated_at": "2025-09-23T10:32:56.861Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 526,
+  "fields": {
+    "device": 39,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.777Z",
+    "updated_at": "2025-09-23T10:32:56.892Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 527,
+  "fields": {
+    "device": 40,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.827Z",
+    "updated_at": "2025-09-23T10:32:56.927Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 528,
+  "fields": {
+    "device": 41,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.874Z",
+    "updated_at": "2025-09-23T10:32:56.966Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 529,
+  "fields": {
+    "device": 42,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.926Z",
+    "updated_at": "2025-09-23T10:32:56.999Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 530,
+  "fields": {
+    "device": 43,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:16.979Z",
+    "updated_at": "2025-09-23T10:32:57.038Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 531,
+  "fields": {
+    "device": 44,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.034Z",
+    "updated_at": "2025-09-23T10:32:57.072Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 532,
+  "fields": {
+    "device": 45,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.084Z",
+    "updated_at": "2025-09-23T10:32:57.104Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 533,
+  "fields": {
+    "device": 46,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.139Z",
+    "updated_at": "2025-09-23T10:32:57.138Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 534,
+  "fields": {
+    "device": 47,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.186Z",
+    "updated_at": "2025-09-23T10:32:57.169Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 535,
+  "fields": {
+    "device": 48,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.233Z",
+    "updated_at": "2025-09-23T10:32:57.201Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 536,
+  "fields": {
+    "device": 49,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.279Z",
+    "updated_at": "2025-09-23T10:32:57.228Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 537,
+  "fields": {
+    "device": 50,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.323Z",
+    "updated_at": "2025-09-23T10:32:57.257Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 538,
+  "fields": {
+    "device": 51,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.368Z",
+    "updated_at": "2025-09-23T10:32:57.285Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 539,
+  "fields": {
+    "device": 52,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.418Z",
+    "updated_at": "2025-09-23T10:32:57.312Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 540,
+  "fields": {
+    "device": 53,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.467Z",
+    "updated_at": "2025-09-23T10:32:57.341Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 541,
+  "fields": {
+    "device": 54,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.514Z",
+    "updated_at": "2025-09-23T10:32:57.368Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 542,
+  "fields": {
+    "device": 55,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.563Z",
+    "updated_at": "2025-09-23T10:32:57.395Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 543,
+  "fields": {
+    "device": 56,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.608Z",
+    "updated_at": "2025-09-23T10:32:57.430Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 544,
+  "fields": {
+    "device": 57,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.655Z",
+    "updated_at": "2025-09-23T10:32:57.457Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 545,
+  "fields": {
+    "device": 58,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.701Z",
+    "updated_at": "2025-09-23T10:32:57.483Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 546,
+  "fields": {
+    "device": 59,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.748Z",
+    "updated_at": "2025-09-23T10:32:57.512Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 547,
+  "fields": {
+    "device": 60,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.793Z",
+    "updated_at": "2025-09-23T10:32:57.544Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 548,
+  "fields": {
+    "device": 61,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.841Z",
+    "updated_at": "2025-09-23T10:32:57.572Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 549,
+  "fields": {
+    "device": 62,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.886Z",
+    "updated_at": "2025-09-23T10:32:57.607Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 550,
+  "fields": {
+    "device": 63,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.931Z",
+    "updated_at": "2025-09-23T10:32:57.637Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 551,
+  "fields": {
+    "device": 64,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:17.984Z",
+    "updated_at": "2025-09-23T10:32:57.665Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 552,
+  "fields": {
+    "device": 65,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.033Z",
+    "updated_at": "2025-09-23T10:32:57.692Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 553,
+  "fields": {
+    "device": 66,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.079Z",
+    "updated_at": "2025-09-23T10:32:57.720Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 554,
+  "fields": {
+    "device": 67,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.127Z",
+    "updated_at": "2025-09-23T10:32:57.751Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 555,
+  "fields": {
+    "device": 68,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.173Z",
+    "updated_at": "2025-09-23T10:32:57.779Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 556,
+  "fields": {
+    "device": 69,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.220Z",
+    "updated_at": "2025-09-23T10:32:57.805Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 557,
+  "fields": {
+    "device": 70,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.267Z",
+    "updated_at": "2025-09-23T10:32:57.836Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 558,
+  "fields": {
+    "device": 71,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.315Z",
+    "updated_at": "2025-09-23T10:32:57.865Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 559,
+  "fields": {
+    "device": 72,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.362Z",
+    "updated_at": "2025-09-23T10:32:57.897Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 560,
+  "fields": {
+    "device": 73,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.408Z",
+    "updated_at": "2025-09-23T10:32:57.926Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 561,
+  "fields": {
+    "device": 74,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.454Z",
+    "updated_at": "2025-09-23T10:32:57.954Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 562,
+  "fields": {
+    "device": 75,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.505Z",
+    "updated_at": "2025-09-23T10:32:57.983Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 563,
+  "fields": {
+    "device": 76,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.557Z",
+    "updated_at": "2025-09-23T10:32:58.014Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 564,
+  "fields": {
+    "device": 77,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.601Z",
+    "updated_at": "2025-09-23T10:32:58.042Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 565,
+  "fields": {
+    "device": 78,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Letter \"M\" in keyboard not working",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.647Z",
+    "updated_at": "2025-09-23T11:55:59.967Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 566,
+  "fields": {
+    "device": 79,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.693Z",
+    "updated_at": "2025-09-23T10:32:58.101Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 567,
+  "fields": {
+    "device": 80,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.738Z",
+    "updated_at": "2025-09-23T10:32:58.131Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 568,
+  "fields": {
+    "device": 81,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "The screen is cracked",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.787Z",
+    "updated_at": "2025-09-23T11:59:05.233Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 569,
+  "fields": {
+    "device": 82,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.833Z",
+    "updated_at": "2025-09-23T10:32:58.186Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 571,
+  "fields": {
+    "device": 84,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.922Z",
+    "updated_at": "2025-09-23T12:10:09.407Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 572,
+  "fields": {
+    "device": 85,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T06:06:18.968Z",
+    "updated_at": "2025-09-23T11:43:37.974Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 574,
+  "fields": {
+    "device": 260,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T09:26:23.405Z",
+    "updated_at": "2025-09-23T11:59:45.092Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 575,
+  "fields": {
+    "device": 330,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T11:21:43.985Z",
+    "updated_at": "2025-09-23T11:21:43.985Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 576,
+  "fields": {
+    "device": 1964,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T11:21:44.034Z",
+    "updated_at": "2025-09-23T12:12:24.076Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 577,
+  "fields": {
+    "device": 1965,
+    "period": 1,
+    "completed_date": "2025-09-17",
+    "remarks": "Device in good condition",
+    "created_by": 1,
+    "created_at": "2025-09-23T11:21:44.078Z",
+    "updated_at": "2025-09-23T12:11:59.389Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 578,
+  "fields": {
+    "device": 1671,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:21:44.767Z",
+    "updated_at": "2025-09-23T11:22:17.898Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 579,
+  "fields": {
+    "device": 1672,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:22:53.234Z",
+    "updated_at": "2025-09-23T11:22:53.234Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 580,
+  "fields": {
+    "device": 1673,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:23:32.220Z",
+    "updated_at": "2025-09-23T11:23:32.220Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 581,
+  "fields": {
+    "device": 1674,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:25:44.728Z",
+    "updated_at": "2025-09-23T11:25:44.728Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 582,
+  "fields": {
+    "device": 1675,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:26:14.853Z",
+    "updated_at": "2025-09-23T11:26:14.853Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 583,
+  "fields": {
+    "device": 1676,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:26:43.707Z",
+    "updated_at": "2025-09-23T11:26:43.708Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 584,
+  "fields": {
+    "device": 1677,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:27:46.464Z",
+    "updated_at": "2025-09-23T11:27:46.464Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 585,
+  "fields": {
+    "device": 1678,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:28:17.184Z",
+    "updated_at": "2025-09-23T11:28:17.184Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 586,
+  "fields": {
+    "device": 1679,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:31:14.980Z",
+    "updated_at": "2025-09-23T11:31:14.980Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 587,
+  "fields": {
+    "device": 1680,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:31:51.388Z",
+    "updated_at": "2025-09-23T11:31:51.388Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 588,
+  "fields": {
+    "device": 1681,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:32:30.620Z",
+    "updated_at": "2025-09-23T11:32:30.620Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 589,
+  "fields": {
+    "device": 1682,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:33:22.268Z",
+    "updated_at": "2025-09-23T11:33:22.268Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 590,
+  "fields": {
+    "device": 1683,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:34:10.226Z",
+    "updated_at": "2025-09-23T11:34:10.226Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 591,
+  "fields": {
+    "device": 1684,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:35:57.458Z",
+    "updated_at": "2025-09-23T11:35:57.458Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 592,
+  "fields": {
+    "device": 1685,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:36:40.053Z",
+    "updated_at": "2025-09-23T11:36:40.053Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 593,
+  "fields": {
+    "device": 1686,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:37:48.961Z",
+    "updated_at": "2025-09-23T11:37:48.961Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 594,
+  "fields": {
+    "device": 1687,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:39:56.723Z",
+    "updated_at": "2025-09-23T11:39:56.723Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 595,
+  "fields": {
+    "device": 1688,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:40:24.299Z",
+    "updated_at": "2025-09-23T11:40:24.299Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 596,
+  "fields": {
+    "device": 1689,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:41:35.509Z",
+    "updated_at": "2025-09-23T11:41:35.509Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 597,
+  "fields": {
+    "device": 1690,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:43:56.624Z",
+    "updated_at": "2025-09-23T11:43:56.624Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 598,
+  "fields": {
+    "device": 1691,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:45:01.157Z",
+    "updated_at": "2025-09-23T11:45:01.157Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 599,
+  "fields": {
+    "device": 1692,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:45:54.346Z",
+    "updated_at": "2025-09-23T11:45:54.346Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 600,
+  "fields": {
+    "device": 1693,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:46:44.118Z",
+    "updated_at": "2025-09-23T11:46:44.118Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 601,
+  "fields": {
+    "device": 1694,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:47:12.350Z",
+    "updated_at": "2025-09-23T11:47:12.350Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 602,
+  "fields": {
+    "device": 1695,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:50:15.841Z",
+    "updated_at": "2025-09-23T11:50:15.841Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 603,
+  "fields": {
+    "device": 1696,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By  Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:50:46.197Z",
+    "updated_at": "2025-09-23T11:50:46.197Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 604,
+  "fields": {
+    "device": 1697,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:51:50.989Z",
+    "updated_at": "2025-09-23T11:51:50.989Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 605,
+  "fields": {
+    "device": 1698,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:52:20.138Z",
+    "updated_at": "2025-09-23T11:52:21.446Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 606,
+  "fields": {
+    "device": 1699,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel  and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:53:13.787Z",
+    "updated_at": "2025-09-23T11:53:16.339Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 607,
+  "fields": {
+    "device": 1700,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:53:52.757Z",
+    "updated_at": "2025-09-23T11:53:52.757Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 608,
+  "fields": {
+    "device": 1701,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:54:34.187Z",
+    "updated_at": "2025-09-23T11:54:34.187Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 609,
+  "fields": {
+    "device": 1702,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:55:05.440Z",
+    "updated_at": "2025-09-23T11:55:05.440Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 610,
+  "fields": {
+    "device": 1703,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:55:33.406Z",
+    "updated_at": "2025-09-23T11:55:33.406Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 611,
+  "fields": {
+    "device": 1704,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:56:05.533Z",
+    "updated_at": "2025-09-23T11:56:05.533Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 612,
+  "fields": {
+    "device": 1705,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem ",
+    "created_by": 10,
+    "created_at": "2025-09-23T11:59:51.819Z",
+    "updated_at": "2025-09-23T11:59:51.819Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 613,
+  "fields": {
+    "device": 1706,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:00:40.785Z",
+    "updated_at": "2025-09-23T12:00:40.785Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 614,
+  "fields": {
+    "device": 1707,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:01:06.675Z",
+    "updated_at": "2025-09-23T12:01:06.675Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 615,
+  "fields": {
+    "device": 1708,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:01:42.448Z",
+    "updated_at": "2025-09-23T12:01:42.448Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 616,
+  "fields": {
+    "device": 1709,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:02:13.335Z",
+    "updated_at": "2025-09-23T12:02:13.335Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 617,
+  "fields": {
+    "device": 1710,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:02:50.768Z",
+    "updated_at": "2025-09-23T12:02:50.768Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 618,
+  "fields": {
+    "device": 1711,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:03:26.051Z",
+    "updated_at": "2025-09-23T12:03:26.051Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 619,
+  "fields": {
+    "device": 1712,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:03:58.597Z",
+    "updated_at": "2025-09-23T12:03:58.597Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 620,
+  "fields": {
+    "device": 1713,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:04:56.162Z",
+    "updated_at": "2025-09-23T12:04:56.162Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 621,
+  "fields": {
+    "device": 1714,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:06:52.487Z",
+    "updated_at": "2025-09-23T12:06:52.488Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 622,
+  "fields": {
+    "device": 1715,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:07:48.142Z",
+    "updated_at": "2025-09-23T12:07:48.143Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 623,
+  "fields": {
+    "device": 1716,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:08:20.372Z",
+    "updated_at": "2025-09-23T12:08:20.372Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 624,
+  "fields": {
+    "device": 1717,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:08:47.557Z",
+    "updated_at": "2025-09-23T12:08:47.557Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 625,
+  "fields": {
+    "device": 1718,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:09:12.715Z",
+    "updated_at": "2025-09-23T12:09:12.715Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 626,
+  "fields": {
+    "device": 1719,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:10:17.778Z",
+    "updated_at": "2025-09-23T12:10:17.778Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 627,
+  "fields": {
+    "device": 1720,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:10:47.193Z",
+    "updated_at": "2025-09-23T12:10:47.194Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 628,
+  "fields": {
+    "device": 1721,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:11:30.604Z",
+    "updated_at": "2025-09-23T12:11:30.604Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 629,
+  "fields": {
+    "device": 1722,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:11:59.093Z",
+    "updated_at": "2025-09-23T12:11:59.093Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 630,
+  "fields": {
+    "device": 1723,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem\r\n",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:12:32.745Z",
+    "updated_at": "2025-09-23T12:12:32.745Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 631,
+  "fields": {
+    "device": 1724,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:13:03.493Z",
+    "updated_at": "2025-09-23T12:13:03.493Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 632,
+  "fields": {
+    "device": 1725,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:13:42.844Z",
+    "updated_at": "2025-09-23T12:13:42.844Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 633,
+  "fields": {
+    "device": 1726,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:14:13.894Z",
+    "updated_at": "2025-09-23T12:14:13.894Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 634,
+  "fields": {
+    "device": 1727,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:15:34.642Z",
+    "updated_at": "2025-09-23T12:15:34.642Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 635,
+  "fields": {
+    "device": 1728,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:17:03.588Z",
+    "updated_at": "2025-09-23T12:17:03.588Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 636,
+  "fields": {
+    "device": 1729,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:17:42.538Z",
+    "updated_at": "2025-09-23T12:17:42.538Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 637,
+  "fields": {
+    "device": 1730,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:19:07.684Z",
+    "updated_at": "2025-09-23T12:19:07.684Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 638,
+  "fields": {
+    "device": 1731,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:19:53.090Z",
+    "updated_at": "2025-09-23T12:19:53.090Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 639,
+  "fields": {
+    "device": 1732,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:21:52.264Z",
+    "updated_at": "2025-09-23T12:21:52.264Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 640,
+  "fields": {
+    "device": 1733,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:22:44.340Z",
+    "updated_at": "2025-09-23T12:22:44.340Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 641,
+  "fields": {
+    "device": 1734,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:23:12.212Z",
+    "updated_at": "2025-09-23T12:23:12.212Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 642,
+  "fields": {
+    "device": 1735,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:23:42.499Z",
+    "updated_at": "2025-09-23T12:23:42.499Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 643,
+  "fields": {
+    "device": 1736,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:24:17.372Z",
+    "updated_at": "2025-09-23T12:24:17.372Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 644,
+  "fields": {
+    "device": 1737,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:25:41.601Z",
+    "updated_at": "2025-09-23T12:25:41.601Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 645,
+  "fields": {
+    "device": 1738,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:26:24.298Z",
+    "updated_at": "2025-09-23T12:26:24.299Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 646,
+  "fields": {
+    "device": 1739,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:26:57.702Z",
+    "updated_at": "2025-09-23T12:26:57.703Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 647,
+  "fields": {
+    "device": 1740,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:27:26.966Z",
+    "updated_at": "2025-09-23T12:27:26.966Z",
+    "activities": [
+      1
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 648,
+  "fields": {
+    "device": 1741,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "Device in good condition(By Samuel and Ephrem)",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:34:52.570Z",
+    "updated_at": "2025-09-23T12:34:52.570Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 649,
+  "fields": {
+    "device": 1742,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "\r\n(By Samuel and Ephrem)\r\n1.Some keys are not functioning \r\n2.Device is slow \r\n3.Device is old",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:40:52.152Z",
+    "updated_at": "2025-09-23T12:40:52.152Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 650,
+  "fields": {
+    "device": 1743,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "(By Samuel and Ephrem)\r\nDevice in good condition",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:42:48.083Z",
+    "updated_at": "2025-09-23T12:42:48.083Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 651,
+  "fields": {
+    "device": 1744,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "(By Samuel and Ephrem)\r\nDevice reported Stolen",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:49:33.443Z",
+    "updated_at": "2025-09-23T12:49:33.443Z",
+    "activities": [
+      11
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 652,
+  "fields": {
+    "device": 83,
+    "period": 1,
+    "completed_date": "2025-09-18",
+    "remarks": "WE DID NOT PERFORM ANY TASK ON THIS DEVICE",
+    "created_by": 7,
+    "created_at": "2025-09-23T12:50:22.604Z",
+    "updated_at": "2025-09-23T12:50:22.604Z",
+    "activities": [
+      11
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 653,
+  "fields": {
+    "device": 1745,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "(By Samuel and Ephrem)\r\nDevice in good condition",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:51:14.950Z",
+    "updated_at": "2025-09-23T12:51:14.950Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 654,
+  "fields": {
+    "device": 1746,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "(By Samuel and Ephrem)\r\nDevice in good condition",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:53:03.195Z",
+    "updated_at": "2025-09-23T12:53:03.195Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 655,
+  "fields": {
+    "device": 1747,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "(By Samuel and Ephrem)\r\n1.Device needed update\r\n2.Mouse pad issue(needs replacement)",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:55:41.400Z",
+    "updated_at": "2025-09-23T12:55:41.400Z",
+    "activities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 656,
+  "fields": {
+    "device": 1748,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "(By Samuel and Ephrem)\r\nDevice not working(sent to Pangani)",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:58:11.879Z",
+    "updated_at": "2025-09-23T12:58:11.879Z",
+    "activities": [
+      11
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 657,
+  "fields": {
+    "device": 1749,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T12:59:45.002Z",
+    "updated_at": "2025-09-23T12:59:45.002Z",
+    "activities": [
+      11
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 658,
+  "fields": {
+    "device": 1750,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T13:00:24.665Z",
+    "updated_at": "2025-09-23T13:00:24.665Z",
+    "activities": [
+      11
+    ]
+  }
+},
+{
+  "model": "ppm.ppmtask",
+  "pk": 659,
+  "fields": {
+    "device": 1751,
+    "period": 1,
+    "completed_date": "2025-09-22",
+    "remarks": "By Samuel and Ephrem",
+    "created_by": 10,
+    "created_at": "2025-09-23T13:01:23.738Z",
+    "updated_at": "2025-09-23T13:01:23.738Z",
+    "activities": [
+      11
+    ]
+  }
+}
+]

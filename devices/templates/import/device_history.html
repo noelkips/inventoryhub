@@ -1,89 +1,111 @@
 {% extends 'dashboard.html' %}
+{% load static %}
 
 {% block content %}
-<div class="container mx-auto p-4">
-    <h2 class="text-2xl font-bold mb-4 text-gray-800">Device History - {{ device.serial_number|default:"Unknown Serial" }}</h2>
-
-    <!-- Back Buttons -->
-    <div class="mb-4 space-x-4">
-        <a href="{% url 'display_approved_imports' %}" class="text-blue-600 hover:underline font-medium">Back to Approved Devices</a>
-        <a href="{% url 'display_unapproved_imports' %}" class="text-blue-600 hover:underline font-medium">Back to Unapproved Devices</a>
-        <a href="" class="text-blue-600 hover:underline font-medium">Back to All Imports</a>
+<div class="container mx-auto p-2 sm:p-4 max-w-full">
+    <!-- Navigation Links -->
+    <div class="mb-4 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+        <a href="{% url 'display_approved_imports' %}" class="text-blue-600 hover:underline text-sm sm:text-base">Back to Approved Devices</a>
+        <a href="{% url 'display_unapproved_imports' %}" class="text-blue-600 hover:underline text-sm sm:text-base">Back to Unapproved Devices</a>
+        <a href="{% url 'display_disposed_imports' %}" class="text-blue-600 hover:underline text-sm sm:text-base">Back to Disposed Devices</a>
     </div>
 
     <!-- Device Summary -->
-    <div class="bg-white p-4 rounded-lg shadow-md mb-6">
-        <h3 class="text-lg font-semibold mb-2 text-gray-700">Device Summary</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <p><strong class="text-gray-700">Serial Number:</strong> {{ device.serial_number|default:"N/A" }}</p>
-                <p><strong class="text-gray-700">Centre:</strong> {{ device.centre.name|default:"Not Assigned" }}</p>
-                <p><strong class="text-gray-700">Department:</strong> {{ device.department|default:"N/A" }}</p>
-                <p><strong class="text-gray-700">Hardware:</strong> {{ device.hardware|default:"N/A" }}</p>
-                <p><strong class="text-gray-700">System Model:</strong> {{ device.system_model|default:"N/A" }}</p>
-                <p><strong class="text-gray-700">Processor:</strong> {{ device.processor|default:"N/A" }}</p>
-            </div>
-            <div>
-                <p><strong class="text-gray-700">RAM (GB):</strong> {{ device.ram_gb|default:"N/A" }}</p>
-                <p><strong class="text-gray-700">HDD (GB):</strong> {{ device.hdd_gb|default:"N/A" }}</p>
-                <p><strong class="text-gray-700">Assignee:</strong> {{ device.assignee_first_name|default:"" }} {{ device.assignee_last_name|default:"Not Assigned" }}</p>
-                <p><strong class="text-gray-700">Email:</strong> {{ device.assignee_email_address|default:"N/A" }}</p>
-                <p><strong class="text-gray-700">Condition:</strong> {{ device.device_condition|default:"N/A" }}</p>
-                <p><strong class="text-gray-700">Status:</strong> {{ device.status|default:"N/A" }}</p>
-                <p><strong class="text-gray-700">Date Added:</strong> {{ device.date|date:"Y-m-d"|default:"N/A" }}</p>
-                <p><strong class="text-gray-700">Added By:</strong> {{ device.added_by.username|default:"Unknown" }}</p>
-                <p><strong class="text-gray-700">Approved By:</strong> {{ device.approved_by.username|default:"Not Approved" }}</p>
-                <p><strong class="text-gray-700">Is Approved:</strong> {{ device.is_approved|yesno:"Yes,No" }}</p>
-                <p><strong class="text-gray-700">Reason for Update:</strong> {{ device.reason_for_update|default:"N/A" }}</p>
-            </div>
+    <h2 class="text-xl sm:text-2xl font-bold mb-4 text-gray-800">Device History - {{ device.serial_number }}</h2>
+    <div class="bg-white p-3 sm:p-4 rounded-lg shadow-md mb-6">
+        <h3 class="text-base sm:text-lg font-semibold mb-4 text-gray-800">Device Summary</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm sm:text-base">
+            <p><strong>Serial Number:</strong> {{ device.serial_number|default:"N/A" }}</p>
+            <p><strong>Centre:</strong> {{ device.centre.name|default:"N/A" }}</p>
+            <p><strong>Department:</strong> {{ device.department.name|default:"N/A" }}</p>
+            <p><strong>Hardware:</strong> {{ device.hardware|default:"N/A" }}</p>
+            <p><strong>System Model:</strong> {{ device.system_model|default:"N/A" }}</p>
+            <p><strong>Processor:</strong> {{ device.processor|default:"N/A" }}</p>
+            <p><strong>RAM (GB):</strong> {{ device.ram_gb|default:"N/A" }}</p>
+            <p><strong>HDD (GB):</strong> {{ device.hdd_gb|default:"N/A" }}</p>
+            <p><strong>Assignee:</strong> {{ device.assignee_first_name|default:"N/A" }} {{ device.assignee_last_name|default:"" }}</p>
+            <p><strong>Email:</strong> {{ device.assignee_email_address|default:"N/A" }}</p>
+            <p><strong>Condition:</strong> {{ device.device_condition|default:"N/A" }}</p>
+            <p><strong>Status:</strong> {{ device.status|default:"N/A" }}</p>
+            <p><strong>Date Added:</strong> {{ device.date|date:"Y-m-d"|default:"N/A" }}</p>
+            <p><strong>Added By:</strong> {{ device.added_by.username|default:"N/A" }}</p>
+            <p><strong>Approved By:</strong> {{ device.approved_by.username|default:"Not Approved" }}</p>
+            <p><strong>Is Approved:</strong> {{ device.is_approved|yesno:"Yes,No" }}</p>
+            <p><strong>Reason for Update:</strong> {{ device.reason_for_update|default:"N/A" }}</p>
         </div>
     </div>
 
-    <!-- History Table -->
-    <div class="bg-white p-4 rounded-lg shadow-md">
-        <h3 class="text-lg font-semibold mb-4 text-gray-800">Change History</h3>
+    <!-- Change History -->
+    <div class="bg-white p-3 sm:p-4 rounded-lg shadow-md mb-6">
+        <h3 class="text-base sm:text-lg font-semibold mb-4 text-gray-800">Change History</h3>
         {% if history %}
             <div class="overflow-x-auto">
-                <table class="min-w-full bg-white border">
+                <table class="min-w-full bg-white border text-sm sm:text-base">
                     <thead>
                         <tr class="bg-gray-200 text-gray-600">
-                            <th class="py-3 px-4 border text-left">Date</th>
-                            <th class="py-3 px-4 border text-left">Change Type</th>
-                            <th class="py-3 px-4 border text-left">Changes</th>
-                            <th class="py-3 px-4 border text-left">User</th>
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Date</th>
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Change Type</th>
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Changes</th>
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">User</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for entry in history %}
                             <tr class="hover:bg-gray-50">
-                                <td class="py-2 px-4 border">{{ entry.record.history_date|date:"Y-m-d H:i" }}</td>
-                                <td class="py-2 px-4 border">{{ entry.change_type }}</td>
-                                <td class="py-2 px-4 border">
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ entry.record.history_date|date:"Y-m-d H:i" }}</td>
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ entry.change_type }}</td>
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">
                                     {% if entry.diff %}
                                         <ul class="list-disc pl-5">
                                             {% for field, values in entry.diff.items %}
-                                                <li>
-                                                    <strong>{{ field|title }}:</strong>
-                                                    {% if values.old != values.new %}
-                                                        Changed from "{{ values.old|default:"N/A" }}" to "{{ values.new|default:"N/A" }}"
-                                                    {% else %}
-                                                        No change
-                                                    {% endif %}
-                                                </li>
+                                                <li>{{ field }}: Changed from "{{ values.old }}" to "{{ values.new }}"</li>
                                             {% endfor %}
                                         </ul>
                                     {% else %}
                                         No changes recorded
                                     {% endif %}
                                 </td>
-                                <td class="py-2 px-4 border">{{ entry.user|default:"Unknown" }}</td>
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ entry.user }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         {% else %}
-            <p class="text-gray-600">No history available for this device.</p>
+            <p class="text-gray-600 text-sm sm:text-base">No history records found.</p>
+        {% endif %}
+    </div>
+
+    <!-- Previous Users History -->
+    <div class="bg-white p-3 sm:p-4 rounded-lg shadow-md">
+        <h3 class="text-base sm:text-lg font-semibold mb-4 text-gray-800">Previous Users</h3>
+        {% if user_history %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border text-sm sm:text-base">
+                    <thead>
+                        <tr class="bg-gray-200 text-gray-600">
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Assignee Name</th>
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Email</th>
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Assigned By</th>
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Assigned Date</th>
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Cleared Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in user_history %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ entry.assignee_name }}</td>
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ entry.email }}</td>
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ entry.assigned_by }}</td>
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ entry.assigned_date|date:"Y-m-d" }}</td>
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ entry.cleared_date|date:"Y-m-d"|default:"N/A" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-gray-600 text-sm sm:text-base">No previous users recorded.</p>
         {% endif %}
     </div>
 </div>

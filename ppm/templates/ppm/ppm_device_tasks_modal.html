@@ -1,0 +1,85 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><div class="bg-white p-4 rounded-lg">
+    <h3 class="text-lg font-semibold mb-4 text-gray-800">PPM Activity for {{ device.serial_number }} - {{ active_period.name }}</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+            <p><strong class="text-gray-700">Serial Number:</strong> {{ device.serial_number|default:"N/A" }}</p>
+            <p><strong class="text-gray-700">Hardware:</strong> {{ device.hardware|default:"N/A" }}</p>
+            <p><strong class="text-gray-700">Department:</strong> {{ device.department|default:"N/A" }}</p>
+        </div>
+        <div>
+            <p><strong class="text-gray-700">Centre:</strong> {{ device.centre.name|default:"Not Assigned" }}</p>
+            <p><strong class="text-gray-700">Done By:</strong> {{ ppm_task.done_by|default:"N/A" }}</p>
+            <p><strong class="text-gray-700">Done At:</strong> {{ ppm_task.done_at|date:"Y-m-d H:i"|default:"N/A" }}</p>
+        </div>
+    </div>
+
+    <form method="post" action="{% url 'ppm_device_tasks' device.id %}">
+        {% csrf_token %}
+        <div class="mb-4">
+            <label for="activity" class="block text-gray-700 font-medium mb-1">Activity</label>
+            <select name="activity" id="activity" class="form-control w-full border rounded-md p-2" required>
+                <option value="">Select Activity</option>
+                {% for activity in active_period.activities.all %}
+                    <option value="{{ activity.id }}" {% if ppm_task.activity.id == activity.id %}selected{% endif %}>{{ activity.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-4">
+            <div class="flex items-center">
+                <input type="checkbox" name="is_done" id="is_done" class="form-check-input h-5 w-5" {% if ppm_task.is_done %}checked{% endif %}>
+                <label for="is_done" class="ml-2 text-gray-700 font-medium">Completed</label>
+            </div>
+        </div>
+        <div class="mb-4">
+            <label for="recommendations" class="block text-gray-700 font-medium mb-1">Recommendations</label>
+            <textarea name="recommendations" id="recommendations" rows="2" class="form-control w-full border rounded-md p-2">{{ ppm_task.recommendations|default:"" }}</textarea>
+        </div>
+        <div class="mb-4">
+            <label for="issues" class="block text-gray-700 font-medium mb-1">Issues</label>
+            <textarea name="issues" id="issues" rows="4" class="form-control w-full border rounded-md p-2">{{ ppm_task.issues|default:"" }}</textarea>
+        </div>
+        <div class="flex space-x-4">
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Save Activity</button>
+            <button type="button" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700" data-bs-dismiss="modal">Cancel</button>
+        </div>
+    </form>
+</div>

@@ -60,7 +60,12 @@
                             </div>
                             <div>
                                 <label class="block text-[#143C50] font-semibold">Department</label>
-                                <input type="text" name="department" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200" required>
+                                <select name="department" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8] transition-all duration-200" required>
+                                    <option value="">Select Department</option>
+                                    {% for dept in departments %}
+                                        <option value="{{ dept.id }}">{{ dept.name }} ({{ dept.department_code }})</option>
+                                    {% endfor %}
+                                </select>
                             </div>
                             <div>
                                 <label class="block text-[#143C50] font-semibold">Hardware</label>
@@ -138,6 +143,7 @@
                                     <li>status</li>
                                 </ul>
                                 <li>Ensure you enter the <strong>centre codes</strong> assigned to you, not the centre names.</li>
+                                <li>Ensure the <strong>department</strong> column contains department codes (e.g., IT_DEPT), not department names.</li>
                                 <li>Convert the Excel file to CSV format.</li>
                                 <li>Upload the CSV file using the form above.</li>
                             </ol>
@@ -235,7 +241,7 @@
                     }
 
                     // Convert filtered JSON back to CSV
-                    var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                    var csv = XLSX.utils.sheet_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
                     csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
                     return csv;
                 } catch (e) {

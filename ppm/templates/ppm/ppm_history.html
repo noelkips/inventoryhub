@@ -1,0 +1,129 @@
+{% extends 'dashboard.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mx-auto p-2 sm:p-4 max-w-full">
+    <h2 class="text-xl sm:text-2xl font-bold mb-4 text-gray-800">PPM History {% if device_id %}for Device ID {{ device_id }}{% endif %}</h2>
+
+    <!-- Messages -->
+    {% if messages %}
+        <div class="mb-4">
+            {% for message in messages %}
+                <div class="bg-{{ message.tags }}-100 border border-{{ message.tags }}-400 text-{{ message.tags }}-700 px-3 py-2 sm:px-4 sm:py-3 rounded-lg mb-2" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Filters -->
+    <div class="bg-white p-3 sm:p-4 rounded-lg shadow-md mb-6">
+        <form method="get" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            <div>
+                <label for="search" class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Search</label>
+                <input type="text" name="search" id="search" value="{{ report_data.search_query }}" class="w-full border rounded-md p-2 text-sm sm:text-base" placeholder="Serial, User, Department">
+            </div>
+            {% if user.is_superuser %}
+                <div>
+                    <label for="centre" class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Centre</label>
+                    <select name="centre" id="centre" class="w-full border rounded-md p-2 text-sm sm:text-base">
+                        <option value="">All Centres</option>
+                        {% for centre in centres %}
+                            <option value="{{ centre.id }}" {% if report_data.centre_filter == centre.id|stringformat:"s" %}selected{% endif %}>{{ centre.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endif %}
+            <div>
+                <label for="items_per_page" class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Items per Page</label>
+                <select name="items_per_page" id="items_per_page" class="w-full border rounded-md p-2 text-sm sm:text-base" onchange="updateItemsPerPage(this)">
+                    {% for option in items_per_page_options %}
+                        <option value="{{ option }}" {% if report_data.items_per_page == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 w-full sm:w-auto text-sm sm:text-base">Filter</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tasks Table -->
+    <div class="bg-white p-3 sm:p-4 rounded-lg shadow-md">
+        <h3 class="text-base sm:text-lg font-semibold mb-4 text-gray-800">PPM Tasks ({{ report_data.total_records }})</h3>
+        {% if tasks %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border text-sm sm:text-base">
+                    <thead>
+                        <tr class="bg-gray-200 text-gray-600">
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Device Serial</th>
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Period</th>
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Activities</th>
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Completed Date</th>
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Remarks</th>
+                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Centre</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in tasks %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ task.device.serial_number }}</td>
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ task.period.name }}</td>
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">
+                                    {% for activity in task.activities.all %}
+                                        {{ activity.name }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </td>
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ task.completed_date|default:"N/A" }}</td>
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ task.remarks|default:"N/A" }}</td>
+                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ task.device.centre.name }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <!-- Pagination -->
+            <div class="flex flex-col md:flex-row justify-between items-center mt-4 space-y-4 md:space-y-0">
+                <div class="text-gray-600 text-sm sm:text-base">
+                    Showing {{ tasks.start_index }} to {{ tasks.end_index }} of {{ report_data.total_records }} tasks
+                </div>
+                <div class="flex flex-wrap space-x-1">
+                    {% if tasks.has_previous %}
+                        <a href="{% if device_id %}{% url 'ppm_history_device' device_id %}{% else %}{% url 'ppm_history' %}{% endif %}?page=1&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">&laquo; First</a>
+                        <a href="{% if device_id %}{% url 'ppm_history_device' device_id %}{% else %}{% url 'ppm_history' %}{% endif %}?page={{ tasks.previous_page_number }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">&lsaquo; Prev</a>
+                    {% endif %}
+                    {% for num in page_range %}
+                        {% if num is None %}
+                            <span class="px-2 py-1 text-gray-700 text-sm sm:text-base">...</span>
+                        {% elif num == tasks.number %}
+                            <span class="px-2 py-1 bg-blue-600 text-white rounded transition duration-200 text-sm sm:text-base">{{ num }}</span>
+                        {% else %}
+                            <a href="{% if device_id %}{% url 'ppm_history_device' device_id %}{% else %}{% url 'ppm_history' %}{% endif %}?page={{ num }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">{{ num }}</a>
+                        {% endif %}
+                    {% endfor %}
+                    {% if tasks.has_next %}
+                        <a href="{% if device_id %}{% url 'ppm_history_device' device_id %}{% else %}{% url 'ppm_history' %}{% endif %}?page={{ tasks.next_page_number }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">Next &rsaquo;</a>
+                        <a href="{% if device_id %}{% url 'ppm_history_device' device_id %}{% else %}{% url 'ppm_history' %}{% endif %}?page={{ paginator.num_pages }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">Last &raquo;</a>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <p class="text-gray-600 text-sm sm:text-base">No PPM tasks found.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"></script>
+<script>
+    function updateItemsPerPage(select) {
+        const itemsPerPage = select.value;
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('items_per_page', itemsPerPage);
+        urlParams.set('page', 1);
+        const baseUrl = {% if device_id %}"{% url 'ppm_history_device' device_id %}"{% else %}"{% url 'ppm_history' %}"{% endif %};
+        window.location.href = baseUrl + "?" + urlParams.toString();
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MOHI IT Device Clearance Form</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .signature-line {
+            width: 300px;
+            border-top: 1px solid #000;
+            margin-top: 10px;
+            padding-top: 5px;
+        }
+        @media print {
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="p-8 bg-white">
+    <div id="pdf-content" class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">MOHI IT DEVICE CLEARANCE</h1>
+        </div>
+
+        <!-- Device Details Section -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Device Details</h2>
+            <table class="w-full border-collapse border border-gray-300">
+                <tbody>
+                    <tr class="bg-gray-100">
+                        <td class="border border-gray-300 px-4 py-2 font-medium text-gray-700">Centre</td>
+                        <td class="border border-gray-300 px-4 py-2">{{ centre.name|default:"N/A" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-4 py-2 font-medium text-gray-700">Department</td>
+                        <td class="border border-gray-300 px-4 py-2">{{ device.department|default:"N/A" }}</td>
+                    </tr>
+                    <tr class="bg-gray-100">
+                        <td class="border border-gray-300 px-4 py-2 font-medium text-gray-700">Hardware</td>
+                        <td class="border border-gray-300 px-4 py-2">{{ device.hardware|default:"N/A" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-4 py-2 font-medium text-gray-700">System Model</td>
+                        <td class="border border-gray-300 px-4 py-2">{{ device.system_model|default:"N/A" }}</td>
+                    </tr>
+                    <tr class="bg-gray-100">
+                        <td class="border border-gray-300 px-4 py-2 font-medium text-gray-700">Processor</td>
+                        <td class="border border-gray-300 px-4 py-2">{{ device.processor|default:"N/A" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-4 py-2 font-medium text-gray-700">RAM (GB)</td>
+                        <td class="border border-gray-300 px-4 py-2">{{ device.ram_gb|default:"N/A" }}</td>
+                    </tr>
+                    <tr class="bg-gray-100">
+                        <td class="border border-gray-300 px-4 py-2 font-medium text-gray-700">HDD (GB)</td>
+                        <td class="border border-gray-300 px-4 py-2">{{ device.hdd_gb|default:"N/A" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-4 py-2 font-medium text-gray-700">Serial Number</td>
+                        <td class="border border-gray-300 px-4 py-2">{{ device.serial_number|default:"N/A" }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Clearance Section -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Clearance Details</h2>
+            <table class="w-full border-collapse border border-gray-300">
+                <tbody>
+                    <tr class="bg-gray-100">
+                        <td class="border border-gray-300 px-4 py-2 font-medium text-gray-700">Cleared By</td>
+                        <td class="border border-gray-300 px-4 py-2">{{ cleared_by.username|default:"N/A" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 px-4 py-2 font-medium text-gray-700">Clearance Date</td>
+                        <td class="border border-gray-300 px-4 py-2">{{ clearance.clearance_date|date:"Y-m-d" }}</td>
+                    </tr>
+                    <tr class="bg-gray-100">
+                        <td class="border border-gray-300 px-4 py-2 font-medium text-gray-700">Remarks</td>
+                        <td class="border border-gray-300 px-4 py-2">{{ clearance.remarks|default:"None" }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="mt-6">
+                <h2 class="text-gray-700 font-medium">Signature: ______________________________</h2>
+                
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const element = document.getElementById('pdf-content');
+            const options = {
+                margin: [10, 10, 10, 10],
+                filename: 'clearance_form_{{ device.serial_number }}.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(options).from(element).save().then(() => {
+                window.location.href = "{% url 'display_approved_imports' %}";
+            });
+        });
+    </script>
+</body>
+</html>
