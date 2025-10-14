@@ -4,12 +4,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
-from django.db.models import Q, Count
+from django.db.models import Q, Count, F, ExpressionWrapper, DurationField
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 from django.db import IntegrityError
-from datetime import datetime
+from datetime import datetime, timedelta
 from .models import PPMPeriod, PPMActivity, PPMTask
 from devices.models import Import, Centre
 import os
@@ -387,11 +387,13 @@ def ppm_report(request):
     # Determine user permissions and base query
     if request.user.is_superuser:
         centres = Centre.objects.all()
+        device_query = Import.objects.all()
         base_tasks_query = PPMTask.objects.select_related(
             'device', 'device__centre', 'device__department', 'period', 'created_by'
         ).prefetch_related('activities')
     elif request.user.centre:
         centres = Centre.objects.filter(id=request.user.centre.id)
+        device_query = Import.objects.filter(centre=request.user.centre)
         base_tasks_query = PPMTask.objects.filter(
             device__centre=request.user.centre
         ).select_related(
@@ -399,14 +401,37 @@ def ppm_report(request):
         ).prefetch_related('activities')
     else:
         centres = Centre.objects.none()
+        device_query = Import.objects.none()
         base_tasks_query = PPMTask.objects.none()
 
+    # Get all periods for filter
+    periods = PPMPeriod.objects.all().order_by('-start_date')
+
     # Get filters
+    period_filter = request.GET.get('period', '')
     centre_filter = request.GET.get('centre', '')
     search_query = request.GET.get('search', '').strip()
     items_per_page = request.GET.get('items_per_page', '10')
     page_number = request.GET.get('page', '1')
     export_type = request.GET.get('export', '')
+
+    # Default to active period if no period selected
+    current_period = None
+    if not period_filter:
+        active_period = PPMPeriod.objects.filter(is_active=True).first()
+        if active_period:
+            period_filter = str(active_period.id)
+        else:
+            latest_period = PPMPeriod.objects.order_by('-end_date').first()
+            if latest_period:
+                period_filter = str(latest_period.id)
+
+    if period_filter:
+        try:
+            current_period = PPMPeriod.objects.get(id=period_filter)
+        except PPMPeriod.DoesNotExist:
+            messages.error(request, "Invalid period selected.")
+            return redirect('ppm_report')
 
     # Validate items_per_page
     try:
@@ -422,75 +447,127 @@ def ppm_report(request):
     except ValueError:
         page_number = 1
 
-    # Apply filters
-    tasks_query = base_tasks_query.order_by('-created_at', 'id')
+    # Apply centre filter to device_query if applicable
+    if centre_filter and (request.user.is_superuser or str(request.user.centre.id) == centre_filter):
+        device_query = device_query.filter(centre__id=centre_filter)
 
-    # Centre filter
-    if centre_filter:
-        if request.user.is_superuser or str(request.user.centre.id) == centre_filter:
+    approved_devices = device_query.filter(is_approved=True, is_disposed=False).count()
+
+    # PPM stats device-based for the selected period
+    devices_with_ppm = 0
+    devices_without_ppm = 0
+    ppm_completion_rate = 0
+    completed_on_time = 0
+    overdue_tasks = 0
+    tasks_due_soon = 0
+    is_past_period = False
+    avg_completion_time = None
+    ppm_status_labels = []
+    ppm_status_data = []
+    ppm_status_colors = []
+    ppm_tasks_by_activity = []
+    ppm_by_centre = []
+    tasks_query = base_tasks_query
+    total_ppm_tasks = 0
+
+    if current_period:
+        tasks_query = base_tasks_query.filter(period=current_period).select_related(
+            'device', 'device__centre', 'device__department', 'period', 'created_by'
+        ).prefetch_related('activities')
+
+        # Apply centre filter to tasks if applicable
+        if centre_filter and (request.user.is_superuser or str(request.user.centre.id) == centre_filter):
             tasks_query = tasks_query.filter(device__centre__id=centre_filter)
 
-    # Search filter
-    if search_query:
-        query = (
-            Q(device__serial_number__icontains=search_query) |
-            Q(device__assignee_first_name__icontains=search_query) |
-            Q(device__assignee_last_name__icontains=search_query) |
-            Q(device__department__name__icontains=search_query) |
-            Q(remarks__icontains=search_query) |
-            Q(period__name__icontains=search_query) |
-            Q(device__hardware__icontains=search_query)
+        # Search filter on tasks
+        if search_query:
+            query = (
+                Q(device__serial_number__icontains=search_query) |
+                Q(device__assignee_first_name__icontains=search_query) |
+                Q(device__assignee_last_name__icontains=search_query) |
+                Q(device__department__name__icontains=search_query) |
+                Q(remarks__icontains=search_query) |
+                Q(device__hardware__icontains=search_query)
+            )
+            tasks_query = tasks_query.filter(query)
+
+        total_ppm_tasks = tasks_query.count()
+        devices_with_ppm = tasks_query.values('device').distinct().count()
+        devices_without_ppm = approved_devices - devices_with_ppm
+        ppm_completion_rate = round((devices_with_ppm / approved_devices * 100) if approved_devices > 0 else 0, 1)
+
+        now = timezone.now().date()
+        is_past_period = current_period.end_date < now
+        overdue_tasks = devices_without_ppm if is_past_period else 0
+
+        seven_days_ahead = now + timedelta(days=7)
+        if current_period.end_date <= seven_days_ahead and current_period.end_date >= now:
+            tasks_due_soon = devices_without_ppm
+
+        completed_on_time = tasks_query.filter(completed_date__lte=current_period.end_date, completed_date__isnull=False).values('device').distinct().count()
+
+        # Average completion time for completed PPMs
+        completed_with_time = tasks_query.filter(
+            completed_date__isnull=False
+        ).annotate(
+            days_to_complete=ExpressionWrapper(F('completed_date') - F('period__start_date'), output_field=DurationField())
         )
-        tasks_query = tasks_query.filter(query)
+        if completed_with_time.exists():
+            total_days = sum(task.days_to_complete.days for task in completed_with_time if task.days_to_complete)
+            avg_completion_time = round(total_days / completed_with_time.count(), 1)
 
-    # Statistics
-    total_tasks = tasks_query.count()
-    completed_tasks = tasks_query.filter(completed_date__isnull=False).count()
-    overdue_tasks = tasks_query.filter(
-        period__end_date__lt=timezone.now().date(),
-        completed_date__isnull=True
-    ).count()
-    tasks_by_status = {
-        'Completed': completed_tasks,
-        'Incomplete': total_tasks - completed_tasks
-    }
-    tasks_by_activity = tasks_query.values('activities__name').annotate(
-        count=Count('id')
-    ).order_by('-count')
+        if not is_past_period:
+            ppm_status_labels = ['PPM Done', 'PPM Not Done']
+            ppm_status_data = [devices_with_ppm, devices_without_ppm]
+            ppm_status_colors = ['#10B981', '#F59E0B']
+        else:
+            ppm_status_labels = ['PPM Done', 'PPM Overdue']
+            ppm_status_data = [devices_with_ppm, devices_without_ppm]
+            ppm_status_colors = ['#10B981', '#EF4444']
 
-    # Handle PDF Export - Export ALL filtered tasks
-    if export_type == 'pdf':
-        if not request.user.is_superuser and not centre_filter:
-            messages.error(request, "Please select a centre to generate the report.")
-            return redirect('ppm_report')
-        
-        # Get centre for report header
-        centre = None
-        if centre_filter:
-            try:
-                centre = Centre.objects.get(id=centre_filter)
-                if not request.user.is_superuser and str(request.user.centre.id) != centre_filter:
-                    messages.error(request, "You can only generate a report for your assigned centre.")
-                    return redirect('ppm_report')
-            except Centre.DoesNotExist:
-                messages.error(request, "Invalid centre selected.")
-                return redirect('ppm_report')
-        elif request.user.centre:
-            centre = request.user.centre
+        ppm_tasks_by_activity = tasks_query.values('activities__name').annotate(
+            count=Count('id')
+        ).order_by('-count') if tasks_query.exists() else []
 
-        # Get ALL filtered tasks for export (not just current page)
+    # PPM by centre device-based
+    centres_to_show = centres if not centre_filter else centres.filter(id=centre_filter)
+    ppm_by_centre = []
+    for centre in centres_to_show:
+        centre_device_query = device_query.filter(centre=centre)
+        centre_approved = centre_device_query.filter(is_approved=True, is_disposed=False).count()
+        centre_with_ppm = base_tasks_query.filter(period=current_period, device__centre=centre).values('device').distinct().count()
+        if centre_approved > 0:
+            ppm_by_centre.append({
+                'device__centre__name': centre.name,
+                'total': centre_approved,
+                'completed': centre_with_ppm
+            })
+    ppm_by_centre = sorted(ppm_by_centre, key=lambda x: x.get('completed', 0), reverse=True)
+
+    # Device condition breakdown from all eligible devices
+    device_condition_breakdown = device_query.filter(is_approved=True, is_disposed=False).values(
+        'device_condition'
+    ).annotate(count=Count('id')).order_by('-count')
+
+    # Recent completions
+    recent_ppm_completions = tasks_query.filter(
+        completed_date__isnull=False
+    ).order_by('-completed_date')[:10]
+
+    # Handle exports
+    if export_type in ['pdf', 'excel']:
         export_tasks = list(tasks_query)
-        
-        if not export_tasks:
-            messages.error(request, "No tasks available for the selected filters.")
+        if approved_devices == 0:
+            messages.error(request, "No data available for the selected filters.")
             return redirect('ppm_report')
 
-        try:
+        centre = centres.get(id=centre_filter) if centre_filter else None
+
+        if export_type == 'pdf':
             response = HttpResponse(content_type='application/pdf')
-            filename = f"PPM_Report_{centre.name if centre else 'All'}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+            filename = f"PPM_Report_{current_period.name if current_period else 'All'}_{centre.name if centre else 'All'}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
-            # Create PDF in landscape for better table layout
             doc = SimpleDocTemplate(
                 response,
                 pagesize=landscape(A4),
@@ -499,17 +576,16 @@ def ppm_report(request):
                 topMargin=15*mm,
                 bottomMargin=15*mm
             )
-            
+
             elements = []
             styles = getSampleStyleSheet()
-            
-            # Custom styles
+
             styles.add(ParagraphStyle(
                 name='ReportTitle',
                 fontSize=18,
                 leading=22,
                 textColor=colors.HexColor('#143C50'),
-                alignment=TA_CENTER,
+                alignment=1,  # TA_CENTER
                 spaceAfter=6
             ))
             styles.add(ParagraphStyle(
@@ -517,7 +593,7 @@ def ppm_report(request):
                 fontSize=12,
                 leading=14,
                 textColor=colors.HexColor('#143C50'),
-                alignment=TA_CENTER,
+                alignment=1,  # TA_CENTER
                 spaceAfter=12
             ))
             styles.add(ParagraphStyle(
@@ -529,6 +605,8 @@ def ppm_report(request):
 
             # Title
             elements.append(Paragraph('MOHI IT - PPM REPORT', styles['ReportTitle']))
+            if current_period:
+                elements.append(Paragraph(f'Period: {current_period.name} ({current_period.start_date} to {current_period.end_date})', styles['SubTitle']))
             elements.append(Paragraph(
                 f'Generated: {timezone.now().strftime("%B %d, %Y at %I:%M %p")}',
                 styles['SubTitle']
@@ -540,12 +618,13 @@ def ppm_report(request):
             # Statistics Summary
             stats_data = [
                 ['Metric', 'Value'],
-                ['Total Tasks', str(total_tasks)],
-                ['Completed Tasks', str(completed_tasks)],
-                ['Incomplete Tasks', str(total_tasks - completed_tasks)],
-                ['Overdue Tasks', str(overdue_tasks)],
+                ['Total Devices', str(approved_devices)],
+                ['Completed PPM', str(devices_with_ppm)],
+                ['Incomplete PPM', str(devices_without_ppm)],
+                ['Overdue PPM', str(overdue_tasks)],
+                ['Completion Rate', f'{ppm_completion_rate}%'],
             ]
-            
+
             stats_table = Table(stats_data, colWidths=[80*mm, 40*mm])
             stats_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#143C50')),
@@ -574,12 +653,12 @@ def ppm_report(request):
                 'Completed Date',
                 'Remarks'
             ]]
-            
+
             for idx, task in enumerate(export_tasks, 1):
                 activities_str = ', '.join(task.activities.values_list('name', flat=True)[:3])
                 if task.activities.count() > 3:
                     activities_str += '...'
-                
+
                 table_data.append([
                     str(idx),
                     Paragraph(task.device.serial_number or 'N/A', styles['Cell']),
@@ -588,15 +667,15 @@ def ppm_report(request):
                     Paragraph(task.device.department.name if task.device.department else 'N/A', styles['Cell']),
                     Paragraph(f"{task.device.assignee_first_name or ''} {task.device.assignee_last_name or ''}".strip() or 'N/A', styles['Cell']),
                     Paragraph(activities_str or 'N/A', styles['Cell']),
-                    'Done' if task.completed_date else 'Pending',
+                    'Completed' if task.completed_date else 'Incomplete',
                     task.completed_date.strftime('%Y-%m-%d') if task.completed_date else 'N/A',
                     Paragraph((task.remarks or 'N/A')[:50], styles['Cell'])
                 ])
-            
+
             tasks_table = Table(table_data, colWidths=[
                 10*mm, 25*mm, 25*mm, 25*mm, 25*mm, 25*mm, 35*mm, 15*mm, 22*mm, 35*mm
             ])
-            
+
             tasks_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#288CC8')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -608,7 +687,7 @@ def ppm_report(request):
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                 ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F5F5F5')]),
             ]))
-            
+
             elements.append(Paragraph('<b>DETAILED TASK LIST</b>', styles['SubTitle']))
             elements.append(tasks_table)
 
@@ -624,21 +703,7 @@ def ppm_report(request):
             doc.build(elements, onFirstPage=add_watermark, onLaterPages=add_watermark)
             return response
 
-        except Exception as e:
-            logger.error(f"PDF generation failed: {str(e)}")
-            messages.error(request, f"Error generating PDF: {str(e)}")
-            return redirect('ppm_report')
-
-    # Handle Excel Export - Export ALL filtered tasks
-    if export_type == 'excel':
-        # Get ALL filtered tasks for export
-        export_tasks = list(tasks_query)
-        
-        if not export_tasks:
-            messages.error(request, "No tasks available for the selected filters.")
-            return redirect('ppm_report')
-
-        try:
+        if export_type == 'excel':
             output = BytesIO()
             workbook = xlsxwriter.Workbook(output)
             worksheet = workbook.add_worksheet('PPM Report')
@@ -652,19 +717,28 @@ def ppm_report(request):
                 'valign': 'vcenter',
                 'border': 1
             })
-            
+
             cell_format = workbook.add_format({
                 'align': 'left',
                 'valign': 'top',
                 'border': 1,
                 'text_wrap': True
             })
-            
+
             date_format = workbook.add_format({
                 'align': 'left',
                 'border': 1,
                 'num_format': 'yyyy-mm-dd'
             })
+
+            # Write period info
+            if current_period:
+                worksheet.write(0, 0, f'Period: {current_period.name}', header_format)
+                worksheet.write(1, 0, f'Start: {current_period.start_date}', cell_format)
+                worksheet.write(2, 0, f'End: {current_period.end_date}', cell_format)
+                start_row = 4
+            else:
+                start_row = 0
 
             # Write headers
             headers = [
@@ -673,15 +747,15 @@ def ppm_report(request):
                 'Activities', 'Status', 'Completed Date', 'Remarks', 'Period',
                 'Created By', 'Created At'
             ]
-            
+
             for col, header in enumerate(headers):
-                worksheet.write(0, col, header, header_format)
+                worksheet.write(start_row, col, header, header_format)
 
             # Write data
-            for row, task in enumerate(export_tasks, 1):
+            for row, task in enumerate(export_tasks, start_row + 1):
                 activities = ', '.join(task.activities.values_list('name', flat=True))
-                
-                worksheet.write(row, 0, row, cell_format)
+
+                worksheet.write(row, 0, row - start_row, cell_format)
                 worksheet.write(row, 1, task.device.serial_number or 'N/A', cell_format)
                 worksheet.write(row, 2, task.device.hardware or 'N/A', cell_format)
                 worksheet.write(row, 3, task.device.centre.name if task.device.centre else 'N/A', cell_format)
@@ -691,12 +765,12 @@ def ppm_report(request):
                 worksheet.write(row, 7, task.device.assignee_email_address or 'N/A', cell_format)
                 worksheet.write(row, 8, activities or 'N/A', cell_format)
                 worksheet.write(row, 9, 'Completed' if task.completed_date else 'Incomplete', cell_format)
-                
+
                 if task.completed_date:
                     worksheet.write(row, 10, task.completed_date, date_format)
                 else:
                     worksheet.write(row, 10, 'N/A', cell_format)
-                
+
                 worksheet.write(row, 11, task.remarks or 'N/A', cell_format)
                 worksheet.write(row, 12, task.period.name if task.period else 'N/A', cell_format)
                 worksheet.write(row, 13, task.created_by.username if task.created_by else 'N/A', cell_format)
@@ -719,16 +793,12 @@ def ppm_report(request):
                 output.read(),
                 content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             )
-            filename = f"PPM_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            filename = f"PPM_Report_{current_period.name if current_period else 'All'}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
             return response
 
-        except Exception as e:
-            logger.error(f"Excel generation failed: {str(e)}")
-            messages.error(request, f"Error generating Excel: {str(e)}")
-            return redirect('ppm_report')
-
     # Pagination for display
+    tasks_query = tasks_query.order_by('-created_at', 'id')
     paginator = Paginator(tasks_query, items_per_page)
     try:
         tasks = paginator.page(page_number)
@@ -737,18 +807,31 @@ def ppm_report(request):
 
     context = {
         'tasks': tasks,
+        'periods': periods,
+        'period_filter': period_filter,
+        'current_period': current_period,
         'centres': centres,
         'centre_filter': centre_filter,
         'search_query': search_query,
         'items_per_page': items_per_page,
         'items_per_page_options': [10, 25, 50, 100, 500],
         'paginator': paginator,
-        'total_tasks': total_tasks,
-        'completed_tasks': completed_tasks,
+        'approved_devices': approved_devices,
+        'devices_with_ppm': devices_with_ppm,
+        'devices_without_ppm': devices_without_ppm,
+        'completed_on_time': completed_on_time,
         'overdue_tasks': overdue_tasks,
-        'tasks_by_status': tasks_by_status,
-        'tasks_by_activity': tasks_by_activity,
+        'tasks_due_soon': tasks_due_soon,
+        'ppm_completion_rate': ppm_completion_rate,
+        'avg_completion_time': avg_completion_time,
+        'ppm_status_labels': ppm_status_labels,
+        'ppm_status_data': ppm_status_data,
+        'ppm_status_colors': ppm_status_colors,
+        'ppm_tasks_by_activity': ppm_tasks_by_activity,
+        'ppm_by_centre': ppm_by_centre,
+        'device_condition_breakdown': device_condition_breakdown,
+        'recent_ppm_completions': recent_ppm_completions,
         'view_name': 'ppm_report',
     }
-    
+
     return render(request, 'ppm/ppm_report.html', context)

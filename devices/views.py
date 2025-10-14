@@ -1359,6 +1359,9 @@ def dashboard_view(request):
         ppm_query = PPMTask.objects.none()
         user_scope = "none"
     
+    # Get active PPM period
+    active_period = PPMPeriod.objects.filter(is_active=True).first()
+    
     # === DEVICE STATISTICS ===
     total_devices = device_query.count()
     approved_devices = device_query.filter(is_approved=True, is_disposed=False).count()
@@ -1370,18 +1373,42 @@ def dashboard_view(request):
         count=Count('id')
     ).order_by('-count')
     
-    # Devices by centre
-    devices_by_centre = device_query.filter(is_disposed=False).values(
-        'centre__name'
-    ).annotate(count=Count('id')).order_by('-count')[:10]
+    # Devices by centre - all centres
+    all_centres = Centre.objects.all()
+    devices_by_centre = []
+    for centre in all_centres:
+        count = device_query.filter(centre=centre, is_approved=True, is_disposed=False).count()
+        if user_scope == "centre" and centre != user.centre:
+            continue
+        devices_by_centre.append({'centre__name': centre.name, 'count': count})
+    devices_by_centre = sorted(devices_by_centre, key=lambda x: x['count'], reverse=True)
     
-    # Devices by hardware type
-    devices_by_hardware = device_query.filter(is_disposed=False).values(
-        'hardware'
-    ).annotate(count=Count('id')).order_by('-count')[:10]
+    # Devices by hardware type - grouped
+    hardware_counts = device_query.filter(is_approved=True, is_disposed=False).values('hardware').annotate(count=Count('id'))
+    grouped_hardware = {}
+    categories = {
+        'laptop': 'Laptop',
+        'monitor': 'Monitor',
+        'system unit': 'System Unit',
+        'printer': 'Printer',
+        'router': 'Routers/Switch/Server',
+        'switch': 'Routers/Switch/Server',
+        'server': 'Routers/Switch/Server',
+        'endcomputing': 'Endcomputing',
+        'television': 'Television'
+    }
+    for item in hardware_counts:
+        hw = item['hardware'].lower() if item['hardware'] else "unknown"
+        key = "Unknown"
+        for cat, label in categories.items():
+            if cat in hw:
+                key = label
+                break
+        grouped_hardware[key] = grouped_hardware.get(key, 0) + item['count']
+    devices_by_hardware = [{'hardware': k, 'count': v} for k, v in sorted(grouped_hardware.items(), key=lambda x: x[1], reverse=True)]
     
     # Device condition breakdown
-    device_condition_breakdown = device_query.filter(is_disposed=False).values(
+    device_condition_breakdown = device_query.filter(is_approved=True, is_disposed=False).values(
         'device_condition'
     ).annotate(count=Count('id')).order_by('-count')
     
@@ -1391,17 +1418,68 @@ def dashboard_view(request):
     recent_devices = device_query.order_by('-date')[:10]
     
     # === PPM STATISTICS ===
-    total_ppm_tasks = ppm_query.count()
-    completed_ppm_tasks = ppm_query.filter(completed_date__isnull=False).count()
-    incomplete_ppm_tasks = total_ppm_tasks - completed_ppm_tasks
+    active_period = PPMPeriod.objects.filter(is_active=True).first()
+    if active_period:
+        period = active_period
+        is_active_period = True
+    else:
+        period = PPMPeriod.objects.order_by('-end_date').first()
+        is_active_period = False
     
-    # Overdue tasks
+    total_ppm_tasks = 0
+    devices_with_ppm = 0
+    devices_without_ppm = 0
+    ppm_completion_rate = 0
+    ppm_status_labels = []
+    ppm_status_data = []
+    ppm_status_colors = []
+    ppm_tasks_by_activity = []
+    ppm_by_centre = []
+    period_name = None
+    
+    if period:
+        period_name = period.name
+        ppm_query_period = ppm_query.filter(period=period)
+        total_ppm_tasks = ppm_query_period.count()
+        devices_with_ppm = ppm_query_period.values('device').distinct().count()
+        devices_without_ppm = approved_devices - devices_with_ppm
+        ppm_completion_rate = round((devices_with_ppm / approved_devices * 100) if approved_devices > 0 else 0, 1)
+        
+        if is_active_period:
+            ppm_status_labels = ['PPM Done', 'PPM Not Done']
+            ppm_status_data = [devices_with_ppm, devices_without_ppm]
+            ppm_status_colors = ['#10B981', '#F59E0B']
+        else:
+            ppm_status_labels = ['PPM Done', 'PPM Overdue']
+            ppm_status_data = [devices_with_ppm, devices_without_ppm]
+            ppm_status_colors = ['#10B981', '#EF4444']
+        
+        # Tasks by activity for this period
+        ppm_tasks_by_activity = ppm_query_period.values(
+            'activities__name'
+        ).annotate(count=Count('id')).order_by('-count')
+        
+        # PPM by centre - all centres, device-based
+        ppm_by_centre = []
+        for centre in all_centres:
+            if user_scope == "centre" and centre != user.centre:
+                continue
+            centre_approved = device_query.filter(centre=centre, is_approved=True, is_disposed=False).count()
+            centre_with_ppm = ppm_query_period.filter(device__centre=centre).values('device').distinct().count()
+            ppm_by_centre.append({
+                'device__centre__name': centre.name,
+                'total': centre_approved,
+                'completed': centre_with_ppm
+            })
+        ppm_by_centre = sorted(ppm_by_centre, key=lambda x: x['completed'], reverse=True)
+    
+    # Overdue tasks - task based, across all
     overdue_ppm_tasks = ppm_query.filter(
         period__end_date__lt=timezone.now().date(),
         completed_date__isnull=True
     ).count()
     
-    # Tasks due soon (next 7 days)
+    # Tasks due soon (next 7 days) - task based
     seven_days_ahead = timezone.now().date() + timedelta(days=7)
     tasks_due_soon = ppm_query.filter(
         period__end_date__lte=seven_days_ahead,
@@ -1409,15 +1487,7 @@ def dashboard_view(request):
         completed_date__isnull=True
     ).count()
     
-    # PPM completion rate
-    ppm_completion_rate = round((completed_ppm_tasks / total_ppm_tasks * 100), 1) if total_ppm_tasks > 0 else 0
-    
-    # Tasks by activity
-    ppm_tasks_by_activity = ppm_query.values(
-        'activities__name'
-    ).annotate(count=Count('id')).order_by('-count')[:10]
-    
-    # Tasks by period
+    # Tasks by period - all
     ppm_tasks_by_period = ppm_query.values(
         'period__name'
     ).annotate(
@@ -1425,7 +1495,7 @@ def dashboard_view(request):
         completed=Count(Case(When(completed_date__isnull=False, then=1), output_field=IntegerField()))
     ).order_by('-total')[:5]
     
-    # Average completion time (in days)
+    # Average completion time (in days) - all
     completed_tasks_with_time = ppm_query.filter(
         completed_date__isnull=False,
         period__start_date__isnull=False
@@ -1438,15 +1508,7 @@ def dashboard_view(request):
         total_days = sum([task.days_to_complete.days for task in completed_tasks_with_time])
         avg_completion_time = round(total_days / completed_tasks_with_time.count(), 1)
     
-    # PPM tasks by centre
-    ppm_by_centre = ppm_query.values(
-        'device__centre__name'
-    ).annotate(
-        total=Count('id'),
-        completed=Count(Case(When(completed_date__isnull=False, then=1), output_field=IntegerField()))
-    ).order_by('-total')[:10]
-    
-    # Recent PPM completions
+    # Recent PPM completions - all
     recent_ppm_completions = ppm_query.filter(
         completed_date__isnull=False
     ).order_by('-completed_date')[:5]
@@ -1471,7 +1533,6 @@ def dashboard_view(request):
     # === MONTHLY TRENDS (Last 6 months) ===
     six_months_ago = timezone.now().date() - timedelta(days=180)
     
-    # Devices added per month
     devices_monthly = []
     ppm_completed_monthly = []
     
@@ -1517,8 +1578,8 @@ def dashboard_view(request):
         
         # PPM stats
         'total_ppm_tasks': total_ppm_tasks,
-        'completed_ppm_tasks': completed_ppm_tasks,
-        'incomplete_ppm_tasks': incomplete_ppm_tasks,
+        'devices_with_ppm': devices_with_ppm,
+        'devices_without_ppm': devices_without_ppm,
         'overdue_ppm_tasks': overdue_ppm_tasks,
         'tasks_due_soon': tasks_due_soon,
         'ppm_completion_rate': ppm_completion_rate,
@@ -1527,6 +1588,11 @@ def dashboard_view(request):
         'avg_completion_time': avg_completion_time,
         'ppm_by_centre': ppm_by_centre,
         'recent_ppm_completions': recent_ppm_completions,
+        'ppm_status_labels': ppm_status_labels,
+        'ppm_status_data': ppm_status_data,
+        'ppm_status_colors': ppm_status_colors,
+        'period_name': period_name,
+        'is_active_period': is_active_period,
         
         # User & system stats
         'total_users': total_users,

@@ -230,109 +230,11 @@
 
     <!-- Main Content -->
     <main class="flex-1 p-6 mt-16 md:ml-64">
-        <h1 class="text-3xl font-bold mb-6">Dashboard</h1>
-
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div class="bg-white p-6 rounded-lg shadow-md">
-                <h2 class="text-xl font-semibold">Total Devices</h2>
-                <p class="text-3xl mt-2">{{ total_devices }}</p>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow-md">
-                <h2 class="text-xl font-semibold">Approved Devices</h2>
-                <p class="text-3xl mt-2">{{ approved_imports }}</p>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow-md">
-                <h2 class="text-xl font-semibold">Pending Approvals</h2>
-                <p class="text-3xl mt-2">{{ pending_approvals }}</p>
-            </div>
-            {% if request.user.is_superuser %}
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h2 class="text-xl font-semibold">Pending Updates</h2>
-                    <p class="text-3xl mt-2">{{ pending_updates }}</p>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h2 class="text-xl font-semibold">Total Users</h2>
-                    <p class="text-3xl mt-2">{{ total_users }}</p>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h2 class="text-xl font-semibold">Total Centres</h2>
-                    <p class="text-3xl mt-2">{{ total_centres }}</p>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h2 class="text-xl font-semibold">Total PPM Tasks</h2>
-                    <p class="text-3xl mt-2">{{ total_ppm_tasks }}</p>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h2 class="text-xl font-semibold">Completed PPM Tasks</h2>
-                    <p class="text-3xl mt-2">{{ completed_ppm_tasks }}</p>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h2 class="text-xl font-semibold">Overdue PPM Tasks</h2>
-                    <p class="text-3xl mt-2">{{ overdue_ppm_tasks }}</p>
-                </div>
-                {% if average_completion_time %}
-                    <div class="bg-white p-6 rounded-lg shadow-md">
-                        <h2 class="text-xl font-semibold">Avg PPM Completion Time (Days)</h2>
-                        <p class="text-3xl mt-2">{{ average_completion_time }}</p>
-                    </div>
-                {% endif %}
-            {% endif %}
-        </div>
-
-        <!-- Recent Devices -->
-        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-            <h2 class="text-xl font-semibold mb-4">Recent Devices</h2>
-            <table class="min-w-full bg-white border">
-                <thead>
-                    <tr class="bg-gray-100 text-gray">
-                        <th class="py-2 px-4 border text-left">Serial Number</th>
-                        <th class="py-2 px-4 border text-left">Centre</th>
-                        <th class="py-2 px-4 border text-left">Date Added</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for device in recent_devices %}
-                        <tr class="hover:bg-gray-50">
-                            <td class="py-2 px-4 border">{{ device.serial_number|default:"N/A" }}</td>
-                            <td class="py-2 px-4 border">{{ device.centre.name|default:"N/A" }}</td>
-                            <td class="py-2 px-4 border">{{ device.date|date:"Y-m-d" }}</td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="3" class="py-2 px-4 border text-center text-gray">No recent devices.</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- PPM Tasks by Status Chart (Only for Superusers) -->
-        {% if request.user.is_superuser and total_ppm_tasks > 0 %}
-            <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-                <h2 class="text-xl font-semibold mb-4">PPM Tasks by Status</h2>
-                <button id="openChartCanvas" class="bg-accent text-white px-4 py-2 rounded hover:bg-blue-700">View Chart</button>
-            </div>
-        {% endif %}
-
-        <!-- Notifications -->
-        <div class="bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-xl font-semibold mb-4">Recent Notifications</h2>
-            <ul class="space-y-4">
-                {% for notification in notifications %}
-                    <li class="border-b pb-2">
-                        <p>{{ notification.message }}</p>
-                        <p class="text-sm text-gray">{{ notification.created_at|date:"Y-m-d H:i" }}</p>
-                    </li>
-                {% empty %}
-                    <li class="text-gray">No recent notifications.</li>
-                {% endfor %}
-            </ul>
-            <a href="{% url 'notifications_view' %}" class="text-accent hover:underline mt-4 inline-block">View All</a>
-        </div>
+        {% block content %}
+        {% endblock %}
     </main>
 
-    <!-- Script for Sidebar, Header Dropdown, Mobile Menu, Dropdown Toggles, and Chart Canvas -->
+    <!-- Scripts for Header and Sidebar -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Mobile menu toggle
@@ -413,39 +315,6 @@
                     }
                 });
             });
-
-            // Chart Canvas Toggle
-            const openChartCanvas = document.getElementById('openChartCanvas');
-            if (openChartCanvas) {
-                openChartCanvas.addEventListener('click', function() {
-                    const canvasPanel = window.createCanvasPanel();
-                    if (canvasPanel) {
-                        canvasPanel.execute(`
-                            const ctx = document.getElementById('ppmChart').getContext('2d');
-                            new Chart(ctx, {
-                                type: 'pie',
-                                data: {
-                                    labels: ['Completed', 'Incomplete'],
-                                    datasets: [{
-                                        data: [{{ ppm_tasks_by_status.Completed }}, {{ ppm_tasks_by_status.Incomplete }}],
-                                        backgroundColor: ['#4CAF50', '#F44336']
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    plugins: {
-                                        legend: { position: 'top' },
-                                        title: { display: true, text: 'PPM Tasks by Status' }
-                                    }
-                                }
-                            });
-                        `);
-                        canvasPanel.setHTML(`
-                            <canvas id="ppmChart" width="400" height="200"></canvas>
-                        `);
-                    }
-                });
-            }
         });
     </script>
 </body>
