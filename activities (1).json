@@ -78,5 +78,13 @@
     "name": "Network Monitoring and Optimization",
     "description": "Monitor network performance and proactively address bottlenecks or vulnerabilities. Using tools like SolarWinds or PRTG to monitor bandwidth usage and reconfigure routers to prevent congestion."
   }
+},
+{
+  "model": "ppm.ppmactivity",
+  "pk": 11,
+  "fields": {
+    "name": "NO ACTIVITY PERFORMED",
+    "description": "SCENARIO WHERE DEVICE IS NOT FOUND"
+  }
 }
 ]

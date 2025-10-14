@@ -9,91 +9,110 @@ django.setup()
 from devices.models import Import, Centre, CustomUser
 from ppm.models import PPMPeriod, PPMActivity, PPMTask
 
-# Get the current date and time
+# Get current datetime
 current_datetime = datetime.now()
 
-# Set the completed date to 09/19/2025
-completed_date = datetime(2025, 9, 17).date()
+# Desired completed date
+completed_date = datetime(2025, 9, 18).date()
 
-# Find the Pangani Centre
-pangani_centre = Centre.objects.filter(name__iexact='Pangani').first()
-if not pangani_centre:
-    print("Error: Pangani Centre not found. Please ensure the centre exists.")
+# Centre lookup
+centre = Centre.objects.filter(name__iexact='Bondeni').first()
+if not centre:
+    print("Error: Centre 'Bondeni' not found.")
     exit(1)
 
-# Get all devices assigned to Pangani Centre
-devices = Import.objects.filter(centre=pangani_centre)
+# Devices in centre
+devices = Import.objects.filter(centre=centre)
 
-# Get the active PPM period
+# Active PPM period
 active_period = PPMPeriod.objects.filter(is_active=True).first()
 if not active_period:
-    print("Error: No active PPM period found. Please ensure an active period is set.")
+    print("Error: No active PPM period found.")
     exit(1)
 
-# Get the specific activities
-try:
-    # Base activities (1, 2, 6, 7) for non-laptop hardware
-    base_activities = PPMActivity.objects.filter(id__in=[1, 2, 6, 7])
-    # Extended activities (1, 2, 3, 4, 5, 6, 7, 8, 10) for laptops
-    laptop_activities = PPMActivity.objects.filter(id__in=[1, 2, 3, 4, 5, 6, 7, 8, 10])
-    if not base_activities.exists() or not laptop_activities.exists():
-        print("Error: One or more specified activities not found. Please ensure these activities exist.")
+# Activities
+activity_map = {
+    "base": list(PPMActivity.objects.filter(id__in=[1, 2, 6, 7])),
+    "laptop": list(PPMActivity.objects.filter(id__in=[1, 2, 3, 4, 5, 6, 7, 8, 10])),
+    "monitor": list(PPMActivity.objects.filter(id=1)),
+    "system_unit": list(PPMActivity.objects.filter(id__in=[6, 7])),
+}
+
+# Ensure all required activities exist
+for key, activities in activity_map.items():
+    if not activities:
+        print(f"Error: Activities for {key} not found.")
         exit(1)
-except PPMActivity.DoesNotExist:
-    print("Error: One or more specified activities not found.")
+
+# Admin user
+admin_user = CustomUser.objects.filter(is_superuser=True).first()
+if not admin_user:
+    print("Error: No superuser found.")
     exit(1)
 
-# Get the current user (e.g., admin user for created_by)
-created_by_user = CustomUser.objects.filter(is_superuser=True).first()
-if not created_by_user:
-    print("Error: No superuser found for created_by. Please ensure an admin user exists.")
-    exit(1)
-
-# Populate or update PPM tasks for each device
-updated_tasks = 0
+# Start processing
 created_tasks = 0
+updated_tasks = 0
+
 for device in devices:
-    # Determine activities based on hardware
-    activities = laptop_activities if device.hardware.lower() == 'laptop' else base_activities
+    hardware = device.hardware.lower()
     
-    # Check if a PPM task already exists for this device and period
-    existing_task = PPMTask.objects.filter(device=device, period=active_period).first()
-    if existing_task:
-        # Update only the completed_date if it differs
-        if existing_task.completed_date != completed_date:
-            existing_task.completed_date = completed_date
-            existing_task.remarks = "device is in good condition"
-            existing_task.save()
-            # Update activities if they differ
-            current_activity_ids = [a.id for a in existing_task.activities.all()]
-            if sorted(current_activity_ids) != sorted([a.id for a in activities]):
-                existing_task.activities.set(activities)
-                print(f"Updated completed_date to {completed_date}, remarks to 'device is in good condition', and activities to {', '.join(a.name for a in activities)} for device {device.serial_number}")
-            else:
-                print(f"Updated completed_date to {completed_date} and remarks to 'device is in good condition' for device {device.serial_number}")
-            updated_tasks += 1
-        else:
-            # Check if activities need updating
-            current_activity_ids = [a.id for a in existing_task.activities.all()]
-            if sorted(current_activity_ids) != sorted([a.id for a in activities]):
-                existing_task.activities.set(activities)
-                print(f"Updated activities to {', '.join(a.name for a in activities)} for device {device.serial_number}")
-            else:
-                print(f"Completed date and activities for device {device.serial_number} are already correct. Skipping...")
+    # Select activities based on hardware
+    if "monitor" in hardware:
+        selected_activities = activity_map["monitor"]
+    elif "system unit" in hardware or "system" in hardware:
+        selected_activities = activity_map["system_unit"]
+    elif "laptop" in hardware:
+        selected_activities = activity_map["laptop"]
     else:
-        # Create a new PPM task with completed_date, remarks, and appropriate activities
-        ppm_task = PPMTask.objects.create(
+        selected_activities = activity_map["base"]
+
+    selected_activity_ids = [a.id for a in selected_activities]
+
+    # Check for existing PPM task
+    task = PPMTask.objects.filter(device=device, period=active_period).first()
+
+    if task:
+        updated = False
+
+        # Update completed date
+        if task.completed_date != completed_date:
+            task.completed_date = completed_date
+            updated = True
+
+        # Update remarks
+        if task.remarks != "Device in good condition":
+            task.remarks = "Device in good condition"
+            updated = True
+
+        # Update activities if they differ
+        current_ids = list(task.activities.values_list('id', flat=True))
+        if sorted(current_ids) != sorted(selected_activity_ids):
+            task.activities.set(selected_activities)
+            updated = True
+            print(f"[{device.serial_number}] Activities updated.")
+
+        if updated:
+            task.save()
+            updated_tasks += 1
+            print(f"[{device.serial_number}] Task updated.")
+        else:
+            print(f"[{device.serial_number}] No changes needed.")
+    else:
+        # Create new task
+        new_task = PPMTask.objects.create(
             device=device,
             period=active_period,
-            created_by=created_by_user,
+            created_by=admin_user,
             completed_date=completed_date,
-            remarks="device is in good condition"
+            remarks="Device in good condition"
         )
-        # Assign the appropriate activities
-        ppm_task.activities.set(activities)
+        new_task.activities.set(selected_activities)
         created_tasks += 1
-        print(f"Created PPM task for device {device.serial_number} with activities {', '.join(a.name for a in activities)} and completed on {completed_date} with remarks 'device is in good condition'")
+        print(f"[{device.serial_number}] New task created.")
 
-print(f"Total PPM tasks created: {created_tasks}")
-print(f"Total PPM tasks updated: {updated_tasks}")
-print(f"Script completed at {current_datetime.strftime('%Y-%m-%d %H:%M:%S')} EAT")
+# Summary
+print(f"\nSummary:")
+print(f"Tasks created: {created_tasks}")
+print(f"Tasks updated: {updated_tasks}")
+print(f"Finished at: {current_datetime.strftime('%Y-%m-%d %H:%M:%S')} EAT")

@@ -1,17 +1,16 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db import transaction
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db.models import Q
-from django.http import HttpResponse, HttpResponseForbidden
+from django.db.models import Q, Count, Avg, F, Sum, Case, When, IntegerField
+from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.template.loader import get_template
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import logout, update_session_auth_hash, authenticate, login
 from django.urls import reverse
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
-from django.http import HttpResponseRedirect
 import openpyxl
 import csv
 import logging
@@ -24,12 +23,10 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT
 
 from devices.forms import ClearanceForm
-from ppm.models import PPMTask
-from .models import CustomUser, DeviceUserHistory, Import, Centre, Notification, PendingUpdate, Department
+from devices.models import CustomUser, DeviceUserHistory, Import, Centre, Notification, PendingUpdate, Department
+from ppm.models import PPMTask, PPMPeriod
 from django.contrib.auth.models import Group, Permission
-from django.shortcuts import render, get_object_or_404, redirect
-from django.utils import timezone
-from .models import Import, DeviceUserHistory
+
 # Set up logging for debugging
 logger = logging.getLogger(__name__)
 
@@ -1344,85 +1341,210 @@ def mark_notification_read(request, pk):
     return HttpResponseRedirect('/dashboard/')
 
 
-
-from django.db.models import Q, Count
-
 @login_required
 def dashboard_view(request):
-    # Initialize default counts
-    total_devices = pending_approvals = approved_imports = pending_updates = 0
-    total_ppm_tasks = completed_ppm_tasks = overdue_ppm_tasks = 0
-    recent_devices = []
-    ppm_tasks_by_status = {'Completed': 0, 'Incomplete': 0}
-    ppm_tasks_by_activity = {}
-
-    if request.user.is_superuser and not request.user.is_trainer:
-        total_devices = Import.objects.count()
-        pending_approvals = Import.objects.filter(is_approved=False, is_disposed=False).count()
-        total_users = CustomUser.objects.count()
-        total_centres = Centre.objects.count()
-        approved_imports = total_devices - pending_approvals
-        recent_devices = Import.objects.order_by('-date')[:5]
-        pending_updates = PendingUpdate.objects.count()
-        # PPM statistics
-        total_ppm_tasks = PPMTask.objects.count()
-        completed_ppm_tasks = PPMTask.objects.filter(completed_date__isnull=False).count()
-        overdue_ppm_tasks = PPMTask.objects.filter(
-            period__end_date__lt=timezone.now().date(),
-            completed_date__isnull=True
+    user = request.user
+    
+    # Base queries based on user role
+    if user.is_superuser and not user.is_trainer:
+        device_query = Import.objects.all()
+        ppm_query = PPMTask.objects.all()
+        user_scope = "all"
+    elif user.is_trainer and user.centre:
+        device_query = Import.objects.filter(centre=user.centre)
+        ppm_query = PPMTask.objects.filter(device__centre=user.centre)
+        user_scope = "centre"
+    else:
+        device_query = Import.objects.none()
+        ppm_query = PPMTask.objects.none()
+        user_scope = "none"
+    
+    # === DEVICE STATISTICS ===
+    total_devices = device_query.count()
+    approved_devices = device_query.filter(is_approved=True, is_disposed=False).count()
+    pending_approvals = device_query.filter(is_approved=False, is_disposed=False).count()
+    disposed_devices = device_query.filter(is_disposed=True).count()
+    
+    # Device status breakdown
+    device_status_breakdown = device_query.filter(is_disposed=False).values('status').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    # Devices by centre
+    devices_by_centre = device_query.filter(is_disposed=False).values(
+        'centre__name'
+    ).annotate(count=Count('id')).order_by('-count')[:10]
+    
+    # Devices by hardware type
+    devices_by_hardware = device_query.filter(is_disposed=False).values(
+        'hardware'
+    ).annotate(count=Count('id')).order_by('-count')[:10]
+    
+    # Device condition breakdown
+    device_condition_breakdown = device_query.filter(is_disposed=False).values(
+        'device_condition'
+    ).annotate(count=Count('id')).order_by('-count')
+    
+    # Recent devices (last 30 days)
+    thirty_days_ago = timezone.now().date() - timedelta(days=30)
+    recent_devices_count = device_query.filter(date__gte=thirty_days_ago).count()
+    recent_devices = device_query.order_by('-date')[:10]
+    
+    # === PPM STATISTICS ===
+    total_ppm_tasks = ppm_query.count()
+    completed_ppm_tasks = ppm_query.filter(completed_date__isnull=False).count()
+    incomplete_ppm_tasks = total_ppm_tasks - completed_ppm_tasks
+    
+    # Overdue tasks
+    overdue_ppm_tasks = ppm_query.filter(
+        period__end_date__lt=timezone.now().date(),
+        completed_date__isnull=True
+    ).count()
+    
+    # Tasks due soon (next 7 days)
+    seven_days_ahead = timezone.now().date() + timedelta(days=7)
+    tasks_due_soon = ppm_query.filter(
+        period__end_date__lte=seven_days_ahead,
+        period__end_date__gte=timezone.now().date(),
+        completed_date__isnull=True
+    ).count()
+    
+    # PPM completion rate
+    ppm_completion_rate = round((completed_ppm_tasks / total_ppm_tasks * 100), 1) if total_ppm_tasks > 0 else 0
+    
+    # Tasks by activity
+    ppm_tasks_by_activity = ppm_query.values(
+        'activities__name'
+    ).annotate(count=Count('id')).order_by('-count')[:10]
+    
+    # Tasks by period
+    ppm_tasks_by_period = ppm_query.values(
+        'period__name'
+    ).annotate(
+        total=Count('id'),
+        completed=Count(Case(When(completed_date__isnull=False, then=1), output_field=IntegerField()))
+    ).order_by('-total')[:5]
+    
+    # Average completion time (in days)
+    completed_tasks_with_time = ppm_query.filter(
+        completed_date__isnull=False,
+        period__start_date__isnull=False
+    ).annotate(
+        days_to_complete=F('completed_date') - F('period__start_date')
+    )
+    
+    avg_completion_time = None
+    if completed_tasks_with_time.exists():
+        total_days = sum([task.days_to_complete.days for task in completed_tasks_with_time])
+        avg_completion_time = round(total_days / completed_tasks_with_time.count(), 1)
+    
+    # PPM tasks by centre
+    ppm_by_centre = ppm_query.values(
+        'device__centre__name'
+    ).annotate(
+        total=Count('id'),
+        completed=Count(Case(When(completed_date__isnull=False, then=1), output_field=IntegerField()))
+    ).order_by('-total')[:10]
+    
+    # Recent PPM completions
+    recent_ppm_completions = ppm_query.filter(
+        completed_date__isnull=False
+    ).order_by('-completed_date')[:5]
+    
+    # === USER & SYSTEM STATISTICS (Superuser only) ===
+    total_users = CustomUser.objects.count() if user.is_superuser else 0
+    active_users = CustomUser.objects.filter(is_active=True).count() if user.is_superuser else 0
+    total_centres = Centre.objects.count() if user.is_superuser else 0
+    pending_updates = PendingUpdate.objects.count() if user.is_superuser else (
+        PendingUpdate.objects.filter(import_record__centre=user.centre).count() if user.centre else 0
+    )
+    
+    # Users by centre
+    users_by_centre = CustomUser.objects.values(
+        'centre__name'
+    ).annotate(count=Count('id')).order_by('-count')[:10] if user.is_superuser else []
+    
+    # === NOTIFICATIONS ===
+    notifications = Notification.objects.filter(user=user).order_by('-created_at')[:5]
+    unread_count = Notification.objects.filter(user=user, is_read=False).count()
+    
+    # === MONTHLY TRENDS (Last 6 months) ===
+    six_months_ago = timezone.now().date() - timedelta(days=180)
+    
+    # Devices added per month
+    devices_monthly = []
+    ppm_completed_monthly = []
+    
+    for i in range(6):
+        month_start = timezone.now().date() - timedelta(days=30*(5-i))
+        month_end = timezone.now().date() - timedelta(days=30*(4-i))
+        
+        devices_count = device_query.filter(
+            date__gte=month_start,
+            date__lt=month_end
         ).count()
-        ppm_tasks_by_status = {
-            'Completed': completed_ppm_tasks,
-            'Incomplete': total_ppm_tasks - completed_ppm_tasks
-        }
-        ppm_tasks_by_activity = PPMTask.objects.values('activities__name').annotate(count=Count('id')).order_by('-count')
-    elif request.user.is_trainer and request.user.centre:
-        total_devices = Import.objects.filter(centre=request.user.centre).count()
-        pending_approvals = Import.objects.filter(centre=request.user.centre, is_approved=False, is_disposed=False).count()
-        approved_imports = total_devices - pending_approvals
-        recent_devices = Import.objects.filter(centre=request.user.centre).order_by('-date')[:5]
-        pending_updates = PendingUpdate.objects.filter(import_record__centre=request.user.centre).count()
-        # PPM statistics
-        total_ppm_tasks = PPMTask.objects.filter(device__centre=request.user.centre).count()
-        completed_ppm_tasks = PPMTask.objects.filter(
-            device__centre=request.user.centre,
-            completed_date__isnull=False
+        
+        ppm_count = ppm_query.filter(
+            completed_date__gte=month_start,
+            completed_date__lt=month_end
         ).count()
-        overdue_ppm_tasks = PPMTask.objects.filter(
-            device__centre=request.user.centre,
-            period__end_date__lt=timezone.now().date(),
-            completed_date__isnull=True
-        ).count()
-        ppm_tasks_by_status = {
-            'Completed': completed_ppm_tasks,
-            'Incomplete': total_ppm_tasks - completed_ppm_tasks
-        }
-        ppm_tasks_by_activity = PPMTask.objects.filter(
-            device__centre=request.user.centre
-        ).values('activities__name').annotate(count=Count('id')).order_by('-count')
-
-    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:5]
-    unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
-
-    return render(request, 'index.html', {
+        
+        devices_monthly.append({
+            'month': month_start.strftime('%b %Y'),
+            'count': devices_count
+        })
+        
+        ppm_completed_monthly.append({
+            'month': month_start.strftime('%b %Y'),
+            'count': ppm_count
+        })
+    
+    # === CONTEXT ===
+    context = {
+        'user_scope': user_scope,
+        
+        # Device stats
         'total_devices': total_devices,
-        'approved_imports': approved_imports,
-        'pending_approvals': pending_approvals if request.user.is_superuser else 0,
-        'total_users': total_users if request.user.is_superuser else 0,
-        'total_centres': total_centres if request.user.is_superuser else 0,
-        'pending_updates': pending_updates,
+        'approved_devices': approved_devices,
+        'pending_approvals': pending_approvals,
+        'disposed_devices': disposed_devices,
+        'recent_devices_count': recent_devices_count,
         'recent_devices': recent_devices,
-        'notifications': notifications,
-        'unread_count': unread_count,
+        'device_status_breakdown': device_status_breakdown,
+        'devices_by_centre': devices_by_centre,
+        'devices_by_hardware': devices_by_hardware,
+        'device_condition_breakdown': device_condition_breakdown,
+        
+        # PPM stats
         'total_ppm_tasks': total_ppm_tasks,
         'completed_ppm_tasks': completed_ppm_tasks,
+        'incomplete_ppm_tasks': incomplete_ppm_tasks,
         'overdue_ppm_tasks': overdue_ppm_tasks,
-        'ppm_tasks_by_status': ppm_tasks_by_status,
+        'tasks_due_soon': tasks_due_soon,
+        'ppm_completion_rate': ppm_completion_rate,
         'ppm_tasks_by_activity': ppm_tasks_by_activity,
-    })
-
-
-
+        'ppm_tasks_by_period': ppm_tasks_by_period,
+        'avg_completion_time': avg_completion_time,
+        'ppm_by_centre': ppm_by_centre,
+        'recent_ppm_completions': recent_ppm_completions,
+        
+        # User & system stats
+        'total_users': total_users,
+        'active_users': active_users,
+        'total_centres': total_centres,
+        'pending_updates': pending_updates,
+        'users_by_centre': users_by_centre,
+        
+        # Notifications
+        'notifications': notifications,
+        'unread_count': unread_count,
+        
+        # Trends
+        'devices_monthly': devices_monthly,
+        'ppm_completed_monthly': ppm_completed_monthly,
+    }
+    
+    return render(request, 'index.html', context)
 
 def login_view(request):
     if request.user.is_authenticated:

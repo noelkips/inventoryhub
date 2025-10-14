@@ -3,8 +3,8 @@ from venv import logger
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.utils import timezone
-from django.http import JsonResponse
-from django.db.models import Q
+from django.http import JsonResponse, HttpResponse
+from django.db.models import Q, Count
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
@@ -12,23 +12,24 @@ from django.db import IntegrityError
 from datetime import datetime
 from .models import PPMPeriod, PPMActivity, PPMTask
 from devices.models import Import, Centre
+import os
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_LEFT, TA_CENTER
+from reportlab.lib.units import mm
+import xlsxwriter
+from io import BytesIO
+import random
+import logging
 
 def is_superuser(user):
     return user.is_superuser
 
+logger = logging.getLogger(__name__)
 
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.utils import timezone
-from django.http import JsonResponse
-from django.db.models import Q
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.views.decorators.http import require_POST
-from django.core.paginator import Paginator
-from django.db import IntegrityError
-from datetime import datetime
-from .models import PPMPeriod, PPMActivity, PPMTask
-from devices.models import Import, Centre
+
 
 def is_superuser(user):
     return user.is_superuser
@@ -381,39 +382,33 @@ def period_delete(request, period_id):
     return redirect('manage_periods')
 
 
-import os
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.utils import timezone
-from django.http import HttpResponse
-from django.db.models import Q, Count
-from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
-from datetime import datetime
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4, mm
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_LEFT
-from reportlab.graphics.shapes import String
-from reportlab.pdfgen import canvas
-import random
-from .models import PPMPeriod, PPMActivity, PPMTask
-from devices.models import Import, Centre
-import logging
-
-logger = logging.getLogger(__name__)
-
 @login_required
 def ppm_report(request):
-    centres = Centre.objects.all() if request.user.is_superuser else Centre.objects.filter(id=request.user.centre.id) if request.user.centre else Centre.objects.none()
+    # Determine user permissions and base query
+    if request.user.is_superuser:
+        centres = Centre.objects.all()
+        base_tasks_query = PPMTask.objects.select_related(
+            'device', 'device__centre', 'device__department', 'period', 'created_by'
+        ).prefetch_related('activities')
+    elif request.user.centre:
+        centres = Centre.objects.filter(id=request.user.centre.id)
+        base_tasks_query = PPMTask.objects.filter(
+            device__centre=request.user.centre
+        ).select_related(
+            'device', 'device__centre', 'device__department', 'period', 'created_by'
+        ).prefetch_related('activities')
+    else:
+        centres = Centre.objects.none()
+        base_tasks_query = PPMTask.objects.none()
+
+    # Get filters
     centre_filter = request.GET.get('centre', '')
     search_query = request.GET.get('search', '').strip()
     items_per_page = request.GET.get('items_per_page', '10')
-    scope = request.GET.get('scope', 'page')
     page_number = request.GET.get('page', '1')
+    export_type = request.GET.get('export', '')
 
-    # Convert and validate items_per_page
+    # Validate items_per_page
     try:
         items_per_page = int(items_per_page)
         if items_per_page not in [10, 25, 50, 100, 500]:
@@ -421,22 +416,21 @@ def ppm_report(request):
     except ValueError:
         items_per_page = 10
 
-    # Convert and validate page_number
+    # Validate page_number
     try:
         page_number = int(page_number) if page_number else 1
     except ValueError:
         page_number = 1
 
-    # Filter tasks based on user permissions with proper select_related and ordering
-    tasks = PPMTask.objects.select_related('device', 'period', 'created_by').prefetch_related('activities').order_by('id')
-    if not request.user.is_superuser and request.user.centre:
-        tasks = tasks.filter(device__centre=request.user.centre)
+    # Apply filters
+    tasks_query = base_tasks_query.order_by('-created_at', 'id')
 
-    # Apply centre filter
-    if centre_filter and (request.user.is_superuser or str(request.user.centre.id) == centre_filter):
-        tasks = tasks.filter(device__centre__id=centre_filter)
+    # Centre filter
+    if centre_filter:
+        if request.user.is_superuser or str(request.user.centre.id) == centre_filter:
+            tasks_query = tasks_query.filter(device__centre__id=centre_filter)
 
-    # Apply search filter
+    # Search filter
     if search_query:
         query = (
             Q(device__serial_number__icontains=search_query) |
@@ -444,159 +438,302 @@ def ppm_report(request):
             Q(device__assignee_last_name__icontains=search_query) |
             Q(device__department__name__icontains=search_query) |
             Q(remarks__icontains=search_query) |
-            Q(period__name__icontains=search_query)
+            Q(period__name__icontains=search_query) |
+            Q(device__hardware__icontains=search_query)
         )
-        tasks = tasks.filter(query)
+        tasks_query = tasks_query.filter(query)
 
-    # PPM statistics
-    total_tasks = tasks.count()
-    completed_tasks = tasks.filter(completed_date__isnull=False).count()
-    overdue_tasks = tasks.filter(period__end_date__lt=timezone.now().date(), completed_date__isnull=True).count()
+    # Statistics
+    total_tasks = tasks_query.count()
+    completed_tasks = tasks_query.filter(completed_date__isnull=False).count()
+    overdue_tasks = tasks_query.filter(
+        period__end_date__lt=timezone.now().date(),
+        completed_date__isnull=True
+    ).count()
     tasks_by_status = {
         'Completed': completed_tasks,
         'Incomplete': total_tasks - completed_tasks
     }
-    tasks_by_activity = tasks.values('activities__name').annotate(count=Count('id')).order_by('-count')
+    tasks_by_activity = tasks_query.values('activities__name').annotate(
+        count=Count('id')
+    ).order_by('-count')
 
-    # Pagination
-    if scope == 'page':
-        paginator = Paginator(tasks, items_per_page)
-        try:
-            tasks = paginator.page(page_number)
-        except:
-            tasks = paginator.page(1)
-    else:
-        tasks = tasks[:500]  # Limit to 500 for performance in 'all' scope
-
-    # Handle PDF export - Force center selection
-    if request.GET.get('export') == 'pdf':
-        if not centre_filter:
+    # Handle PDF Export - Export ALL filtered tasks
+    if export_type == 'pdf':
+        if not request.user.is_superuser and not centre_filter:
             messages.error(request, "Please select a centre to generate the report.")
             return redirect('ppm_report')
-        try:
-            # Ensure the center is valid for the user
-            centre = Centre.objects.get(id=centre_filter)
-            if not request.user.is_superuser and str(request.user.centre.id) != centre_filter:
-                messages.error(request, "You can only generate a report for your assigned centre.")
+        
+        # Get centre for report header
+        centre = None
+        if centre_filter:
+            try:
+                centre = Centre.objects.get(id=centre_filter)
+                if not request.user.is_superuser and str(request.user.centre.id) != centre_filter:
+                    messages.error(request, "You can only generate a report for your assigned centre.")
+                    return redirect('ppm_report')
+            except Centre.DoesNotExist:
+                messages.error(request, "Invalid centre selected.")
                 return redirect('ppm_report')
-        except Centre.DoesNotExist:
-            messages.error(request, "Invalid centre selected.")
+        elif request.user.centre:
+            centre = request.user.centre
+
+        # Get ALL filtered tasks for export (not just current page)
+        export_tasks = list(tasks_query)
+        
+        if not export_tasks:
+            messages.error(request, "No tasks available for the selected filters.")
             return redirect('ppm_report')
 
         try:
-            # Debug: Check if tasks is empty
-            if not tasks:
-                messages.error(request, "No tasks available for the selected centre.")
-                return redirect('ppm_report')
-
-            # Setup PDF response
             response = HttpResponse(content_type='application/pdf')
-            filename = f"PPM_Report_{'All' if scope == 'all' else 'Page'}_{datetime.now().strftime('%Y%m%d')}.pdf"
+            filename = f"PPM_Report_{centre.name if centre else 'All'}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
-            # Initialize PDF document
-            doc = SimpleDocTemplate(response, pagesize=(A4[1], A4[0]), rightMargin=10*mm, leftMargin=10*mm, topMargin=15*mm, bottomMargin=15*mm)
+            # Create PDF in landscape for better table layout
+            doc = SimpleDocTemplate(
+                response,
+                pagesize=landscape(A4),
+                rightMargin=10*mm,
+                leftMargin=10*mm,
+                topMargin=15*mm,
+                bottomMargin=15*mm
+            )
+            
             elements = []
             styles = getSampleStyleSheet()
-            styles.add(ParagraphStyle(name='ReportTitle', fontSize=18, leading=22, textColor=colors.black, alignment=1))
-            styles.add(ParagraphStyle(name='SubTitle', fontSize=14, leading=18, textColor=colors.black, alignment=1))
-            styles.add(ParagraphStyle(name='CustomBody', fontSize=12, leading=14))
-            styles.add(ParagraphStyle(name='Cell', parent=styles['Normal'], fontSize=10, leading=12, alignment=TA_LEFT, wordWrap='CJK'))
-            styles.add(ParagraphStyle(name='DeviceInfo', parent=styles['Cell'], leading=10))
-            styles.add(ParagraphStyle(name='Remarks', parent=styles['Cell'], wordWrap='CJK'))
+            
+            # Custom styles
+            styles.add(ParagraphStyle(
+                name='ReportTitle',
+                fontSize=18,
+                leading=22,
+                textColor=colors.HexColor('#143C50'),
+                alignment=TA_CENTER,
+                spaceAfter=6
+            ))
+            styles.add(ParagraphStyle(
+                name='SubTitle',
+                fontSize=12,
+                leading=14,
+                textColor=colors.HexColor('#143C50'),
+                alignment=TA_CENTER,
+                spaceAfter=12
+            ))
+            styles.add(ParagraphStyle(
+                name='Cell',
+                fontSize=8,
+                leading=10,
+                wordWrap='CJK'
+            ))
 
-            # Add title and generation info
-            elements.append(Paragraph('MOHO IT PPM Report', styles['ReportTitle']))
-            elements.append(Paragraph(f'Generated on {timezone.now().strftime("%I:%M %p EAT, %A, %B %d, %Y")}', styles['SubTitle']))
-            elements.append(Paragraph(f'Centre: {centre.name}', styles['SubTitle']))
+            # Title
+            elements.append(Paragraph('MOHI IT - PPM REPORT', styles['ReportTitle']))
+            elements.append(Paragraph(
+                f'Generated: {timezone.now().strftime("%B %d, %Y at %I:%M %p")}',
+                styles['SubTitle']
+            ))
+            if centre:
+                elements.append(Paragraph(f'Centre: {centre.name}', styles['SubTitle']))
             elements.append(Spacer(1, 12))
 
-            # Summary Statistics Table
+            # Statistics Summary
             stats_data = [
-                ['Statistic', 'Value'],
-                ['Total PPM Tasks', str(total_tasks)],
+                ['Metric', 'Value'],
+                ['Total Tasks', str(total_tasks)],
                 ['Completed Tasks', str(completed_tasks)],
+                ['Incomplete Tasks', str(total_tasks - completed_tasks)],
                 ['Overdue Tasks', str(overdue_tasks)],
-                ['Tasks by Status', f'Completed: {tasks_by_status["Completed"]}, Incomplete: {tasks_by_status["Incomplete"]}'],
             ]
-            for item in tasks_by_activity:
-                stats_data.append([f'Tasks by Activity: {item["activities__name"] or "N/A"}', str(item['count'])])
-            stats_table = Table(stats_data, colWidths=[80*mm, 60*mm])
+            
+            stats_table = Table(stats_data, colWidths=[80*mm, 40*mm])
             stats_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#143C50')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('FONTSIZE', (0, 0), (-1, 0), 10),
                 ('FONTSIZE', (0, 1), (-1, -1), 9),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-                ('TOPPADDING', (0, 1), (-1, -1), 4),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ]))
             elements.append(stats_table)
             elements.append(Spacer(1, 12))
 
-            # TASKS DONE Table
-            data_tasks = [['No.', 'Device Details', 'Tasks Done', 'Date', 'Remarks']]
-            for idx, task in enumerate(tasks.object_list if hasattr(tasks, 'object_list') else tasks, 1):
-                device_details = f"{task.device.serial_number or 'N/A'}<br/>{task.device.hardware or 'N/A'}<br/><b>Department:</b> {task.device.department.name if task.device.department else 'N/A'}<br/><b>Assignee:</b> {task.device.assignee_first_name or 'N/A'} {task.device.assignee_last_name or ''}"
-                tasks_done = ', '.join(task.activities.values_list('name', flat=True)) or 'N/A'
-                date = task.completed_date.strftime('%Y-%m-%d') if task.completed_date else 'N/A'
-                data_tasks.append([str(idx), Paragraph(device_details, styles['DeviceInfo']), Paragraph(tasks_done, styles['Cell']), date, Paragraph(task.remarks or 'N/A', styles['Remarks'])])
-            if not tasks:
-                data_tasks.append(['', 'No tasks available for this centre.', '', '', ''])
-            table_tasks = Table(data_tasks, colWidths=[20*mm, 80*mm, 100*mm, 40*mm, 40*mm])
-            table_tasks.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            # Tasks table
+            table_data = [[
+                'No.',
+                'Serial Number',
+                'Hardware',
+                'Centre',
+                'Department',
+                'Assignee',
+                'Activities',
+                'Status',
+                'Completed Date',
+                'Remarks'
+            ]]
+            
+            for idx, task in enumerate(export_tasks, 1):
+                activities_str = ', '.join(task.activities.values_list('name', flat=True)[:3])
+                if task.activities.count() > 3:
+                    activities_str += '...'
+                
+                table_data.append([
+                    str(idx),
+                    Paragraph(task.device.serial_number or 'N/A', styles['Cell']),
+                    Paragraph(task.device.hardware or 'N/A', styles['Cell']),
+                    Paragraph(task.device.centre.name if task.device.centre else 'N/A', styles['Cell']),
+                    Paragraph(task.device.department.name if task.device.department else 'N/A', styles['Cell']),
+                    Paragraph(f"{task.device.assignee_first_name or ''} {task.device.assignee_last_name or ''}".strip() or 'N/A', styles['Cell']),
+                    Paragraph(activities_str or 'N/A', styles['Cell']),
+                    'Done' if task.completed_date else 'Pending',
+                    task.completed_date.strftime('%Y-%m-%d') if task.completed_date else 'N/A',
+                    Paragraph((task.remarks or 'N/A')[:50], styles['Cell'])
+                ])
+            
+            tasks_table = Table(table_data, colWidths=[
+                10*mm, 25*mm, 25*mm, 25*mm, 25*mm, 25*mm, 35*mm, 15*mm, 22*mm, 35*mm
+            ])
+            
+            tasks_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#288CC8')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 12),
-                ('FONTSIZE', (0, 1), (-1, -1), 10),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('FONTSIZE', (0, 1), (-1, -1), 7),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F5F5F5')]),
             ]))
-            elements.append(Paragraph("<b>TASKS DONE</b>", styles['SubTitle']))
-            elements.append(table_tasks)
+            
+            elements.append(Paragraph('<b>DETAILED TASK LIST</b>', styles['SubTitle']))
+            elements.append(tasks_table)
 
-            # Watermark function with period scattered across the page
+            # Watermark
             def add_watermark(canvas, doc):
-                period_name = tasks.object_list[0].period.name if tasks.object_list else 'N/A'
-                watermark_text = f"{period_name}"
                 canvas.saveState()
-                canvas.setFont("Helvetica", 10)  # Larger font
-                canvas.setFillGray(0.8, 0.8)  # Light gray
-                # Generate 20 random positions to scatter the watermark
-                for _ in range(20):
-                    x = random.randint(10, int(doc.pagesize[0] - 10))  # Random x within page width
-                    y = random.randint(10, int(doc.pagesize[1] - 10))  # Random y within page height
-                    canvas.drawString(x, y, watermark_text)  # Scattered placement
+                canvas.setFont("Helvetica", 60)
+                canvas.setFillGray(0.9, 0.15)
+                canvas.rotate(45)
+                canvas.drawCentredString(400, 100, "MOHI IT")
                 canvas.restoreState()
 
             doc.build(elements, onFirstPage=add_watermark, onLaterPages=add_watermark)
+            return response
 
         except Exception as e:
             logger.error(f"PDF generation failed: {str(e)}")
-            return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+            messages.error(request, f"Error generating PDF: {str(e)}")
+            return redirect('ppm_report')
 
-        return response
+    # Handle Excel Export - Export ALL filtered tasks
+    if export_type == 'excel':
+        # Get ALL filtered tasks for export
+        export_tasks = list(tasks_query)
+        
+        if not export_tasks:
+            messages.error(request, "No tasks available for the selected filters.")
+            return redirect('ppm_report')
 
-    # Custom page range for pagination
-    paginator = Paginator(tasks, items_per_page)
-    page_range = []
-    if paginator.num_pages > 1:
-        start = max(1, tasks.number - 2) if scope == 'page' else 1
-        end = min(paginator.num_pages + 1, tasks.number + 3) if scope == 'page' else paginator.num_pages + 1
-        page_range = list(range(start, end))
-        if start > 2:
-            page_range = [1, None] + page_range
-        elif start == 2:
-            page_range = [1] + page_range
-        if end < paginator.num_pages:
-            page_range = page_range + [None, paginator.num_pages]
-        elif end == paginator.num_pages:
-            page_range = page_range + [paginator.num_pages]
+        try:
+            output = BytesIO()
+            workbook = xlsxwriter.Workbook(output)
+            worksheet = workbook.add_worksheet('PPM Report')
+
+            # Formats
+            header_format = workbook.add_format({
+                'bold': True,
+                'bg_color': '#143C50',
+                'font_color': 'white',
+                'align': 'center',
+                'valign': 'vcenter',
+                'border': 1
+            })
+            
+            cell_format = workbook.add_format({
+                'align': 'left',
+                'valign': 'top',
+                'border': 1,
+                'text_wrap': True
+            })
+            
+            date_format = workbook.add_format({
+                'align': 'left',
+                'border': 1,
+                'num_format': 'yyyy-mm-dd'
+            })
+
+            # Write headers
+            headers = [
+                'No.', 'Serial Number', 'Hardware', 'Centre', 'Department',
+                'Assignee First Name', 'Assignee Last Name', 'Assignee Email',
+                'Activities', 'Status', 'Completed Date', 'Remarks', 'Period',
+                'Created By', 'Created At'
+            ]
+            
+            for col, header in enumerate(headers):
+                worksheet.write(0, col, header, header_format)
+
+            # Write data
+            for row, task in enumerate(export_tasks, 1):
+                activities = ', '.join(task.activities.values_list('name', flat=True))
+                
+                worksheet.write(row, 0, row, cell_format)
+                worksheet.write(row, 1, task.device.serial_number or 'N/A', cell_format)
+                worksheet.write(row, 2, task.device.hardware or 'N/A', cell_format)
+                worksheet.write(row, 3, task.device.centre.name if task.device.centre else 'N/A', cell_format)
+                worksheet.write(row, 4, task.device.department.name if task.device.department else 'N/A', cell_format)
+                worksheet.write(row, 5, task.device.assignee_first_name or 'N/A', cell_format)
+                worksheet.write(row, 6, task.device.assignee_last_name or '', cell_format)
+                worksheet.write(row, 7, task.device.assignee_email_address or 'N/A', cell_format)
+                worksheet.write(row, 8, activities or 'N/A', cell_format)
+                worksheet.write(row, 9, 'Completed' if task.completed_date else 'Incomplete', cell_format)
+                
+                if task.completed_date:
+                    worksheet.write(row, 10, task.completed_date, date_format)
+                else:
+                    worksheet.write(row, 10, 'N/A', cell_format)
+                
+                worksheet.write(row, 11, task.remarks or 'N/A', cell_format)
+                worksheet.write(row, 12, task.period.name if task.period else 'N/A', cell_format)
+                worksheet.write(row, 13, task.created_by.username if task.created_by else 'N/A', cell_format)
+                worksheet.write(row, 14, task.created_at.strftime('%Y-%m-%d %H:%M') if task.created_at else 'N/A', cell_format)
+
+            # Set column widths
+            worksheet.set_column('A:A', 8)
+            worksheet.set_column('B:C', 20)
+            worksheet.set_column('D:E', 25)
+            worksheet.set_column('F:H', 20)
+            worksheet.set_column('I:I', 40)
+            worksheet.set_column('J:K', 15)
+            worksheet.set_column('L:L', 35)
+            worksheet.set_column('M:O', 20)
+
+            workbook.close()
+            output.seek(0)
+
+            response = HttpResponse(
+                output.read(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            filename = f"PPM_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+
+        except Exception as e:
+            logger.error(f"Excel generation failed: {str(e)}")
+            messages.error(request, f"Error generating Excel: {str(e)}")
+            return redirect('ppm_report')
+
+    # Pagination for display
+    paginator = Paginator(tasks_query, items_per_page)
+    try:
+        tasks = paginator.page(page_number)
+    except:
+        tasks = paginator.page(1)
 
     context = {
         'tasks': tasks,
@@ -605,8 +742,7 @@ def ppm_report(request):
         'search_query': search_query,
         'items_per_page': items_per_page,
         'items_per_page_options': [10, 25, 50, 100, 500],
-        'scope': scope,
-        'page_range': page_range,
+        'paginator': paginator,
         'total_tasks': total_tasks,
         'completed_tasks': completed_tasks,
         'overdue_tasks': overdue_tasks,
@@ -614,4 +750,5 @@ def ppm_report(request):
         'tasks_by_activity': tasks_by_activity,
         'view_name': 'ppm_report',
     }
+    
     return render(request, 'ppm/ppm_report.html', context)
