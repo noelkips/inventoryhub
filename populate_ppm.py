@@ -13,12 +13,13 @@ from ppm.models import PPMPeriod, PPMActivity, PPMTask
 current_datetime = datetime.now()
 
 # Desired completed date
-completed_date = datetime(2025, 9, 18).date()
+completed_date = datetime(2025, 10, 8).date()
 
 # Centre lookup
-centre = Centre.objects.filter(name__iexact='Bondeni').first()
+centre = Centre.objects.filter(pk=32)
+print(f"{centre}")
 if not centre:
-    print("Error: Centre 'Bondeni' not found.")
+    print("Error: Centre 'Molo Turi High School' not found.")
     exit(1)
 
 # Devices in centre
@@ -56,7 +57,7 @@ updated_tasks = 0
 
 for device in devices:
     hardware = device.hardware.lower()
-    
+
     # Select activities based on hardware
     if "monitor" in hardware:
         selected_activities = activity_map["monitor"]
