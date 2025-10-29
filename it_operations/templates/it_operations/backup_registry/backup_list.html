@@ -1,0 +1,86 @@
+{% extends 'dashboard.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-primary">Backup Registry</h1>
+        <a href="{% url 'backup_registry_create' %}" class="bg-accent text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+            + Add Backup Record
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white p-4 rounded shadow mb-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Centre</label>
+                <select name="centre" class="w-full border border-gray-300 rounded px-3 py-2">
+                    <option value="">All Centres</option>
+                    {% for centre in centres %}
+                    <option value="{{ centre.id }}" {% if request.GET.centre == centre.id|stringformat:"s" %}selected{% endif %}>{{ centre.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">System</label>
+                <input type="text" name="system" placeholder="Search system..." value="{{ request.GET.system }}" class="w-full border border-gray-300 rounded px-3 py-2">
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="w-full bg-primary text-white px-4 py-2 rounded hover:bg-blue-900 transition">
+                    Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Backups Table -->
+    <div class="bg-white rounded shadow overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-primary text-white">
+                <tr>
+                    <th class="px-4 py-3 text-left">System</th>
+                    <th class="px-4 py-3 text-left">Centre</th>
+                    <th class="px-4 py-3 text-left">Date</th>
+                    <th class="px-4 py-3 text-left">Done By</th>
+                    <th class="px-4 py-3 text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for backup in backups %}
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="px-4 py-3">{{ backup.system }}</td>
+                    <td class="px-4 py-3">{{ backup.centre.name }}</td>
+                    <td class="px-4 py-3">{{ backup.date|date:"M d, Y" }}</td>
+                    <td class="px-4 py-3">{{ backup.done_by.username }}</td>
+                    <td class="px-4 py-3">
+                        <a href="{% url 'backup_registry_update' backup.pk %}" class="text-blue-600 hover:underline mr-2">Edit</a>
+                        <a href="{% url 'backup_registry_delete' backup.pk %}" class="text-red-600 hover:underline">Delete</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-4 py-3 text-center text-gray-500">No backup records found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="mt-6 flex justify-center gap-2">
+        {% if page_obj.has_previous %}
+        <a href="?page=1" class="px-3 py-2 border rounded hover:bg-gray-100">First</a>
+        <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 border rounded hover:bg-gray-100">Previous</a>
+        {% endif %}
+        
+        <span class="px-3 py-2">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 border rounded hover:bg-gray-100">Next</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 border rounded hover:bg-gray-100">Last</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

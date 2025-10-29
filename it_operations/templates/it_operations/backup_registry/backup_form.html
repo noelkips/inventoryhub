@@ -1,0 +1,124 @@
+{% extends 'dashboard.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
+    <div class="container mx-auto max-w-4xl">
+        <!-- Header -->
+        <div class="mb-8 animate-fade-in">
+            <h1 class="text-4xl font-bold text-primary mb-2">{{ action }} Backup Record</h1>
+            <p class="text-gray-600">Track and manage system backups across your organization</p>
+        </div>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            <!-- Form Container with Column Layout -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- System/Software Selection -->
+                <div class="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 animate-scale-in">
+                    <label class="block text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">System/Software Name *</label>
+                    <select name="system" required class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent focus:ring-opacity-20 transition-all duration-300 text-gray-700 font-medium">
+                        <option value="">-- Select System --</option>
+                        {% for value, label in system_choices %}
+                        <option value="{{ value }}" {% if backup.system == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zm-11-1a1 1 0 11-2 0 1 1 0 012 0zM8 8a1 1 0 000 2h6a1 1 0 000-2H8zm0 3a1 1 0 000 2h3a1 1 0 000-2H8z" clip-rule="evenodd"></path>
+                        </svg>
+                        Select the system being backed up
+                    </p>
+                </div>
+
+                <!-- Centre Selection -->
+                <div class="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 animate-scale-in" style="animation-delay: 0.1s;">
+                    <label class="block text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Centre *</label>
+                    <select name="centre" required class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent focus:ring-opacity-20 transition-all duration-300 text-gray-700 font-medium">
+                        <option value="">-- Select Centre --</option>
+                        {% for centre in centres %}
+                        <option value="{{ centre.id }}" {% if backup.centre.id == centre.id %}selected{% endif %}>{{ centre.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                        </svg>
+                        Select the centre location
+                    </p>
+                </div>
+            </div>
+
+            <!-- Comments Section - Full Width -->
+            <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 animate-scale-in" style="animation-delay: 0.2s;">
+                <label class="block text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Comments & Details</label>
+                <textarea 
+                    name="comments" 
+                    rows="6" 
+                    placeholder="Add relevant comments about the backup:&#10;• Backup status&#10;• Size and duration&#10;• Any issues encountered&#10;• Verification results" 
+                    class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent focus:ring-opacity-20 transition-all duration-300 resize-none text-gray-700 leading-relaxed"
+                >{{ backup.comments|default:'' }}</textarea>
+                <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5z"></path>
+                    </svg>
+                    Provide detailed information about the backup operation
+                </p>
+            </div>
+
+            <!-- Info Box -->
+            <div class="bg-gradient-to-r from-blue-50 to-accent/10 border-l-4 border-accent rounded-xl p-6 animate-fade-in" style="animation-delay: 0.3s;">
+                <div class="flex gap-4">
+                    <svg class="w-6 h-6 text-accent flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zm-11-1a1 1 0 11-2 0 1 1 0 012 0zM8 8a1 1 0 000 2h6a1 1 0 000-2H8zm0 3a1 1 0 000 2h3a1 1 0 000-2H8z" clip-rule="evenodd"></path>
+                    </svg>
+                    <div>
+                        <h4 class="font-semibold text-primary mb-1">Backup Information</h4>
+                        <ul class="text-sm text-gray-700 space-y-1">
+                            <li>• Backup date will be automatically recorded as today</li>
+                            <li>• You will be recorded as the person who performed the backup</li>
+                            <li>• All backup records are tracked for compliance and recovery purposes</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-4 justify-end pt-6 border-t">
+                <a href="{% url 'backup_registry_list' %}" class="group bg-white text-primary px-8 py-3 rounded-xl border-2 border-primary hover:bg-secondary hover:text-blue-600 transition-all duration-300 flex items-center gap-2 transform hover:-translate-y-1 font-semibold">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"></path>
+                    </svg>
+                    Cancel
+                </a>
+                <button type="submit" class="group bg-primary from-accent to-blue-600 text-white px-8 py-3 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center gap-2 transform hover:-translate-y-1 font-semibold">
+                    <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                    {{ action }} Record
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    .animate-fade-in {
+        animation: fadeIn 0.6s ease-in forwards;
+        opacity: 0;
+    }
+
+    @keyframes scaleIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    .animate-scale-in {
+        animation: scaleIn 0.5s ease-out forwards;
+        opacity: 0;
+    }
+</style>
+{% endblock %}

@@ -24,7 +24,8 @@ class CustomUser(AbstractUser):
     is_trainer = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=True)
     centre = models.ForeignKey('Centre', on_delete=models.SET_NULL, null=True, blank=True)
-    
+    is_it_manager = models.BooleanField(default=False, help_text="IT Manager - receives notifications for staff work plans")
+    is_senior_it_officer = models.BooleanField(default=False, help_text="Senior IT Officer - receives notifications for trainer work plans")
     groups = models.ManyToManyField(
         'auth.Group',
         related_name='customuser_set',

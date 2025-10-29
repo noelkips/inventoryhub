@@ -93,6 +93,41 @@
                 </ul>
             </li>
 
+            <!-- Added IT Operations section with Mission Critical, Backup Registry, and Work Plans -->
+            {% if not user.is_trainer %}
+            <li>
+                <a href="#" class="flex items-center justify-between hover:bg-secondary px-4 py-2 rounded" id="itOperationsToggle">
+                    <span class="flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        IT Operations
+                    </span>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </a>
+                <ul id="itOperationsDropdown" class="ml-4 space-y-2 pt-2 hidden">
+                    <li><a href="{% url 'mission_critical_list' %}" class="flex items-center hover:bg-secondary px-4 py-2 rounded block">🔴 Mission Critical Assets</a></li>
+                    <li><a href="{% url 'backup_registry_list' %}" class="flex items-center hover:bg-secondary px-4 py-2 rounded block">💾 Backup Registry</a></li>
+                    <li><a href="{% url 'work_plan_list' %}" class="flex items-center hover:bg-secondary px-4 py-2 rounded block">📅 Work Plans</a></li>
+                </ul>
+            </li>
+            {% else %}
+            <!-- Trainers only see Work Plans -->
+            <li>
+                <a href="{% url 'work_plan_list' %}" class="flex items-center hover:bg-secondary px-4 py-2 rounded">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    My Work Plan
+                </a>
+            </li>
+            {% endif %}
+
             {% if user.is_superuser %}
             <!-- PPM Management -->
             <li>
@@ -108,8 +143,6 @@
                     <li><a href="{% url 'ppm_history' %}" class="hover:bg-secondary px-4 py-2 rounded block">🕑 PPM History</a></li>
                     <li><a href="{% url 'manage_activities' %}" class="hover:bg-secondary px-4 py-2 rounded block">🧭 Manage Activities</a></li>
                     <li><a href="{% url 'manage_periods' %}" class="hover:bg-secondary px-4 py-2 rounded block">🗓 Manage Periods</a></li>
-
-                    <!-- NEW: PPM Reports -->
                     <li><a href="{% url 'ppm_report' %}" class="hover:bg-secondary px-4 py-2 rounded block">📊 See PPM Reports</a></li>
                 </ul>
             </li>
@@ -186,6 +219,15 @@
                 });
             }
 
+            const itOperationsToggle = document.getElementById('itOperationsToggle');
+            if (itOperationsToggle) {
+                itOperationsToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const dropdown = document.getElementById('itOperationsDropdown');
+                    if (dropdown) dropdown.classList.toggle('hidden');
+                });
+            }
+
             // PPM Management dropdown toggle
             const ppmManagementToggle = document.getElementById('ppmManagementToggle');
             if (ppmManagementToggle) {
@@ -212,6 +254,8 @@
                 const accountButton = document.getElementById('accountDropdown');
                 const manageDevicesDropdown = document.getElementById('manageDevicesDropdown');
                 const manageDevicesButton = document.getElementById('manageDevicesToggle');
+                const itOperationsDropdown = document.getElementById('itOperationsDropdown');
+                const itOperationsButton = document.getElementById('itOperationsToggle');
                 const ppmManagementDropdown = document.getElementById('ppmManagementDropdown');
                 const ppmManagementButton = document.getElementById('ppmManagementToggle');
                 const manageUsersDropdown = document.getElementById('manageUsersDropdown');
@@ -222,6 +266,9 @@
                 }
                 if (manageDevicesButton && manageDevicesDropdown && !manageDevicesButton.contains(e.target) && !manageDevicesDropdown.contains(e.target)) {
                     manageDevicesDropdown.classList.add('hidden');
+                }
+                if (itOperationsButton && itOperationsDropdown && !itOperationsButton.contains(e.target) && !itOperationsDropdown.contains(e.target)) {
+                    itOperationsDropdown.classList.add('hidden');
                 }
                 if (ppmManagementButton && ppmManagementDropdown && !ppmManagementButton.contains(e.target) && !ppmManagementDropdown.contains(e.target)) {
                     ppmManagementDropdown.classList.add('hidden');

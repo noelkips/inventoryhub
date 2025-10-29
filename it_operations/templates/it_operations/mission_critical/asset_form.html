@@ -1,0 +1,81 @@
+{% extends 'dashboard.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-2xl">
+    <h1 class="text-3xl font-bold text-primary mb-6">{{ action }} Mission Critical Asset</h1>
+
+    <form method="post" class="bg-white p-6 rounded shadow">
+        {% csrf_token %}
+        
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Asset Name/Description *</label>
+            <input type="text" name="name" value="{{ asset.name|default:'' }}" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent">
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                <select name="category" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent">
+                    <option value="">Select Category</option>
+                    {% for value, label in categories %}
+                    <option value="{{ value }}" {% if asset.category == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Criticality Level *</label>
+                <select name="criticality_level" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent">
+                    <option value="">Select Level</option>
+                    {% for value, label in criticality_levels %}
+                    <option value="{{ value }}" {% if asset.criticality_level == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Location/Scope *</label>
+            <input type="text" name="location_scope" value="{{ asset.location_scope|default:'' }}" required placeholder="e.g., HQ & Data Centers" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent">
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Department *</label>
+            <select name="department" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent">
+                <option value="">Select Department</option>
+                {% for dept in departments %}
+                <option value="{{ dept.id }}" {% if asset.department.id == dept.id %}selected{% endif %}>{{ dept.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Purpose/Function *</label>
+            <textarea name="purpose_function" required rows="3" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent">{{ asset.purpose_function|default:'' }}</textarea>
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Dependency/Linked System</label>
+            <textarea name="dependency_linked_system" rows="3" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent">{{ asset.dependency_linked_system|default:'' }}</textarea>
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Backup/Recovery Method *</label>
+            <textarea name="backup_recovery_method" required rows="3" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent">{{ asset.backup_recovery_method|default:'' }}</textarea>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <textarea name="notes" rows="3" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent">{{ asset.notes|default:'' }}</textarea>
+        </div>
+
+        <div class="flex gap-4">
+            <button type="submit" class="bg-accent text-white px-6 py-2 rounded hover:bg-blue-700 transition">
+                {{ action }} Asset
+            </button>
+            <a href="{% url 'mission_critical_list' %}" class="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
