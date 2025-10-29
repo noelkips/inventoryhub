@@ -1,7 +1,8 @@
+<!-- workplan_calendar.html -->
 {% extends 'dashboard.html' %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 py-8 px-4">
     <div class="container mx-auto max-w-7xl">
         <!-- Header -->
         <div class="mb-8 animate-fade-in">
@@ -10,7 +11,7 @@
                     <h1 class="text-4xl font-bold text-primary mb-2">{{ user_name }}'s Work Plan Calendar</h1>
                     <p class="text-gray-600">Monthly overview of work plan submissions</p>
                 </div>
-                <a href="{% url 'work_plan_list' %}" class="group bg-white text-primary px-6 py-3 rounded-xl border-2 border-primary hover:bg-primary hover:text-white transition-all duration-300 flex items-center gap-2 transform hover:-translate-y-1 w-fit font-semibold">
+                <a href="{% url 'work_plan_list' %}" class="group bg-white text-blue-600 px-6 py-3 rounded-xl border-2 border-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300 flex items-center gap-2 transform hover:-translate-y-1 w-fit font-semibold">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"></path>
                     </svg>
@@ -20,11 +21,11 @@
         </div>
 
         <!-- Month Navigation -->
-        <div class="bg-white rounded-2xl shadow-lg p-6 mb-8 animate-slide-up">
+        <div class="bg-white rounded-2xl shadow-lg p-6 mb-8 animate-slide-up border-2 border-slate-200">
             <div class="flex items-center justify-between">
                 {% if month == 1 %}
                     {% with prev_year=year|add:"-1" prev_month=12 %}
-                    <a href="?year={{ prev_year }}&month={{ prev_month }}" class="group bg-gradient-to-r from-primary to-accent text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center gap-2 transform hover:-translate-y-1">
+                    <a href="?year={{ prev_year }}&month={{ prev_month }}" class="group bg-gradient-to-r from-blue-600 to-teal-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center gap-2 transform hover:-translate-y-1">
                         <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"></path>
                         </svg>
@@ -33,7 +34,7 @@
                     {% endwith %}
                 {% else %}
                     {% with prev_month=month|add:"-1" %}
-                    <a href="?year={{ year }}&month={{ prev_month }}" class="group bg-gradient-to-r from-primary to-accent text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center gap-2 transform hover:-translate-y-1">
+                    <a href="?year={{ year }}&month={{ prev_month }}" class="group bg-gradient-to-r from-blue-600 to-teal-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center gap-2 transform hover:-translate-y-1">
                         <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"></path>
                         </svg>
@@ -42,11 +43,11 @@
                     {% endwith %}
                 {% endif %}
                 
-                <h2 class="text-3xl font-bold text-primary">{{ month_name }} {{ year }}</h2>
+                <h2 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">{{ month_name }} {{ year }}</h2>
                 
                 {% if month == 12 %}
                     {% with next_year=year|add:"1" next_month=1 %}
-                    <a href="?year={{ next_year }}&month={{ next_month }}" class="group bg-gradient-to-r from-accent to-blue-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center gap-2 transform hover:-translate-y-1">
+                    <a href="?year={{ next_year }}&month={{ next_month }}" class="group bg-gradient-to-r from-blue-600 to-teal-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center gap-2 transform hover:-translate-y-1">
                         Next
                         <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
@@ -55,7 +56,7 @@
                     {% endwith %}
                 {% else %}
                     {% with next_month=month|add:"1" %}
-                    <a href="?year={{ year }}&month={{ next_month }}" class="group bg-gradient-to-r from-accent to-blue-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center gap-2 transform hover:-translate-y-1">
+                    <a href="?year={{ year }}&month={{ next_month }}" class="group bg-gradient-to-r from-blue-600 to-teal-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center gap-2 transform hover:-translate-y-1">
                         Next
                         <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
@@ -66,84 +67,43 @@
             </div>
         </div>
 
-        <!-- Calendar Grid -->
-        <div class="bg-white rounded-2xl shadow-lg overflow-hidden mb-8 animate-scale-in">
-            <!-- Day Headers -->
-            <div class="grid grid-cols-7 gap-0 bg-gradient-to-r from-primary to-accent">
-                {% for day_name in day_names %}
-                <div class="p-4 text-center font-bold text-white text-sm md:text-base">
-                    {{ day_name }}
-                </div>
-                {% endfor %}
-            </div>
+        <!-- Calendar -->
+        <div class="bg-white rounded-2xl shadow-lg p-8 mb-8 animate-slide-up border-2 border-slate-200">
+            <div class="grid grid-cols-7 gap-2 md:gap-4">
+                <!-- Weekdays Header -->
+                <div class="text-center font-bold text-gray-700">Sun</div>
+                <div class="text-center font-bold text-gray-700">Mon</div>
+                <div class="text-center font-bold text-gray-700">Tue</div>
+                <div class="text-center font-bold text-gray-700">Wed</div>
+                <div class="text-center font-bold text-gray-700">Thu</div>
+                <div class="text-center font-bold text-gray-700">Fri</div>
+                <div class="text-center font-bold text-gray-700">Sat</div>
 
-            <!-- Calendar Days -->
-            <div class="grid grid-cols-7 gap-0 divide-x divide-y divide-gray-200">
-                {% for week in calendar %}
-                    {% for day in week %}
-                        {% if day == 0 %}
-                        <div class="p-4 bg-gray-50 min-h-24 md:min-h-32"></div>
-                        {% else %}
-                        <div class="p-4 min-h-24 md:min-h-32 bg-white hover:bg-gray-50 transition-colors duration-200 relative group">
-                            <div class="flex items-start justify-between mb-2">
-                                <span class="text-lg font-bold text-primary">{{ day }}</span>
-                                {% if day in work_plan_dates %}
-                                    {% with plan_data=work_plan_dates|get_item:day %}
-                                    {% if plan_data.has_tasks %}
-                                    <span class="inline-block w-3 h-3 bg-green-500 rounded-full" title="Work plan submitted"></span>
-                                    {% elif plan_data.is_past_deadline %}
-                                    <span class="inline-block w-3 h-3 bg-red-500 rounded-full" title="Deadline passed - not submitted"></span>
-                                    {% else %}
-                                    <span class="inline-block w-3 h-3 bg-yellow-500 rounded-full" title="Pending submission"></span>
-                                    {% endif %}
-                                    {% endwith %}
-                                {% endif %}
-                            </div>
-                            {% if day in work_plan_dates %}
-                                {% with plan_data=work_plan_dates|get_item:day %}
-                                <div class="text-xs space-y-1">
-                                    {% if plan_data.has_tasks %}
-                                    <p class="text-green-700 font-semibold">✓ Submitted</p>
-                                    {% elif plan_data.is_past_deadline %}
-                                    <p class="text-red-700 font-semibold">✗ Overdue</p>
-                                    {% else %}
-                                    <p class="text-yellow-700 font-semibold">⏳ Pending</p>
-                                    {% endif %}
-                                    <a href="{% url 'work_plan_detail' plan_data.work_plan.pk %}" class="text-accent hover:underline block mt-1">View Plan</a>
-                                </div>
-                                {% endwith %}
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                    {% endfor %}
+                <!-- Empty days before month start -->
+                {% for _ in padding_days %}
+                <div class="bg-gray-50 rounded-xl p-2 md:p-4 text-center text-gray-400"></div>
+                {% endfor %}
+
+                <!-- Calendar Days -->
+                {% for day, data in calendar_days.items %}
+                <div class="group relative rounded-xl p-2 md:p-4 text-center transition-all duration-300
+                    {% if data.has_work_plan %}bg-gradient-to-br from-blue-50 to-teal-50 hover:shadow-xl hover:scale-105 border-2 border-teal-200
+                    {% else %}bg-white hover:shadow-md border-2 border-slate-200 hover:border-teal-500/50
+                    {% endif %}">
+                    <span class="text-xl font-bold text-primary">{{ day }}</span>
+                    {% if data.has_work_plan %}
+                    <div class="absolute inset-0 bg-white bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-300"></div>
+                    <a href="{% url 'work_plan_detail' data.work_plan_id %}" class="absolute inset-0"></a>
+                    {% endif %}
+                </div>
                 {% endfor %}
             </div>
         </div>
 
-        <!-- Legend -->
-        <div class="bg-white rounded-2xl shadow-lg p-6 mb-8 animate-fade-in" style="animation-delay: 0.2s;">
-            <h3 class="text-lg font-bold text-primary mb-4">Legend</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="flex items-center gap-3">
-                    <span class="inline-block w-4 h-4 bg-green-500 rounded-full"></span>
-                    <span class="text-gray-700"><strong>Green:</strong> Work plan submitted</span>
-                </div>
-                <div class="flex items-center gap-3">
-                    <span class="inline-block w-4 h-4 bg-yellow-500 rounded-full"></span>
-                    <span class="text-gray-700"><strong>Yellow:</strong> Pending submission</span>
-                </div>
-                <div class="flex items-center gap-3">
-                    <span class="inline-block w-4 h-4 bg-red-500 rounded-full"></span>
-                    <span class="text-gray-700"><strong>Red:</strong> Deadline passed</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Work Plans List for Month -->
-        <div class="animate-fade-in" style="animation-delay: 0.3s;">
+        <!-- Work Plans List -->
+        <div class="bg-white rounded-2xl shadow-lg p-8 animate-slide-up border-2 border-slate-200">
             <h2 class="text-2xl font-bold text-primary mb-6 flex items-center gap-2">
                 <svg class="w-6 h-6 text-accent" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
                     <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"></path>
                 </svg>
                 Work Plans This Month
@@ -152,7 +112,7 @@
             {% if work_plans %}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {% for plan in work_plans %}
-                <div class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:-translate-y-1 border-l-4 border-accent animate-scale-in">
+                <div class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:-translate-y-1 border-l-4 border-teal-600 animate-scale-in">
                     <div class="p-6">
                         <div class="flex items-start justify-between mb-4">
                             <div>
@@ -165,7 +125,7 @@
                             <span class="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-bold">Pending</span>
                             {% endif %}
                         </div>
-                        <a href="{% url 'work_plan_detail' plan.id %}" class="inline-block bg-gradient-to-r from-accent to-blue-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-300 text-sm font-semibold group-hover:scale-105 transform">
+                        <a href="{% url 'work_plan_detail' plan.id %}" class="inline-block bg-gradient-to-r from-blue-600 to-teal-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-300 text-sm font-semibold group-hover:scale-105 transform">
                             View Details →
                         </a>
                     </div>
@@ -173,7 +133,7 @@
                 {% endfor %}
             </div>
             {% else %}
-            <div class="bg-white rounded-2xl shadow-lg p-12 text-center">
+            <div class="bg-white rounded-2xl shadow-lg p-12 text-center border-2 border-slate-200">
                 <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>

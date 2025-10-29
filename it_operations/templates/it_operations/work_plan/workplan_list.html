@@ -1,3 +1,4 @@
+<!-- workplan_list.html -->
 {% extends 'dashboard.html' %}
 
 {% block content %}
@@ -5,42 +6,42 @@
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-primary">Work Plans</h1>
         <div class="flex gap-2">
-            <a href="{% url 'work_plan_create' %}" class="bg-accent text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+            <a href="{% url 'work_plan_create' %}" class="bg-gradient-to-r from-blue-600 to-teal-600 text-white px-4 py-2 rounded-xl font-bold shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
                 + Create Work Plan
             </a>
-            <a href="{% url 'work_plan_calendar' %}" class="bg-secondary text-white px-4 py-2 rounded hover:bg-orange-700 transition">
+            <a href="{% url 'work_plan_calendar' %}" class="bg-gradient-to-r from-orange-600 to-orange-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
                 Calendar View
             </a>
         </div>
     </div>
 
     <!-- Work Plans Table -->
-    <div class="bg-white rounded shadow overflow-x-auto">
+    <div class="bg-white rounded-2xl shadow-xl overflow-x-auto border-2 border-slate-200">
         <table class="w-full">
-            <thead class="bg-primary text-white">
+            <thead class="bg-gradient-to-r from-blue-600 to-teal-600 text-white">
                 <tr>
-                    <th class="px-4 py-3 text-left">User</th>
-                    <th class="px-4 py-3 text-left">Week</th>
-                    <th class="px-4 py-3 text-left">Status</th>
-                    <th class="px-4 py-3 text-left">Created</th>
-                    <th class="px-4 py-3 text-left">Actions</th>
+                    <th class="px-4 py-3 text-left font-bold uppercase tracking-wider">User</th>
+                    <th class="px-4 py-3 text-left font-bold uppercase tracking-wider">Week</th>
+                    <th class="px-4 py-3 text-left font-bold uppercase tracking-wider">Status</th>
+                    <th class="px-4 py-3 text-left font-bold uppercase tracking-wider">Created</th>
+                    <th class="px-4 py-3 text-left font-bold uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-slate-200">
                 {% for plan in work_plans %}
-                <tr class="border-b hover:bg-gray-50">
-                    <td class="px-4 py-3">{{ plan.user_name }}</td>
-                    <td class="px-4 py-3">{{ plan.week_start }} - {{ plan.week_end }}</td>
+                <tr class="hover:bg-blue-50 transition-all duration-300">
+                    <td class="px-4 py-3 font-medium text-gray-800">{{ plan.user_name }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ plan.week_start }} - {{ plan.week_end }}</td>
                     <td class="px-4 py-3">
                         {% if plan.is_submitted %}
-                        <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-sm">Submitted</span>
+                        <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-sm font-bold">Submitted</span>
                         {% else %}
-                        <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-sm">Pending</span>
+                        <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-sm font-bold">Pending</span>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-3">{{ plan.created_at }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ plan.created_at }}</td>
                     <td class="px-4 py-3">
-                        <a href="{% url 'work_plan_detail' plan.id %}" class="text-accent hover:underline">View</a>
+                        <a href="{% url 'work_plan_detail' plan.id %}" class="text-teal-600 hover:text-teal-700 font-medium">View</a>
                     </td>
                 </tr>
                 {% empty %}
@@ -56,15 +57,15 @@
     {% if page_obj.has_other_pages %}
     <div class="mt-6 flex justify-center gap-2">
         {% if page_obj.has_previous %}
-        <a href="?page=1" class="px-3 py-2 border rounded hover:bg-gray-100">First</a>
-        <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 border rounded hover:bg-gray-100">Previous</a>
+        <a href="?page=1" class="px-3 py-2 border-2 border-blue-600 rounded-xl text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300">First</a>
+        <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 border-2 border-blue-600 rounded-xl text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300">Previous</a>
         {% endif %}
         
-        <span class="px-3 py-2">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        <span class="px-3 py-2 bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-xl font-bold">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
         
         {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 border rounded hover:bg-gray-100">Next</a>
-        <a href="?page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 border rounded hover:bg-gray-100">Last</a>
+        <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 border-2 border-blue-600 rounded-xl text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300">Next</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 border-2 border-blue-600 rounded-xl text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300">Last</a>
         {% endif %}
     </div>
     {% endif %}

@@ -1,20 +1,33 @@
+<!-- asset_list.html -->
 {% extends 'dashboard.html' %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold text-primary">Mission Critical Assets</h1>
-        <a href="{% url 'mission_critical_create' %}" class="bg-accent text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+        <div class="flex items-center gap-4">
+            <div class="p-4 bg-gradient-to-br from-blue-600 to-teal-600 rounded-2xl shadow-2xl transform hover:scale-105 transition-transform duration-300">
+                <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z"></path>
+                    <path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z"></path>
+                    <path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z"></path>
+                </svg>
+            </div>
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">Mission Critical Assets</h1>
+        </div>
+        <a href="{% url 'mission_critical_create' %}" class="bg-gradient-to-r from-blue-600 to-teal-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 text-lg whitespace-nowrap">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"></path>
+            </svg>
             + Add Asset
         </a>
     </div>
 
     <!-- Filters -->
-    <div class="bg-white p-4 rounded shadow mb-6">
-        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="bg-white rounded-2xl shadow-xl p-6 border-2 border-slate-200 mb-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select name="category" class="w-full border border-gray-300 rounded px-3 py-2">
+                <label class="block text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Category</label>
+                <select name="category" class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 text-gray-700 font-medium bg-white hover:border-teal-400">
                     <option value="">All Categories</option>
                     {% for value, label in categories %}
                     <option value="{{ value }}" {% if request.GET.category == value %}selected{% endif %}>{{ label }}</option>
@@ -22,8 +35,8 @@
                 </select>
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Criticality Level</label>
-                <select name="criticality" class="w-full border border-gray-300 rounded px-3 py-2">
+                <label class="block text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Criticality Level</label>
+                <select name="criticality" class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 text-gray-700 font-medium bg-white hover:border-teal-400">
                     <option value="">All Levels</option>
                     {% for value, label in criticality_levels %}
                     <option value="{{ value }}" {% if request.GET.criticality == value %}selected{% endif %}>{{ label }}</option>
@@ -31,11 +44,14 @@
                 </select>
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-                <input type="text" name="search" placeholder="Search assets..." value="{{ request.GET.search }}" class="w-full border border-gray-300 rounded px-3 py-2">
+                <label class="block text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Search</label>
+                <input type="text" name="search" placeholder="Search assets..." value="{{ request.GET.search }}" class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 text-gray-700 font-medium bg-white hover:border-teal-400">
             </div>
             <div class="flex items-end">
-                <button type="submit" class="w-full bg-primary text-white px-4 py-2 rounded hover:bg-blue-900 transition">
+                <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-teal-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-3">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+                    </svg>
                     Filter
                 </button>
             </div>
@@ -43,24 +59,24 @@
     </div>
 
     <!-- Assets Table -->
-    <div class="bg-white rounded shadow overflow-x-auto">
+    <div class="bg-white rounded-2xl shadow-xl overflow-x-auto border-2 border-slate-200">
         <table class="w-full">
-            <thead class="bg-primary text-white">
+            <thead class="bg-gradient-to-r from-blue-600 to-teal-600 text-white">
                 <tr>
-                    <th class="px-4 py-3 text-left">Name</th>
-                    <th class="px-4 py-3 text-left">Category</th>
-                    <th class="px-4 py-3 text-left">Criticality</th>
-                    <th class="px-4 py-3 text-left">Department</th>
-                    <th class="px-4 py-3 text-left">Actions</th>
+                    <th class="px-6 py-4 text-left font-bold uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-4 text-left font-bold uppercase tracking-wider">Category</th>
+                    <th class="px-6 py-4 text-left font-bold uppercase tracking-wider">Criticality</th>
+                    <th class="px-6 py-4 text-left font-bold uppercase tracking-wider">Department</th>
+                    <th class="px-6 py-4 text-left font-bold uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-slate-200">
                 {% for asset in assets %}
-                <tr class="border-b hover:bg-gray-50">
-                    <td class="px-4 py-3">{{ asset.name }}</td>
-                    <td class="px-4 py-3">{{ asset.get_category_display }}</td>
-                    <td class="px-4 py-3">
-                        <span class="px-2 py-1 rounded text-white text-sm
+                <tr class="hover:bg-blue-50 transition-all duration-300">
+                    <td class="px-6 py-4 font-medium text-gray-800">{{ asset.name }}</td>
+                    <td class="px-6 py-4 text-gray-700">{{ asset.get_category_display }}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-3 py-1 rounded text-white text-sm
                             {% if asset.criticality_level == 'Critical' %}bg-red-600
                             {% elif asset.criticality_level == 'High' %}bg-orange-600
                             {% elif asset.criticality_level == 'Medium' %}bg-yellow-600
@@ -68,16 +84,39 @@
                             {{ asset.criticality_level }}
                         </span>
                     </td>
-                    <td class="px-4 py-3">{{ asset.department.name|default:"N/A" }}</td>
-                    <td class="px-4 py-3">
-                        <a href="{% url 'mission_critical_detail' asset.pk %}" class="text-accent hover:underline mr-2">View</a>
-                        <a href="{% url 'mission_critical_update' asset.pk %}" class="text-blue-600 hover:underline mr-2">Edit</a>
-                        <a href="{% url 'mission_critical_delete' asset.pk %}" class="text-red-600 hover:underline">Delete</a>
+                    <td class="px-6 py-4 text-gray-700">{{ asset.department.name|default:"N/A" }}</td>
+                    <td class="px-6 py-4">
+                        <div class="flex gap-3">
+                            <a href="{% url 'mission_critical_detail' asset.pk %}" class="text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1 transform hover:scale-110 transition">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
+                                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path>
+                                </svg>
+                                View
+                            </a>
+                            <a href="{% url 'mission_critical_update' asset.pk %}" class="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 transform hover:scale-110 transition">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"></path>
+                                </svg>
+                                Edit
+                            </a>
+                            <a href="{% url 'mission_critical_delete' asset.pk %}" class="text-red-600 hover:text-red-700 font-medium flex items-center gap-1 transform hover:scale-110 transition">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                Delete
+                            </a>
+                        </div>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5" class="px-4 py-3 text-center text-gray-500">No assets found.</td>
+                    <td colspan="5" class="px-6 py-16 text-center text-gray-500">
+                        <svg class="w-20 h-20 mx-auto mb-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm10 5a1 1 0 011 1v3a1 1 0 11-2 0v-3a1 1 0 011-1zm-4 1a1 1 0 011 1v3a1 1 0 11-2 0v-3a1 1 0 011-1z" clip-rule="evenodd"></path>
+                        </svg>
+                        No assets found.
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -86,17 +125,19 @@
 
     <!-- Pagination -->
     {% if page_obj.has_other_pages %}
-    <div class="mt-6 flex justify-center gap-2">
+    <div class="mt-8 flex justify-center gap-3 flex-wrap">
         {% if page_obj.has_previous %}
-        <a href="?page=1" class="px-3 py-2 border rounded hover:bg-gray-100">First</a>
-        <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 border rounded hover:bg-gray-100">Previous</a>
+        <a href="?page=1" class="px-5 py-3 bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-xl font-bold shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">First</a>
+        <a href="?page={{ page_obj.previous_page_number }}" class="px-5 py-3 bg-white border-2 border-blue-600 text-blue-600 rounded-xl font-bold shadow-lg hover:shadow-2xl hover:bg-blue-600 hover:text-white transform hover:-translate-y-1 transition-all duration-300">Previous</a>
         {% endif %}
         
-        <span class="px-3 py-2">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        <span class="px-8 py-3 bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-xl font-bold shadow-lg">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </span>
         
         {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 border rounded hover:bg-gray-100">Next</a>
-        <a href="?page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 border rounded hover:bg-gray-100">Last</a>
+        <a href="?page={{ page_obj.next_page_number }}" class="px-5 py-3 bg-white border-2 border-blue-600 text-blue-600 rounded-xl font-bold shadow-lg hover:shadow-2xl hover:bg-blue-600 hover:text-white transform hover:-translate-y-1 transition-all duration-300">Next</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}" class="px-5 py-3 bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-xl font-bold shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">Last</a>
         {% endif %}
     </div>
     {% endif %}

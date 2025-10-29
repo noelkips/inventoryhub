@@ -1,7 +1,8 @@
+<!-- workplan_edit.html -->
 {% extends 'dashboard.html' %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 py-8 px-4">
     <div class="container mx-auto max-w-6xl">
         <!-- Header -->
         <div class="mb-8 animate-fade-in">
@@ -34,7 +35,7 @@
                 {% for day_info in days %}
                 <div class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:-translate-y-1 animate-scale-in" style="animation-delay: {{ day_info.animation_delay }};">
                     <!-- Day Header -->
-                    <div class="bg-gradient-to-r from-primary to-accent p-4 text-white">
+                    <div class="bg-gradient-to-r from-blue-600 to-teal-600 p-4 text-white">
                         <h3 class="text-xl font-bold flex items-center gap-2">
                             <span class="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-sm font-bold">{{ day_info.number }}</span>
                             {{ day_info.name }}
@@ -44,14 +45,13 @@
                     <!-- Task Input -->
                     <div class="p-6 space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-3">Update Your Tasks</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">Add Your Tasks</label>
                             <textarea 
                                 name="task_{{ day_info.name }}" 
                                 rows="6" 
                                 placeholder="Describe your tasks and activities for {{ day_info.name }}...&#10;• Task 1&#10;• Task 2&#10;• Task 3" 
-                                class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent focus:ring-opacity-20 transition-all duration-300 resize-none text-sm leading-relaxed"
-                                {% if not work_plan.is_editable %}disabled{% endif %}
-                            >{{ day_info.tasks }}</textarea>
+                                class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600 focus:ring-opacity-20 transition-all duration-300 resize-none text-sm leading-relaxed"
+                            >{{ day_info.task }}</textarea>
                         </div>
                         <div class="flex items-center gap-2 text-xs text-gray-500">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -65,15 +65,15 @@
             </div>
 
             <!-- Action Buttons -->
-            <div class="flex gap-4 justify-end pt-6 border-t">
-                <a href="{% url 'work_plan_detail' work_plan.pk %}" class="group bg-white text-primary px-8 py-3 rounded-xl border-2 border-primary hover:bg-primary hover:text-white transition-all duration-300 flex items-center gap-2 transform hover:-translate-y-1 font-semibold">
+            <div class="flex gap-4 justify-end pt-6 border-t border-gray-200">
+                <a href="{% url 'work_plan_detail' work_plan.pk %}" class="group bg-white text-blue-600 px-8 py-3 rounded-xl border-2 border-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300 flex items-center gap-2 transform hover:-translate-y-1 font-semibold">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"></path>
                     </svg>
                     Cancel
                 </a>
                 {% if work_plan.is_editable %}
-                <button type="submit" class="group bg-gradient-to-r from-accent to-blue-600 text-white px-8 py-3 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center gap-2 transform hover:-translate-y-1 font-semibold">
+                <button type="submit" class="group bg-gradient-to-r from-blue-600 to-teal-600 text-white px-8 py-3 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center gap-2 transform hover:-translate-y-1 font-semibold">
                     <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
                     </svg>
