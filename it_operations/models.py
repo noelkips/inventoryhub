@@ -109,6 +109,16 @@ class WorkPlan(models.Model):
         days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
         days_with_tasks = set(self.tasks.values_list('day', flat=True).distinct())
         return [day for day in days if day not in days_with_tasks]
+    
+    def get_current_week_status(self):
+        """Determine if this is current, past, or future week"""
+        today = timezone.now().date()
+        if self.week_start_date <= today <= self.week_end_date:
+            return 'current'
+        elif today > self.week_end_date:
+            return 'past'
+        else:
+            return 'future'
 
 
 class WorkPlanTask(models.Model):
@@ -122,18 +132,34 @@ class WorkPlanTask(models.Model):
     ]
     
     STATUS_CHOICES = [
-        ('Pending', 'Pending'),
-        ('In Progress', 'In Progress'),
         ('Completed', 'Completed'),
+        ('Not Completed', 'Not Completed'),
+        ('Not Done', 'Not Done'),
     ]
     
     work_plan = models.ForeignKey(WorkPlan, on_delete=models.CASCADE, related_name='tasks')
     day = models.CharField(max_length=10, choices=DAY_CHOICES)
-    task_description = models.TextField(help_text="Description of the task")
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    
+    task_name = models.CharField(max_length=255, help_text="Task name/title")
+    centre = models.ForeignKey(Centre, on_delete=models.SET_NULL, null=True, blank=True, help_text="Centre/Location (optional)")
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, help_text="Department (optional)")
+    
+    human_resources = models.ManyToManyField(User, blank=True, related_name='assigned_tasks', help_text="Assigned staff members")
+    
+    items_needed = models.CharField(max_length=500, blank=True, null=True, help_text="Items/resources needed (e.g., Portal, Help desk)")
+    
+    comments = models.TextField(blank=True, null=True, help_text="Additional comments/details about the task")
+    
+    target = models.CharField(max_length=500, blank=True, null=True, help_text="Target/Desired outcome")
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Not Done')
+    
+    status_updated_at = models.DateTimeField(auto_now=True)
+    status_updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='task_status_updates')
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_tasks')
     
     class Meta:
         ordering = ['day', 'created_at']
@@ -141,11 +167,51 @@ class WorkPlanTask(models.Model):
         verbose_name_plural = 'Work Plan Tasks'
     
     def __str__(self):
-        return f"{self.work_plan.user.username} - {self.day}: {self.task_description[:50]}"
+        return f"{self.work_plan.user.username} - {self.day}: {self.task_name}"
+    
+    def can_edit(self, user):
+        """Check if task can be edited based on week status and user role"""
+        work_plan = self.work_plan
+        week_status = work_plan.get_current_week_status()
+        
+        # IT Manager can always edit
+        if user.is_it_manager:
+            return True
+        
+        # Original creator can edit current week
+        if self.created_by == user and week_status == 'current':
+            return True
+        
+        # Can't edit future weeks (locked at status "Not Done")
+        if week_status == 'future':
+            return False
+        
+        return False
+    
+    def auto_update_status(self):
+        """Auto-update status based on week status"""
+        work_plan = self.work_plan
+        week_status = work_plan.get_current_week_status()
+        
+        if week_status == 'future':
+            self.status = 'Not Done'
+        elif week_status == 'past' and self.status != 'Completed':
+            self.status = 'Not Done'
+        
+        return self.status
+    
+    def get_status_color(self):
+        """Return color class based on status"""
+        status_colors = {
+            'Completed': 'bg-green-100 border-green-300 text-green-800',
+            'Not Completed': 'bg-yellow-100 border-yellow-300 text-yellow-800',
+            'Not Done': 'bg-red-100 border-red-300 text-red-800',
+        }
+        return status_colors.get(self.status, 'bg-gray-100')
 
 
 class WorkPlanTaskComment(models.Model):
-    task = models.ForeignKey(WorkPlanTask, on_delete=models.CASCADE, related_name='comments')
+    task = models.ForeignKey(WorkPlanTask, on_delete=models.CASCADE, related_name='task_comments')
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     comment = models.TextField()
     
@@ -153,9 +219,6 @@ class WorkPlanTaskComment(models.Model):
     
     class Meta:
         ordering = ['-created_at']
-    
-    def __str__(self):
-        return f"Comment by {self.user.username} on {self.task}"
 
 
 class WorkPlanActivity(models.Model):

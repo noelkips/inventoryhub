@@ -15,12 +15,13 @@ urlpatterns = [
     path('backup-registry/<int:pk>/edit/', views.backup_registry_update, name='backup_registry_update'),
     path('backup-registry/<int:pk>/delete/', views.backup_registry_delete, name='backup_registry_delete'),
     
-    # Work Plan
-    path('work-plan/', views.work_plan_list, name='work_plan_list'),
-    path('work-plan/<int:pk>/', views.work_plan_detail, name='work_plan_detail'),
-    path('work-plan/add/', views.work_plan_create, name='work_plan_create'),
-    path('work-plan/<int:pk>/edit/', views.work_plan_update, name='work_plan_update'),
-    path('work-plan/<int:pk>/comment/', views.work_plan_add_task_comment, name='work_plan_add_comment'),
-    path('work-plan/calendar/', views.work_plan_calendar, name='work_plan_calendar'),
-    path('work-plan/calendar/<int:user_id>/', views.work_plan_calendar, name='work_plan_calendar_user'),
+    #Work plan
+    path('calendar/', views.work_plan_calendar, name='calendar'),
+    path('calendar/<int:year>/<int:month>/', views.work_plan_calendar, name='calendar_month'),
+    path('<int:pk>/', views.work_plan_detail, name='work_plan_detail'),
+    path('list/', views.work_plan_list, name='work_plan_list'),
+    
+    path('<int:pk>/add-task/', views.add_task, name='add_task'),
+    path('task/<int:pk>/status/', views.update_task_status, name='update_task_status'),
+    path('task/<int:pk>/delete/', views.delete_task, name='delete_task'),
 ]

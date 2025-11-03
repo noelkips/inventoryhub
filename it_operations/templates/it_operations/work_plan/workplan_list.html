@@ -1,73 +1,87 @@
-<!-- workplan_list.html -->
 {% extends 'dashboard.html' %}
+{% load workplan_extras %}
+{% block title %}My Work Plans - MOHI IT{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold text-primary">Work Plans</h1>
-        <div class="flex gap-2">
-            <a href="{% url 'work_plan_create' %}" class="bg-gradient-to-r from-blue-600 to-teal-600 text-white px-4 py-2 rounded-xl font-bold shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
-                + Create Work Plan
-            </a>
-            <a href="{% url 'work_plan_calendar' %}" class="bg-gradient-to-r from-orange-600 to-orange-700 text-white px-4 py-2 rounded-xl font-bold shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
-                Calendar View
+<div class="container mx-auto p-6">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-primary mb-2">My Work Plans</h1>
+        <p class="text-gray-600">Manage your weekly work schedules</p>
+    </div>
+
+    {% if work_plans %}
+        <div class="space-y-4">
+            {% for work_plan in work_plans %}
+                <div class="bg-white rounded-lg shadow hover:shadow-xl transition-all duration-300 p-6 border-l-4 border-accent transform hover:-translate-y-1">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                                <h2 class="text-xl font-bold text-primary">
+                                    Week of {{ work_plan.week_start_date|date:"M d, Y" }}
+                                </h2>
+                                {% if work_plan.get_current_week_status == 'current' %}
+                                    <span class="px-3 py-1 bg-accent/10 text-accent rounded-full text-xs font-semibold">Current</span>
+                                {% elif work_plan.get_current_week_status == 'past' %}
+                                    <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-semibold">Past</span>
+                                {% else %}
+                                    <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">Upcoming</span>
+                                {% endif %}
+                            </div>
+                            <p class="text-sm text-gray-600 mb-1">
+                                {{ work_plan.week_start_date|date:"l" }} - {{ work_plan.week_end_date|date:"l, M d" }}
+                            </p>
+                            
+                           <!-- Progress Info -->
+                            <div class="flex flex-wrap gap-4 mt-3 text-sm">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                                    <span class="text-green-600 font-medium">
+                                        {{ work_plan.completed_count|default:0 }} Completed
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 bg-yellow-500 rounded-full"></span>
+                                    <span class="text-yellow-600 font-medium">
+                                        {{ work_plan.not_completed_count|default:0 }} Not Completed
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 bg-red-500 rounded-full"></span>
+                                    <span class="text-red-600 font-medium">
+                                        {{ work_plan.not_done_count|default:0 }} Not Done
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <p class="text-sm text-gray-500 mt-3">
+                                <span class="font-semibold text-primary">{{ work_plan.tasks.count }}</span> total tasks
+                            </p>
+                        </div>
+                        <a href="{% url 'work_plan_detail' work_plan.pk %}" 
+                           class="px-6 py-2 bg-accent hover:bg-accent/90 text-white rounded-lg font-semibold transition-all duration-300 shadow hover:shadow-lg whitespace-nowrap">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-16 bg-white rounded-lg shadow">
+            <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            <p class="text-gray-500 text-lg mb-4">No work plans yet. Create one to get started.</p>
+            <a href="{% url 'it_operations:calendar' %}" class="inline-block px-6 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors">
+                Create Work Plan
             </a>
         </div>
-    </div>
-
-    <!-- Work Plans Table -->
-    <div class="bg-white rounded-2xl shadow-xl overflow-x-auto border-2 border-slate-200">
-        <table class="w-full">
-            <thead class="bg-gradient-to-r from-blue-600 to-teal-600 text-white">
-                <tr>
-                    <th class="px-4 py-3 text-left font-bold uppercase tracking-wider">User</th>
-                    <th class="px-4 py-3 text-left font-bold uppercase tracking-wider">Week</th>
-                    <th class="px-4 py-3 text-left font-bold uppercase tracking-wider">Status</th>
-                    <th class="px-4 py-3 text-left font-bold uppercase tracking-wider">Created</th>
-                    <th class="px-4 py-3 text-left font-bold uppercase tracking-wider">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-200">
-                {% for plan in work_plans %}
-                <tr class="hover:bg-blue-50 transition-all duration-300">
-                    <td class="px-4 py-3 font-medium text-gray-800">{{ plan.user_name }}</td>
-                    <td class="px-4 py-3 text-gray-700">{{ plan.week_start }} - {{ plan.week_end }}</td>
-                    <td class="px-4 py-3">
-                        {% if plan.is_submitted %}
-                        <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-sm font-bold">Submitted</span>
-                        {% else %}
-                        <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-sm font-bold">Pending</span>
-                        {% endif %}
-                    </td>
-                    <td class="px-4 py-3 text-gray-700">{{ plan.created_at }}</td>
-                    <td class="px-4 py-3">
-                        <a href="{% url 'work_plan_detail' plan.id %}" class="text-teal-600 hover:text-teal-700 font-medium">View</a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5" class="px-4 py-3 text-center text-gray-500">No work plans found.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Pagination -->
-    {% if page_obj.has_other_pages %}
-    <div class="mt-6 flex justify-center gap-2">
-        {% if page_obj.has_previous %}
-        <a href="?page=1" class="px-3 py-2 border-2 border-blue-600 rounded-xl text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300">First</a>
-        <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 border-2 border-blue-600 rounded-xl text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300">Previous</a>
-        {% endif %}
-        
-        <span class="px-3 py-2 bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-xl font-bold">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-        
-        {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 border-2 border-blue-600 rounded-xl text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300">Next</a>
-        <a href="?page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 border-2 border-blue-600 rounded-xl text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300">Last</a>
-        {% endif %}
-    </div>
     {% endif %}
 </div>
+
+<style>
+.bg-primary { background-color: #143C50; }
+.text-primary { color: #143C50; }
+.bg-accent { background-color: #288CC8; }
+.text-accent { color: #288CC8; }
+</style>
 {% endblock %}
