@@ -1,0 +1,191 @@
+{% extends 'dashboard.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mx-auto p-4 lg:p-6">
+    <!-- Header -->
+    <div class="mb-8 animate-fade-in">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-4xl font-bold text-primary mb-2">
+                    Filtered Devices: {{ filter_display }}
+                </h1>
+                <p class="text-gray-600">Showing {{ total_devices }} device(s)</p>
+            </div>
+            <a href="{% url 'dashboard' %}" class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition duration-200 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"></path>
+                </svg>
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white p-6 rounded-2xl shadow-md mb-8">
+        <h3 class="text-lg font-bold text-primary mb-4">Filters & Search</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+                <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search:</label>
+                <input type="text" name="search" id="search" class="w-full border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent" value="{{ search_query }}" placeholder="Serial, hardware, assignee..." onchange="updateSearch(this.value)">
+            </div>
+            <div>
+                <label for="items_per_page" class="block text-sm font-medium text-gray-700 mb-2">Items per Page:</label>
+                <select name="items_per_page" id="items_per_page" class="w-full border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent" onchange="updateItemsPerPage(this.value)">
+                    {% for size in items_per_page_options %}
+                        <option value="{{ size }}" {% if items_per_page == size %}selected{% endif %}>
+                            {{ size }} per page
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex items-end col-span-2">
+                <button onclick="clearFilters()" class="w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition duration-200">
+                    Clear All Filters
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Devices Table -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden mb-8">
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead>
+                    <tr class="bg-primary text-white">
+                        <th class="py-4 px-4 text-left text-sm font-semibold">Serial Number</th>
+                        <th class="py-4 px-4 text-left text-sm font-semibold">Hardware</th>
+                        <th class="py-4 px-4 text-left text-sm font-semibold">Centre</th>
+                        <th class="py-4 px-4 text-left text-sm font-semibold">Department</th>
+                        <th class="py-4 px-4 text-left text-sm font-semibold">Assignee</th>
+                        <th class="py-4 px-4 text-left text-sm font-semibold">Status</th>
+                        <th class="py-4 px-4 text-left text-sm font-semibold">Condition</th>
+                        <th class="py-4 px-4 text-left text-sm font-semibold">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for device in devices %}
+                        <tr class="hover:bg-gray-50 transition duration-150">
+                            <td class="py-3 px-4">
+                                <p class="text-sm font-medium text-primary">{{ device.serial_number|default:"N/A" }}</p>
+                            </td>
+                            <td class="py-3 px-4 text-sm text-gray-700">{{ device.hardware|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-sm text-gray-700">{{ device.centre.name|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-sm text-gray-700">{{ device.department.name|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-sm text-gray-700">
+                                {{ device.assignee_first_name|default:"" }} {{ device.assignee_last_name|default:"" }}
+                            </td>
+                            <td class="py-3 px-4">
+                                <span class="inline-block px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">
+                                    {{ device.status|default:"N/A" }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4">
+                                <span class="inline-block px-2 py-1 rounded text-xs font-semibold 
+                                    {% if device.device_condition == 'Good' %}bg-green-100 text-green-800
+                                    {% elif device.device_condition == 'Fair' %}bg-yellow-100 text-yellow-800
+                                    {% else %}bg-red-100 text-red-800{% endif %}">
+                                    {{ device.device_condition|default:"N/A" }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4">
+                                <a href="{% url 'device_history' device.id %}" class="bg-accent text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition duration-200 text-sm">View</a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="8" class="py-8 text-center text-gray-500">
+                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                <p class="mt-2 text-sm">No devices found matching your criteria.</p>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if paginator.num_pages > 1 %}
+            <div class="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                <div class="flex-1 flex justify-between sm:hidden">
+                    {% if devices.has_previous %}
+                        <a href="?page={{ devices.previous_page_number }}&type={{ filter_type }}&value={{ filter_value }}&items_per_page={{ items_per_page }}&search={{ search_query|urlencode }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Previous</a>
+                    {% endif %}
+                    {% if devices.has_next %}
+                        <a href="?page={{ devices.next_page_number }}&type={{ filter_type }}&value={{ filter_value }}&items_per_page={{ items_per_page }}&search={{ search_query|urlencode }}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Next</a>
+                    {% endif %}
+                </div>
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Showing <span class="font-medium">{{ devices.start_index }}</span> to <span class="font-medium">{{ devices.end_index }}</span> of <span class="font-medium">{{ total_devices }}</span> results
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                            {% if devices.has_previous %}
+                                <a href="?page=1&type={{ filter_type }}&value={{ filter_value }}&items_per_page={{ items_per_page }}&search={{ search_query|urlencode }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                    <span>First</span>
+                                </a>
+                                <a href="?page={{ devices.previous_page_number }}&type={{ filter_type }}&value={{ filter_value }}&items_per_page={{ items_per_page }}&search={{ search_query|urlencode }}" class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                    <span>&lsaquo;</span>
+                                </a>
+                            {% endif %}
+                            
+                            {% for num in paginator.page_range %}
+                                {% if num >= devices.number|add:-2 and num <= devices.number|add:2 %}
+                                    <a href="?page={{ num }}&type={{ filter_type }}&value={{ filter_value }}&items_per_page={{ items_per_page }}&search={{ search_query|urlencode }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 {% if num == devices.number %}bg-accent text-white{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %} text-sm font-medium">
+                                        {{ num }}
+                                    </a>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if devices.has_next %}
+                                <a href="?page={{ devices.next_page_number }}&type={{ filter_type }}&value={{ filter_value }}&items_per_page={{ items_per_page }}&search={{ search_query|urlencode }}" class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                    <span>&rsaquo;</span>
+                                </a>
+                                <a href="?page={{ paginator.num_pages }}&type={{ filter_type }}&value={{ filter_value }}&items_per_page={{ items_per_page }}&search={{ search_query|urlencode }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                    <span>Last</span>
+                                </a>
+                            {% endif %}
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function updateSearch(value) {
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('search', value);
+    urlParams.set('page', 1);
+    window.location.href = "{% url 'filtered_devices' %}?" + urlParams.toString();
+}
+
+function updateItemsPerPage(value) {
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('items_per_page', value);
+    urlParams.set('page', 1);
+    window.location.href = "{% url 'filtered_devices' %}?" + urlParams.toString();
+}
+
+function clearFilters() {
+    window.location.href = "{% url 'display_approved_imports' %}";
+}
+</script>
+
+<style>
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    .animate-fade-in {
+        animation: fadeIn 0.8s ease-in forwards;
+        opacity: 0;
+    }
+</style>
+{% endblock %}

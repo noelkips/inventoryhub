@@ -2012,3 +2012,122 @@ def download_clearance_form(request, device_id):
     doc.build(elements, onFirstPage=add_watermark, onLaterPages=add_watermark)
 
     return response
+
+
+@login_required
+def filtered_devices_view(request):
+    user = request.user
+    
+    # Base query based on user role
+    if user.is_superuser and not user.is_trainer:
+        device_query = Import.objects.all()
+    elif user.is_trainer and user.centre:
+        device_query = Import.objects.filter(centre=user.centre)
+    else:
+        device_query = Import.objects.none()
+    
+    # Get filter parameters
+    filter_type = request.GET.get('type', '')  # hardware, centre, status, condition
+    filter_value = request.GET.get('value', '')
+    search_query = request.GET.get('search', '').strip()
+    items_per_page = request.GET.get('items_per_page', '25')
+    page_number = request.GET.get('page', '1')
+    
+    # Apply filters
+    if filter_type == 'hardware' and filter_value:
+        # Handle grouped hardware categories
+        hardware_map = {
+            'Laptop': ['laptop'],
+            'Monitor': ['monitor'],
+            'System Unit': ['system unit'],
+            'Printer': ['printer'],
+            'Routers/Switch/Server': ['router', 'switch', 'server'],
+            'Endcomputing': ['endcomputing'],
+            'Television': ['television']
+        }
+        
+        if filter_value in hardware_map:
+            query = Q()
+            for term in hardware_map[filter_value]:
+                query |= Q(hardware__icontains=term)
+            device_query = device_query.filter(query)
+        else:
+            device_query = device_query.filter(hardware__icontains=filter_value)
+    
+    elif filter_type == 'centre' and filter_value:
+        device_query = device_query.filter(centre__name=filter_value)
+    
+    elif filter_type == 'status' and filter_value:
+        device_query = device_query.filter(status=filter_value)
+    
+    elif filter_type == 'condition' and filter_value:
+        device_query = device_query.filter(device_condition=filter_value)
+    
+    elif filter_type == 'ppm_status':
+        # Get active period
+        active_period = PPMPeriod.objects.filter(is_active=True).first()
+        if not active_period:
+            active_period = PPMPeriod.objects.order_by('-end_date').first()
+        
+        if active_period:
+            devices_with_ppm = PPMTask.objects.filter(
+                period=active_period
+            ).values_list('device_id', flat=True).distinct()
+            
+            if filter_value == 'completed':
+                device_query = device_query.filter(id__in=devices_with_ppm)
+            elif filter_value == 'pending':
+                device_query = device_query.filter(is_approved=True, is_disposed=False).exclude(id__in=devices_with_ppm)
+    
+    # Default filter to approved and non-disposed
+    device_query = device_query.filter(is_approved=True, is_disposed=False)
+    
+    # Apply search
+    if search_query:
+        query = (
+            Q(serial_number__icontains=search_query) |
+            Q(hardware__icontains=search_query) |
+            Q(assignee_first_name__icontains=search_query) |
+            Q(assignee_last_name__icontains=search_query) |
+            Q(centre__name__icontains=search_query) |
+            Q(department__name__icontains=search_query)
+        )
+        device_query = device_query.filter(query)
+    
+    # Validate items_per_page
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [10, 25, 50, 100, 500]:
+            items_per_page = 25
+    except ValueError:
+        items_per_page = 25
+    
+    # Order by date
+    device_query = device_query.select_related('centre', 'department').order_by('-date', 'id')
+    
+    # Pagination
+    paginator = Paginator(device_query, items_per_page)
+    try:
+        page_number = int(page_number) if page_number else 1
+        devices = paginator.page(page_number)
+    except:
+        devices = paginator.page(1)
+    
+    # Get filter display name
+    filter_display = filter_value if filter_value else "All Devices"
+    if filter_type == 'ppm_status':
+        filter_display = f"PPM {filter_value.title()}"
+    
+    context = {
+        'devices': devices,
+        'filter_type': filter_type,
+        'filter_value': filter_value,
+        'filter_display': filter_display,
+        'search_query': search_query,
+        'items_per_page': items_per_page,
+        'items_per_page_options': [10, 25, 50, 100, 500],
+        'paginator': paginator,
+        'total_devices': paginator.count,
+    }
+    
+    return render(request, 'import/zfiltered_devices.html', context)

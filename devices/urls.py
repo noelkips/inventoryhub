@@ -39,6 +39,8 @@ urlpatterns = [
     path('exportpdf/', views.export_to_pdf, name='export_to_pdf'),
     path('exportexcel/', views.export_to_excel, name='export_to_excel'),
 
+    path('devices/filtered/', views.filtered_devices_view, name='filtered_devices'),
+
     # Notifications
     path('notifications/', views.notifications_view, name='notifications_view'),
     path('notifications/<int:pk>/mark-read/', views.mark_notification_read, name='mark_notification_read'),
