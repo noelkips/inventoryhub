@@ -15,14 +15,24 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from io import BytesIO
 import os
 
+# admin.py
+from django.contrib.auth.admin import UserAdmin
+from django.core.exceptions import PermissionDenied
+from django.utils.translation import gettext_lazy as _
+
+
+# ----------------------------------------------------------------------
+# 1. FORM – password + trainer-centre validation
+# ----------------------------------------------------------------------
 class CustomUserAdminForm(forms.ModelForm):
     password1 = forms.CharField(
-        label="Password",
+        label=_("Password"),
         widget=forms.PasswordInput,
         required=False,
+        help_text=_("Leave blank to keep current password."),
     )
     password2 = forms.CharField(
-        label="Confirm Password",
+        label=_("Confirm Password"),
         widget=forms.PasswordInput,
         required=False,
     )
@@ -31,68 +41,180 @@ class CustomUserAdminForm(forms.ModelForm):
         model = CustomUser
         fields = '__all__'
         widgets = {
-            'groups': forms.SelectMultiple(attrs={'class': 'select2'}),
+            'groups': forms.SelectMultiple(attrs={'class': "select2"}),
         }
 
     def clean(self):
         cleaned_data = super().clean()
-        password1 = cleaned_data.get("password1")
-        password2 = cleaned_data.get("password2")
+        p1 = cleaned_data.get("password1")
+        p2 = cleaned_data.get("password2")
         is_trainer = cleaned_data.get("is_trainer")
         centre = cleaned_data.get("centre")
 
-        if password1 and password2:
-            if password1 != password2:
-                raise forms.ValidationError("Passwords do not match.")
+        if p1 and p2 and p1 != p2:
+            raise forms.ValidationError(_("Passwords do not match."))
+
         if is_trainer and not centre:
-            raise forms.ValidationError("Centre is required for trainers.")
+            raise forms.ValidationError(_("Centre is required for trainers."))
+
         return cleaned_data
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        password1 = self.cleaned_data.get("password1")
-        if password1:
-            user.set_password(password1)
+        p1 = self.cleaned_data.get("password1")
+        if p1:
+            user.set_password(p1)
         if commit:
             user.save()
-            if hasattr(self, 'save_m2m'):
-                user.groups.clear()
-                groups = self.cleaned_data.get('groups')
-                if groups is not None:
-                    user.groups.set(groups)
+            self.save_m2m()
         return user
 
-class CustomUserAdmin(admin.ModelAdmin):
+
+# ----------------------------------------------------------------------
+# 2. ADMIN – role-field protection + password fix
+# ----------------------------------------------------------------------
+@admin.register(CustomUser)
+class CustomUserAdmin(UserAdmin):
     form = CustomUserAdminForm
-    list_display = ('username', 'email', 'is_trainer', 'centre', 'is_staff', 'is_superuser', 'get_groups')
-    list_filter = ('is_trainer', 'centre', 'groups', 'is_staff', 'is_superuser')
-    search_fields = ('username', 'email', 'groups__name')
-    fieldsets = (
-        (None, {'fields': ('username', 'email', 'password1', 'password2')}),
-        ('Personal Info', {'fields': ('first_name', 'last_name')}),
-        ('Permissions', {'fields': ('is_trainer', 'centre', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
-        ('Important Dates', {'fields': ('last_login', 'date_joined')}),
+
+    # ----- list view -----
+    list_display = (
+        "username", "email", "first_name", "last_name", "centre",
+        "is_trainer", "is_staff", "is_superuser", "get_groups"
     )
-    add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('username', 'email', 'password1', 'password2', 'is_trainer', 'is_superuser', 'centre', 'groups'),
-        }),
+    list_filter = ("is_trainer", "centre", "groups", "is_staff", "is_superuser")
+    search_fields = ("username", "email", "first_name", "last_name", "groups__name")
+
+    # ----- fieldsets (NO password1/2 here!) -----
+    base_fieldsets = (
+        (None, {"fields": ("username", "email")}),
+        ("Personal Info", {"fields": ("first_name", "last_name", "centre")}),
+        (
+            "Permissions",
+            {
+                "fields": (
+                    "is_trainer",
+                    "is_staff",
+                    "is_superuser",
+                    "is_it_manager",
+                    "is_senior_it_officer",
+                    "groups",
+                    "user_permissions",
+                )
+            },
+        ),
+        ("Important dates", {"fields": ("last_login", "date_joined")}),
     )
 
-    def get_fieldsets(self, request, obj=None):
-        if not obj:
-            return self.add_fieldsets
-        return super().get_fieldsets(request, obj)
+    add_fieldsets = (
+        (
+            None,
+            {
+                "classes": ("wide",),
+                "fields": (
+                    "username", "email", "password1", "password2",
+                    "first_name", "last_name", "centre",
+                    "is_trainer", "is_staff", "is_superuser",
+                    "is_it_manager", "is_senior_it_officer", "groups",
+                ),
+            },
+        ),
+    )
 
     def get_groups(self, obj):
-        return ", ".join([group.name for group in obj.groups.all()])
-    get_groups.short_description = 'Groups'
+        return ", ".join(g.name for g in obj.groups.all())
+    get_groups.short_description = "Groups"
 
+    # ------------------------------------------------------------------
+    # 3. DYNAMIC FORM + PASSWORD FIELDS
+    # ------------------------------------------------------------------
+    def get_form(self, request, obj=None, **kwargs):
+        """
+        Inject password1/password2 into the form for both add & change.
+        """
+        form = super().get_form(request, obj, **kwargs)
+        return form
+
+    def get_fieldsets(self, request, obj=None):
+        if obj is None:  # Add form
+            if self._is_role_editor(request):
+                return self.add_fieldsets
+            else:
+                # Non-role editors: remove role fields from add form
+                return (
+                    (
+                        None,
+                        {
+                            "classes": ("wide",),
+                            "fields": (
+                                "username", "email", "password1", "password2",
+                                "first_name", "last_name", "centre",
+                            ),
+                        },
+                    ),
+                )
+        return self.base_fieldsets
+
+    # ------------------------------------------------------------------
+    # 4. ROLE EDITOR CHECK
+    # ------------------------------------------------------------------
+    def _is_role_editor(self, request):
+        return request.user.is_it_manager or request.user.is_senior_it_officer
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly = super().get_readonly_fields(request, obj)
+
+        if not self._is_role_editor(request):
+            role_fields = (
+                "is_trainer", "is_staff", "is_superuser",
+                "is_it_manager", "is_senior_it_officer",
+                "groups", "user_permissions"
+            )
+            readonly = readonly + role_fields
+
+        # Never show password fields as readonly (they're not model fields)
+        return readonly
+
+    # ------------------------------------------------------------------
+    # 5. BLOCK ROLE CHANGES
+    # ------------------------------------------------------------------
     def save_model(self, request, obj, form, change):
-        if not change and form.cleaned_data.get('password1'):
-            obj.set_password(form.cleaned_data['password1'])
+        if not self._is_role_editor(request):
+            role_keys = {
+                "is_trainer", "is_staff", "is_superuser",
+                "is_it_manager", "is_senior_it_officer",
+                "groups", "user_permissions"
+            }
+            for key in role_keys:
+                if key in form.cleaned_data:
+                    db_val = getattr(CustomUser.objects.get(pk=obj.pk), key) if change else None
+                    new_val = form.cleaned_data[key]
+                    if key == "groups":
+                        db_ids = {g.id for g in (obj.groups.all() if change else [])}
+                        new_ids = {g.id for g in new_val} if new_val else set()
+                        if db_ids != new_ids:
+                            raise PermissionDenied("You are not allowed to modify user roles.")
+                    elif db_val != new_val:
+                        raise PermissionDenied("You are not allowed to modify user roles.")
+
+        # Handle password
+        p1 = form.cleaned_data.get("password1")
+        if p1:
+            obj.set_password(p1)
+
         super().save_model(request, obj, form, change)
+
+    # ------------------------------------------------------------------
+    # 6. WARNING MESSAGE
+    # ------------------------------------------------------------------
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        if not self._is_role_editor(request):
+            self.message_user(
+                request,
+                "You can only edit basic user information. Role changes are restricted.",
+                level="warning",
+            )
+        return super().change_view(request, object_id, form_url, extra_context)
 
         
 class ImportAdmin(admin.ModelAdmin):
@@ -249,7 +371,6 @@ class ReportAdmin(admin.ModelAdmin):
         displaycsv_url = reverse('display_approved_imports')
         return redirect(displaycsv_url)
 
-admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(Centre)
 admin.site.register(Department)
 admin.site.register(Import, ImportAdmin)

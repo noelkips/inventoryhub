@@ -8,7 +8,7 @@
   <!-- Breadcrumbs -->
   <nav class="text-sm mb-4">
     <ul class="flex space-x-2">
-      <li><a href="{% url 'dashboard' %}" class="text-blue-600 hover:text-blue-800 transition duration-200">Dashboard</a></li>
+      <li><a href="{% url 'dashboard' %}" class="text-blue-600 hover:text-blue-800 transition">Dashboard</a></li>
       <li><span class="text-gray-500">/</span></li>
       <li><span class="text-gray-700">Manage Users</span></li>
     </ul>
@@ -18,7 +18,7 @@
   {% if messages %}
     <div class="mb-4">
       {% for message in messages %}
-        <div class="bg-{% if message.tags == 'error' %}red{% else %}green{% endif %}-100 border border-{% if message.tags == 'error' %}red{% else %}green{% endif %}-400 text-{% if message.tags == 'error' %}red{% else %}green{% endif %}-700 px-4 py-3 rounded relative animate__animated animate__fadeIn" role="alert">
+        <div class="bg-{% if message.tags == 'error' %}red{% else %}green{% endif %}-100 border border-{% if message.tags == 'error' %}red{% else %}green{% endif %}-400 text-{% if message.tags == 'error' %}red{% else %}green{% endif %}-700 px-4 py-3 rounded animate__animated animate__fadeIn" role="alert">
           {{ message }}
         </div>
       {% endfor %}
@@ -27,9 +27,9 @@
 
   <!-- Action Buttons -->
   <div class="mb-4 flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
-    <button onclick="showModal('add')" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200 w-full sm:w-auto">Add User</button>
+    <button onclick="showModal('add')" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full sm:w-auto">Add User</button>
     {% if request.user.is_superuser %}
-      <button onclick="showModal('manage_groups')" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200 w-full sm:w-auto">Manage Groups</button>
+      <button onclick="showModal('manage_groups')" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full sm:w-auto">Manage Groups</button>
     {% endif %}
   </div>
 
@@ -46,20 +46,36 @@
       </thead>
       <tbody id="userTableBody">
         {% for user in users %}
-          <tr class="hover:bg-gray-50 animate__animated animate__fadeIn transition duration-150" data-user-id="{{ user.pk }}" data-username="{{ user.username }}" data-email="{{ user.email }}" data-first-name="{{ user.first_name|default:'' }}" data-last-name="{{ user.last_name|default:'' }}" data-centre="{{ user.centre.id|default:'' }}" data-is-trainer="{{ user.is_trainer }}" data-is-staff="{{ user.is_staff }}" data-is-superuser="{{ user.is_superuser }}" data-groups="{% for group in user.groups.all %}{{ group.id }}{% if not forloop.last %},{% endif %}{% endfor %}" data-devices-added="{{ user.stats.devices_added }}" data-devices-approved="{{ user.stats.devices_approved|default:'0' }}" data-devices-updated="{{ user.stats.devices_updated|default:'0' }}">
+          <tr class="hover:bg-gray-50 transition"
+              data-user-id="{{ user.pk }}"
+              data-username="{{ user.username }}"
+              data-email="{{ user.email }}"
+              data-first-name="{{ user.first_name|default:'' }}"
+              data-last-name="{{ user.last_name|default:'' }}"
+              data-centre="{{ user.centre.name|default:'N/A' }}"
+              data-is-trainer="{{ user.is_trainer }}"
+              data-is-staff="{{ user.is_staff }}"
+              data-is-superuser="{{ user.is_superuser }}"
+              data-is-it-manager="{{ user.is_it_manager }}"
+              data-is-senior-it-officer="{{ user.is_senior_it_officer }}"
+              data-groups="{% for g in user.groups.all %}{{ g.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
             <td class="py-2 px-4 border">
               <strong>Username:</strong> {{ user.username }}<br>
               <strong>Email:</strong> {{ user.email }}
             </td>
             <td class="py-2 px-4 border">
               <strong>Centre:</strong> {{ user.centre.name|default:"N/A" }}<br>
-              <strong>Trainer:</strong> {{ user.is_trainer|yesno:"Yes,No" }}
+              <strong>Role:</strong>
+              {% if user.is_it_manager %}IT Manager{% elif user.is_senior_it_officer %}Senior IT Officer{% elif user.is_trainer %}Trainer{% elif user.is_staff %}Staff{% else %}User{% endif %}
             </td>
             <td class="py-2 px-4 border">{{ user.groups.all|join:", "|default:"N/A" }}</td>
-            <td class="py-2 px-4 border flex space-x-2">
-              <button onclick="showModal('view', {{ user.pk }})" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition duration-200">View</button>
-              <button onclick="showModal('update', {{ user.pk }})" class="bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 transition duration-200">Edit</button>
-              <button onclick="showModal('delete', {{ user.pk }})" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition duration-200">Delete</button>
+            <td class="py-2 px-4 border flex flex-wrap gap-1 text-xs">
+              <button onclick="showModal('view', {{ user.pk }})" class="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">View</button>
+              <button onclick="showModal('update', {{ user.pk }})" class="bg-yellow-600 text-white px-2 py-1 rounded hover:bg-yellow-700">Edit</button>
+
+              {% if request.user.is_it_manager or request.user.is_senior_it_officer %}
+                <button onclick="showModal('delete', {{ user.pk }})" class="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Delete</button>
+              {% endif %}
             </td>
           </tr>
         {% empty %}
@@ -71,71 +87,33 @@
     </table>
   </div>
 
-  <!-- View Details Modal -->
+  <!-- VIEW MODAL -->
   <div id="viewModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-7xl mx-4 md:mx-6 max-h-[80vh] md:max-h-[90vh] overflow-y-auto relative animate__animated animate__zoomIn">
-      <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-t-lg flex justify-between items-center">
-        <h3 class="text-xl font-semibold">User Details</h3>
-        <button onclick="closeModal('viewModal')" class="text-white hover:bg-gray-200 hover:text-gray-800 rounded-full p-2 transition duration-200">&times;</button>
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold text-blue-800">User Details</h3>
+        <button onclick="closeModal('viewModal')" class="text-gray-600 hover:text-gray-800 text-2xl">x</button>
       </div>
-      <div class="p-8">
-        <div id="loadingSpinner" class="hidden flex justify-center items-center mb-4">
-          <svg class="animate-spin h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-        </div>
-        <div class="mb-6">
-          <h4 class="text-lg font-bold text-gray-800 mb-2">User Profile</h4>
-          <div class="bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-200">
-            <p class="text-2xl font-semibold text-gray-800" id="viewUsername"></p>
-            <p class="text-lg text-gray-600" id="viewEmail"></p>
-          </div>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div>
-            <h4 class="text-lg font-bold text-gray-800 mb-2">Personal Info</h4>
-            <div class="bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-200">
-              <p class="mb-4 text-sm md:text-base"><strong class="text-gray-700 font-semibold">First Name:</strong> <span id="viewFirstName" class="text-gray-600"></span></p>
-              <p class="mb-4 text-sm md:text-base"><strong class="text-gray-700 font-semibold">Last Name:</strong> <span id="viewLastName" class="text-gray-600"></span></p>
-              <p class="mb-4 text-sm md:text-base"><strong class="text-gray-700 font-semibold">Centre:</strong> <span id="viewCentre" class="text-gray-600"></span></p>
-            </div>
-          </div>
-          <div>
-            <h4 class="text-lg font-bold text-gray-800 mb-2">Roles</h4>
-            <div class="bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-200">
-              <p class="mb-4 text-sm md:text-base"><strong class="text-gray-700 font-semibold">Is Trainer:</strong> <span id="viewIsTrainer" class="text-gray-600"></span></p>
-              <p class="mb-4 text-sm md:text-base"><strong class="text-gray-700 font-semibold">Is Staff:</strong> <span id="viewIsStaff" class="text-gray-600"></span></p>
-              <p class="mb-4 text-sm md:text-base"><strong class="text-gray-700 font-semibold">Is Superuser:</strong> <span id="viewIsSuperuser" class="text-gray-600"></span></p>
-              <p class="mb-4 text-sm md:text-base"><strong class="text-gray-700 font-semibold">Groups:</strong> <span id="viewGroups" class="text-gray-600"></span></p>
-            </div>
-          </div>
-        </div>
-        <div class="mt-8">
-          <h4 class="text-lg font-bold text-gray-800 mb-2">Activity Stats</h4>
-          <div class="bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-200">
-            <p class="mb-4 text-sm md:text-base"><strong class="text-gray-700 font-semibold" title="Number of devices added by this user">Devices Added:</strong> <span id="viewDevicesAdded" class="text-gray-600"></span></p>
-            {% if request.user.is_superuser %}
-              <p class="mb-4 text-sm md:text-base"><strong class="text-gray-700 font-semibold" title="Number of devices approved by this user">Devices Approved:</strong> <span id="viewDevicesApproved" class="text-gray-600"></span></p>
-            {% endif %}
-            {% if request.user.is_trainer %}
-              <p class="mb-4 text-sm md:text-base"><strong class="text-gray-700 font-semibold" title="Number of device update requests submitted by this user">Devices Updated:</strong> <span id="viewDevicesUpdated" class="text-gray-600"></span></p>
-            {% endif %}
-          </div>
-        </div>
-        <div class="mt-6 flex justify-end">
-          <button class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200" onclick="closeModal('viewModal')">Close</button>
-        </div>
+      <div class="space-y-3 text-gray-700">
+        <p><strong>Username:</strong> <span id="viewUsername"></span></p>
+        <p><strong>Email:</strong> <span id="viewEmail"></span></p>
+        <p><strong>Name:</strong> <span id="viewName"></span></p>
+        <p><strong>Centre:</strong> <span id="viewCentre"></span></p>
+        <p><strong>Role:</strong> <span id="viewRole"></span></p>
+        <p><strong>Groups:</strong> <span id="viewGroups"></span></p>
+      </div>
+      <div class="mt-6 flex justify-end">
+        <button onclick="closeModal('viewModal')" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">Close</button>
       </div>
     </div>
   </div>
 
-  <!-- Add/Update User Modal -->
+  <!-- UPDATE MODAL (existing) -->
   <div id="userModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-7xl mx-4 md:mx-6 max-h-[80vh] md:max-h-[90vh] overflow-y-auto relative animate__animated animate__zoomIn">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-7xl mx-4 md:mx-6 max-h-[90vh] overflow-y-auto">
       <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-t-lg flex justify-between items-center">
         <h3 id="modalTitle" class="text-xl font-semibold"></h3>
-        <button onclick="closeModal('userModal')" class="text-white hover:bg-gray-200 hover:text-gray-800 rounded-full p-2 transition duration-200">&times;</button>
+        <button onclick="closeModal('userModal')" class="text-white hover:bg-gray-200 hover:text-gray-800 rounded-full p-2">x</button>
       </div>
       <div class="p-8">
         <form id="userForm" method="post" action="" class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -153,6 +131,7 @@
             <div class="mb-4">
               <label class="block text-gray-700 font-medium mb-1">Password</label>
               <input type="password" name="password" id="password" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <p class="text-xs text-gray-500 mt-1">Leave blank to keep current password.</p>
             </div>
           </div>
           <div>
@@ -174,7 +153,9 @@
               </select>
             </div>
           </div>
-          <div>
+
+          {% if request.user.is_it_manager or request.user.is_senior_it_officer %}
+          <div id="roleSection">
             <div class="mb-4">
               <label class="block text-gray-700 font-medium mb-1">Groups</label>
               <select name="groups" id="groups" multiple class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -183,228 +164,165 @@
                 {% endfor %}
               </select>
             </div>
-            <div class="mb-4 flex flex-col space-y-2">
+            <div class="mb-4 grid grid-cols-2 gap-2">
               <label class="flex items-center">
                 <input type="checkbox" name="is_trainer" id="is_trainer" class="mr-2">
-                <span class="text-gray-700 font-medium">Is Trainer</span>
+                <span>Is Trainer</span>
               </label>
               <label class="flex items-center">
                 <input type="checkbox" name="is_staff" id="is_staff" class="mr-2">
-                <span class="text-gray-700 font-medium">Is Staff</span>
+                <span>Is Staff</span>
               </label>
               <label class="flex items-center">
                 <input type="checkbox" name="is_superuser" id="is_superuser" class="mr-2">
-                <span class="text-gray-700 font-medium">Is Superuser</span>
+                <span>Is Superuser</span>
               </label>
             </div>
           </div>
+          {% else %}
+          <div class="bg-gray-50 p-4 rounded border">
+            <h4 class="font-semibold text-gray-700 mb-2">Current Roles (Read-Only)</h4>
+            <p><strong>Trainer:</strong> <span id="readonlyTrainer">No</span></p>
+            <p><strong>Staff:</strong> <span id="readonlyStaff">No</span></p>
+            <p><strong>Superuser:</strong> <span id="readonlySuperuser">No</span></p>
+            <p><strong>IT Manager:</strong> <span id="readonlyItManager">No</span></p>
+            <p><strong>Senior IT Officer:</strong> <span id="readonlySeniorOfficer">No</span></p>
+            <p><strong>Groups:</strong> <span id="readonlyGroups">None</span></p>
+          </div>
+          <input type="hidden" name="groups" value="">
+          <input type="hidden" name="is_trainer" value="false">
+          <input type="hidden" name="is_staff" value="false">
+          <input type="hidden" name="is_superuser" value="false">
+          {% endif %}
+
           <div class="col-span-1 md:col-span-3 flex justify-end space-x-3">
-            <button type="button" onclick="closeModal('userModal')" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200">Cancel</button>
-            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200">Save</button>
+            <button type="button" onclick="closeModal('userModal')" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">Cancel</button>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Save</button>
           </div>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- Delete Confirmation Modal -->
+  <!-- DELETE MODAL -->
+  {% if request.user.is_it_manager or request.user.is_senior_it_officer %}
   <div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center">
-    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md mx-4 animate__animated animate__zoomIn">
-      <h3 class="text-lg font-bold mb-4 text-gray-800">Delete User</h3>
-      <p class="text-gray-600 mb-4">Are you sure you want to delete this user (<span id="deleteUsername"></span>)?</p>
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md mx-4">
+      <h3 class="text-lg font-bold mb-4 text-red-600">Delete User</h3>
+      <p class="text-gray-700 mb-4">Are you sure you want to <strong>permanently delete</strong> this user?</p>
+      <p class="text-sm text-gray-600 mb-4">
+        <strong>Username:</strong> <span id="deleteUsername" class="font-medium"></span>
+      </p>
       <form id="deleteForm" method="post" action="">
         {% csrf_token %}
         <input type="hidden" id="deleteUserId" name="user_id">
         <div class="flex justify-end space-x-3">
-          <button type="button" onclick="closeModal('deleteModal')" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200">Cancel</button>
-          <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition duration-200">Delete</button>
+          <button type="button" onclick="closeModal('deleteModal')" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">Cancel</button>
+          <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Delete User</button>
         </div>
       </form>
     </div>
   </div>
-
-  <!-- Manage Groups Modal -->
-  <div id="groupModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center">
-    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md mx-4 animate__animated animate__zoomIn">
-      <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-t-lg flex justify-between items-center">
-        <h3 class="text-xl font-semibold">Manage Groups</h3>
-        <button onclick="closeModal('groupModal')" class="text-white hover:bg-gray-200 hover:text-gray-800 rounded-full p-2 transition duration-200">&times;</button>
-      </div>
-      <div class="p-6">
-        <form id="groupForm" method="post" action="{% url 'manage_groups' %}">
-          {% csrf_token %}
-          <div class="mb-4">
-            <label class="block text-gray-700 font-medium mb-1">New Group Name</label>
-            <input type="text" name="group_name" id="group_name" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
-          <div class="flex justify-end space-x-3">
-            <button type="button" onclick="closeModal('groupModal')" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200">Cancel</button>
-            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200">Add Group</button>
-          </div>
-        </form>
-        <div class="mt-4">
-          <h4 class="text-lg font-semibold text-gray-700">Existing Groups</h4>
-          <ul class="list-disc pl-5 space-y-2">
-            {% for group in groups %}
-              <li class="flex items-center space-x-4">
-                {{ group.name }}
-                <button onclick="showPermissionsModal({{ group.id }})" class="text-blue-600 hover:text-blue-800 transition duration-200">Manage Permissions</button>
-                <form method="post" action="{% url 'delete_group' %}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this group?');">
-                  {% csrf_token %}
-                  <input type="hidden" name="group_id" value="{{ group.id }}">
-                  <button type="submit" class="text-red-600 hover:text-red-800 transition duration-200">Delete</button>
-                </form>
-              </li>
-            {% endfor %}
-          </ul>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Manage Permissions Modal -->
-  <div id="permissionsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center">
-    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md mx-4 animate__animated animate__zoomIn">
-      <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-t-lg flex justify-between items-center">
-        <h3 class="text-xl font-semibold">Manage Permissions</h3>
-        <button onclick="closeModal('permissionsModal')" class="text-white hover:bg-gray-200 hover:text-gray-800 rounded-full p-2 transition duration-200">&times;</button>
-      </div>
-      <div class="p-6">
-        <form id="permissionsForm" method="post" action="{% url 'update_group_permissions' %}">
-          {% csrf_token %}
-          <div class="mb-4">
-            <label class="block text-gray-700 font-medium mb-1">Select Group</label>
-            <select name="group_id" id="group_select" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-              {% for group in groups %}
-                <option value="{{ group.id }}">{{ group.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="grid grid-cols-1 gap-2 max-h-[50vh] overflow-y-auto">
-            {% for perm in permissions %}
-              <div class="flex items-center">
-                <input type="checkbox" name="permissions" value="{{ perm.id }}" id="perm_{{ perm.id }}" class="mr-2">
-                <label for="perm_{{ perm.id }}" class="text-gray-700">{{ perm.codename }} ({{ perm.content_type.model }})</label>
-              </div>
-            {% endfor %}
-          </div>
-          <div class="flex justify-end space-x-3 mt-4">
-            <button type="button" onclick="closeModal('permissionsModal')" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200">Cancel</button>
-            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200">Save Permissions</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
+  {% endif %}
 </div>
 
 <script>
-const groupsData = {
-  {% for group in groups %}
-  "{{ group.id }}": {
-    permissions: [{% for perm in group.permissions.all %}"{{ perm.id }}",{% endfor %}]
-  },
-  {% endfor %}
-};
+const canEditRoles = {{ request.user.is_it_manager|yesno:"true,false" }} || {{ request.user.is_senior_it_officer|yesno:"true,false" }};
 
 function showModal(action, userId = null) {
-  const userModal = document.getElementById('userModal');
-  const deleteModal = document.getElementById('deleteModal');
-  const groupModal = document.getElementById('groupModal');
-  const viewModal = document.getElementById('viewModal');
-  const loadingSpinner = document.getElementById('loadingSpinner');
-  const modalTitle = document.getElementById('modalTitle');
-  const userForm = document.getElementById('userForm');
-  const deleteForm = document.getElementById('deleteForm');
+  const row = userId ? document.querySelector(`tr[data-user-id="${userId}"]`) : null;
 
   if (action === 'add') {
-    modalTitle.textContent = 'Add User';
-    userForm.action = "{% url 'user_add' %}";
-    document.getElementById('userId').value = '';
-    document.getElementById('username').value = '';
-    document.getElementById('email').value = '';
-    document.getElementById('password').value = '';
-    document.getElementById('first_name').value = '';
-    document.getElementById('last_name').value = '';
-    document.getElementById('centre').value = '';
-    document.getElementById('groups').value = [];
-    document.getElementById('is_trainer').checked = false;
-    document.getElementById('is_staff').checked = false;
-    document.getElementById('is_superuser').checked = false;
-    document.getElementById('centre').required = false;
-    userModal.classList.remove('hidden');
-  } else if (action === 'update' && userId) {
-    modalTitle.textContent = 'Update User';
-    userForm.action = "{% url 'user_update' user.pk %}".replace('{{ user.pk }}', userId);
-    const row = document.querySelector(`tr[data-user-id="${userId}"]`);
-    if (row) {
-      document.getElementById('userId').value = userId;
-      document.getElementById('username').value = row.dataset.username;
-      document.getElementById('email').value = row.dataset.email;
-      document.getElementById('first_name').value = row.dataset.firstName;
-      document.getElementById('last_name').value = row.dataset.lastName;
-      document.getElementById('centre').value = row.dataset.centre || '';
-      const groupIds = row.dataset.groups ? row.dataset.groups.split(',') : [];
-      const groupsSelect = document.getElementById('groups');
-      Array.from(groupsSelect.options).forEach(option => {
-        option.selected = groupIds.includes(option.value);
-      });
-      document.getElementById('is_trainer').checked = row.dataset.isTrainer === 'true';
-      document.getElementById('is_staff').checked = row.dataset.isStaff === 'true';
-      document.getElementById('is_superuser').checked = row.dataset.isSuperuser === 'true';
-      document.getElementById('password').value = '';
-      document.getElementById('centre').required = row.dataset.isTrainer === 'true' && row.dataset.isSuperuser !== 'true';
-    }
-    userModal.classList.remove('hidden');
-  } else if (action === 'delete' && userId) {
-    deleteForm.action = "{% url 'user_delete' user.pk %}".replace('{{ user.pk }}', userId);
+    document.getElementById('modalTitle').textContent = 'Add User';
+    document.getElementById('userForm').action = "{% url 'user_add' %}";
+    resetForm();
+    document.getElementById('userModal').classList.remove('hidden');
+
+  } else if (action === 'update' && row) {
+    document.getElementById('modalTitle').textContent = 'Update User';
+    document.getElementById('userForm').action = "{% url 'user_update' 999 %}".replace('999', userId);
+    populateForm(row);
+    document.getElementById('userModal').classList.remove('hidden');
+
+  } else if (action === 'view' && row) {
+    document.getElementById('viewUsername').textContent = row.dataset.username;
+    document.getElementById('viewEmail').textContent = row.dataset.email;
+    document.getElementById('viewName').textContent = `${row.dataset.firstName} ${row.dataset.lastName}`.trim() || '—';
+    document.getElementById('viewCentre').textContent = row.dataset.centre;
+    const role = row.dataset.isItManager === 'true' ? 'IT Manager' :
+                 row.dataset.isSeniorItOfficer === 'true' ? 'Senior IT Officer' :
+                 row.dataset.isTrainer === 'true' ? 'Trainer' :
+                 row.dataset.isStaff === 'true' ? 'Staff' : 'User';
+    document.getElementById('viewRole').textContent = role;
+    document.getElementById('viewGroups').textContent = row.dataset.groups || 'None';
+    document.getElementById('viewModal').classList.remove('hidden');
+
+  } else if (action === 'delete' && row) {
+    document.getElementById('deleteUsername').textContent = row.dataset.username;
     document.getElementById('deleteUserId').value = userId;
-    const row = document.querySelector(`tr[data-user-id="${userId}"]`);
-    document.getElementById('deleteUsername').textContent = row ? row.dataset.username : '';
-    deleteModal.classList.remove('hidden');
-  } else if (action === 'view' && userId) {
-    loadingSpinner.classList.remove('hidden');
-    const row = document.querySelector(`tr[data-user-id="${userId}"]`);
-    if (row) {
-      document.getElementById('viewUsername').textContent = row.dataset.username;
-      document.getElementById('viewEmail').textContent = row.dataset.email;
-      document.getElementById('viewFirstName').textContent = row.dataset.firstName || 'N/A';
-      document.getElementById('viewLastName').textContent = row.dataset.lastName || 'N/A';
-      document.getElementById('viewCentre').textContent = row.dataset.centre ? Array.from(document.getElementById('centre').options).find(opt => opt.value === row.dataset.centre)?.text || 'N/A' : 'N/A';
-      document.getElementById('viewGroups').textContent = row.dataset.groups ? Array.from(document.getElementById('groups').options).filter(opt => row.dataset.groups.split(',').includes(opt.value)).map(opt => opt.text).join(', ') || 'N/A' : 'N/A';
-      document.getElementById('viewIsTrainer').textContent = row.dataset.isTrainer === 'true' ? 'Yes' : 'No';
-      document.getElementById('viewIsStaff').textContent = row.dataset.isStaff === 'true' ? 'Yes' : 'No';
-      document.getElementById('viewIsSuperuser').textContent = row.dataset.isSuperuser === 'true' ? 'Yes' : 'No';
-      document.getElementById('viewDevicesAdded').textContent = row.dataset.devicesAdded || '0';
-      {% if request.user.is_superuser %}
-      document.getElementById('viewDevicesApproved').textContent = row.dataset.devicesApproved || '0';
-      {% endif %}
-      {% if request.user.is_trainer %}
-      document.getElementById('viewDevicesUpdated').textContent = row.dataset.devicesUpdated || '0';
-      {% endif %}
-    }
-    loadingSpinner.classList.add('hidden');
-    viewModal.classList.remove('hidden');
-  } else if (action === 'manage_groups') {
-    groupModal.classList.remove('hidden');
+    document.getElementById('deleteForm').action = "{% url 'user_delete' 999 %}".replace('999', userId);
+    document.getElementById('deleteModal').classList.remove('hidden');
   }
 }
 
-function showPermissionsModal(groupId) {
-  const permissionsModal = document.getElementById('permissionsModal');
-  document.getElementById('group_select').value = groupId;
-  const perms = groupsData[groupId]?.permissions || [];
-  document.querySelectorAll('input[name="permissions"]').forEach(checkbox => {
-    checkbox.checked = perms.includes(checkbox.value);
-  });
-  permissionsModal.classList.remove('hidden');
+function resetForm() {
+  document.getElementById('userId').value = '';
+  document.getElementById('username').value = '';
+  document.getElementById('email').value = '';
+  document.getElementById('password').value = '';
+  document.getElementById('first_name').value = '';
+  document.getElementById('last_name').value = '';
+  document.getElementById('centre').value = '';
+  if (canEditRoles) {
+    const groups = document.getElementById('groups');
+    if (groups) Array.from(groups.options).forEach(o => o.selected = false);
+    ['is_trainer', 'is_staff', 'is_superuser'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.checked = false;
+    });
+  } else {
+    document.getElementById('readonlyTrainer').textContent = 'No';
+    document.getElementById('readonlyStaff').textContent = 'No';
+    document.getElementById('readonlySuperuser').textContent = 'No';
+    document.getElementById('readonlyItManager').textContent = 'No';
+    document.getElementById('readonlySeniorOfficer').textContent = 'No';
+    document.getElementById('readonlyGroups').textContent = 'None';
+  }
 }
 
-function closeModal(modalId) {
-  document.getElementById(modalId).classList.add('hidden');
+function populateForm(row) {
+  document.getElementById('userId').value = row.dataset.userId;
+  document.getElementById('username').value = row.dataset.username;
+  document.getElementById('email').value = row.dataset.email;
+  document.getElementById('first_name').value = row.dataset.firstName;
+  document.getElementById('last_name').value = row.dataset.lastName;
+  document.getElementById('centre').value = row.dataset.centre || '';
+  document.getElementById('password').value = '';
+
+  if (canEditRoles) {
+    const groupIds = row.dataset.groups ? row.dataset.groups.split(',').map(g => g.trim()) : [];
+    const groupsSelect = document.getElementById('groups');
+    if (groupsSelect) {
+      Array.from(groupsSelect.options).forEach(o => o.selected = groupIds.includes(o.text));
+    }
+    document.getElementById('is_trainer').checked = row.dataset.isTrainer === 'true';
+    document.getElementById('is_staff').checked = row.dataset.isStaff === 'true';
+    document.getElementById('is_superuser').checked = row.dataset.isSuperuser === 'true';
+  } else {
+    document.getElementById('readonlyTrainer').textContent = row.dataset.isTrainer === 'true' ? 'Yes' : 'No';
+    document.getElementById('readonlyStaff').textContent = row.dataset.isStaff === 'true' ? 'Yes' : 'No';
+    document.getElementById('readonlySuperuser').textContent = row.dataset.isSuperuser === 'true' ? 'Yes' : 'No';
+    document.getElementById('readonlyItManager').textContent = row.dataset.isItManager === 'true' ? 'Yes' : 'No';
+    document.getElementById('readonlySeniorOfficer').textContent = row.dataset.isSeniorItOfficer === 'true' ? 'Yes' : 'No';
+    document.getElementById('readonlyGroups').textContent = row.dataset.groups || 'None';
+  }
 }
 
+function closeModal(id) {
+  document.getElementById(id).classList.add('hidden');
+}
+
+// Password required
 document.getElementById('userForm').addEventListener('submit', function(e) {
   if (!document.getElementById('userId').value && !document.getElementById('password').value) {
     e.preventDefault();
@@ -412,23 +330,15 @@ document.getElementById('userForm').addEventListener('submit', function(e) {
   }
 });
 
-document.getElementById('is_trainer').addEventListener('change', function() {
-  const isTrainer = this.checked;
+// Centre required for trainers
+document.getElementById('is_trainer')?.addEventListener('change', updateCentreRequirement);
+document.getElementById('is_superuser')?.addEventListener('change', updateCentreRequirement);
+
+function updateCentreRequirement() {
+  if (!canEditRoles) return;
+  const isTrainer = document.getElementById('is_trainer').checked;
   const isSuperuser = document.getElementById('is_superuser').checked;
   document.getElementById('centre').required = isTrainer && !isSuperuser;
-});
-
-document.getElementById('is_superuser').addEventListener('change', function() {
-  const isSuperuser = this.checked;
-  const isTrainer = document.getElementById('is_trainer').checked;
-  document.getElementById('centre').required = isTrainer && !isSuperuser;
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-  const rows = document.querySelectorAll('#userTableBody tr');
-  rows.forEach((row, index) => {
-    row.style.animationDelay = `${index * 0.1}s`;
-  });
-});
+}
 </script>
 {% endblock %}

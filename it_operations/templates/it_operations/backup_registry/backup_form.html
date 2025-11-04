@@ -6,19 +6,19 @@
     <div class="container mx-auto max-w-5xl">
         <!-- Header -->
         <div class="mb-8 animate-fade-in">
-            <div class="flex items-center gap-4 mb-6">
-                <div class="p-4 bg-gradient-to-br from-blue-600 to-teal-600 rounded-2xl shadow-2xl transform hover:scale-105 transition-transform duration-300">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+                <div class="p-4 bg-gradient-to-br from-blue-600 to-teal-600 rounded-2xl shadow-2xl transform hover:scale-105 transition-transform duration-300 flex-shrink-0">
                     <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z"></path>
                         <path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z"></path>
                         <path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z"></path>
                     </svg>
                 </div>
-                <div>
-                    <h1 class="text-5xl font-extrabold bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">
+                <div class="flex-1">
+                    <h1 class="text-4xl sm:text-5xl font-extrabold bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">
                         {{ action }} Backup Record
                     </h1>
-                    <p class="text-gray-600 mt-2 text-lg">Track and manage system backups across your organization</p>
+                    <p class="text-gray-600 mt-2 text-base sm:text-lg">Track and manage system backups across your organization</p>
                 </div>
             </div>
         </div>
@@ -26,84 +26,66 @@
         <form method="post" class="space-y-6">
             {% csrf_token %}
             
-            <!-- Form Container with Column Layout -->
+            <!-- Form Container -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- System/Software Selection -->
-                <div class="bg-white rounded-2xl shadow-xl p-6 border-2 border-slate-200 hover:shadow-2xl hover:border-teal-500/50 transition-all duration-300 group">
+                <!-- System/Software -->
+                <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-slate-200 hover:shadow-2xl hover:border-teal-500/50 transition-all duration-300 group">
                     <label class="block text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide flex items-center gap-2">
-                        <svg class="w-5 h-5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 1.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L7.586 10 5.293 7.707a1 1 0 010-1.414zM11 12a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"></path>
-                        </svg>
+                        <svg class="w-5 h-5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">…</svg>
                         System/Software Name *
                     </label>
-                    <select name="system" required class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 text-gray-700 font-medium bg-white hover:border-teal-400 group-hover:border-teal-500/50">
+                    <select name="system" required class="w-full border-2 border-slate-300 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 text-gray-700 font-medium bg-white hover:border-teal-400 group-hover:border-teal-500/50">
                         <option value="">-- Select System --</option>
                         {% for value, label in system_choices %}
                         <option value="{{ value }}" {% if backup.system == value %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
-                    <p class="text-xs text-gray-500 mt-3 flex items-center gap-2 bg-blue-50 p-3 rounded-lg">
-                        <svg class="w-4 h-4 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
-                        </svg>
+                    <p class="text-xs text-gray-500 mt-3 flex items-center gap-2 bg-blue-50 p-2 sm:p-3 rounded-lg">
+                        <svg class="w-4 h-4 text-teal-600" fill="currentColor" viewBox="0 0 20 20">…</svg>
                         <span>Select the system being backed up</span>
                     </p>
                 </div>
 
-                <!-- Centre Selection -->
-                <div class="bg-white rounded-2xl shadow-xl p-6 border-2 border-slate-200 hover:shadow-2xl hover:border-teal-500/50 transition-all duration-300 group">
+                <!-- Centre -->
+                <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-slate-200 hover:shadow-2xl hover:border-teal-500/50 transition-all duration-300 group">
                     <label class="block text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide flex items-center gap-2">
-                        <svg class="w-5 h-5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z" clip-rule="evenodd"></path>
-                        </svg>
+                        <svg class="w-5 h-5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">…</svg>
                         Centre *
                     </label>
-                    <select name="centre" required class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 text-gray-700 font-medium bg-white hover:border-teal-400 group-hover:border-teal-500/50">
+                    <select name="centre" required class="w-full border-2 border-slate-300 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 text-gray-700 font-medium bg-white hover:border-teal-400 group-hover:border-teal-500/50">
                         <option value="">-- Select Centre --</option>
                         {% for centre in centres %}
                         <option value="{{ centre.id }}" {% if backup.centre.id == centre.id %}selected{% endif %}>{{ centre.name }}</option>
                         {% endfor %}
                     </select>
-                    <p class="text-xs text-gray-500 mt-3 flex items-center gap-2 bg-blue-50 p-3 rounded-lg">
-                        <svg class="w-4 h-4 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
-                        </svg>
+                    <p class="text-xs text-gray-500 mt-3 flex items-center gap-2 bg-blue-50 p-2 sm:p-3 rounded-lg">
+                        <svg class="w-4 h-4 text-teal-600" fill="currentColor" viewBox="0 0 20 20">…</svg>
                         <span>Select the centre location</span>
                     </p>
                 </div>
             </div>
 
-            <!-- Comments Section - Full Width -->
-            <div class="bg-white rounded-2xl shadow-xl p-6 border-2 border-slate-200 hover:shadow-2xl hover:border-teal-500/50 transition-all duration-300">
+            <!-- Comments -->
+            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-slate-200 hover:shadow-2xl hover:border-teal-500/50 transition-all duration-300">
                 <label class="block text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide flex items-center gap-2">
-                    <svg class="w-5 h-5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"></path>
-                        <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z"></path>
-                    </svg>
+                    <svg class="w-5 h-5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">…</svg>
                     Comments & Details
                 </label>
-                <textarea 
-                    name="comments" 
-                    rows="6" 
-                    placeholder="Add relevant comments about the backup:&#10;• Backup status&#10;• Size and duration&#10;• Any issues encountered&#10;• Verification results" 
-                    class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 resize-none text-gray-700 leading-relaxed hover:border-teal-400"
-                >{{ backup.comments|default:'' }}</textarea>
-                <p class="text-xs text-gray-500 mt-3 flex items-center gap-2 bg-blue-50 p-3 rounded-lg">
-                    <svg class="w-4 h-4 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5z"></path>
-                    </svg>
+                <textarea name="comments" rows="6"
+                    placeholder="Add relevant comments about the backup:&#10;• Backup status&#10;• Size and duration&#10;• Any issues encountered&#10;• Verification results"
+                    class="w-full border-2 border-slate-300 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 resize-none text-gray-700 leading-relaxed hover:border-teal-400">{{ backup.comments|default:'' }}</textarea>
+                <p class="text-xs text-gray-500 mt-3 flex items-center gap-2 bg-blue-50 p-2 sm:p-3 rounded-lg">
+                    <svg class="w-4 h-4 text-teal-600" fill="currentColor" viewBox="0 0 20 20">…</svg>
                     <span>Provide detailed information about the backup operation</span>
                 </p>
             </div>
 
             <!-- Info Box -->
-            <div class="bg-gradient-to-r from-blue-50 to-teal-50 border-l-4 border-teal-600 rounded-lg p-6 shadow-lg">
-                <div class="flex gap-4">
-                    <svg class="w-6 h-6 text-teal-600 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
-                    </svg>
+            <div class="bg-gradient-to-r from-blue-50 to-teal-50 border-l-4 border-teal-600 rounded-lg p-4 sm:p-6 shadow-lg">
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <svg class="w-6 h-6 text-teal-600 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">…</svg>
                     <div>
-                        <h4 class="font-semibold text-blue-900 mb-1 text-lg">Backup Information</h4>
+                        <h4 class="font-semibold text-blue-900 mb-1 text-base sm:text-lg">Backup Information</h4>
                         <ul class="text-sm text-gray-700 space-y-1">
                             <li>• Backup date will be automatically recorded as today</li>
                             <li>• You will be recorded as the person who performed the backup</li>
@@ -114,18 +96,14 @@
             </div>
 
             <!-- Action Buttons -->
-            <div class="bg-gradient-to-r from-slate-100 to-blue-100 rounded-2xl p-6 border-2 border-slate-300">
+            <div class="bg-gradient-to-r from-slate-100 to-blue-100 rounded-2xl p-4 sm:p-6 border-2 border-slate-300">
                 <div class="flex flex-col sm:flex-row gap-4 justify-end">
-                    <a href="{% url 'backup_registry_list' %}" class="group relative inline-flex items-center justify-center gap-2 bg-white text-gray-700 px-8 py-4 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-2 border-slate-300 hover:border-slate-400">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"></path>
-                        </svg>
+                    <a href="{% url 'backup_registry_list' %}" class="group relative inline-flex items-center justify-center gap-2 bg-white text-gray-700 px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-2 border-slate-300 hover:border-slate-400 w-full sm:w-auto">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">…</svg>
                         <span>Cancel</span>
                     </a>
-                    <button type="submit" class="group relative inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-teal-600 text-white px-8 py-4 rounded-xl font-bold shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 hover:from-blue-700 hover:to-teal-700">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                        </svg>
+                    <button type="submit" class="group relative inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-teal-600 text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-bold shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 hover:from-blue-700 hover:to-teal-700 w-full sm:w-auto">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">…</svg>
                         <span>{{ action }} Record</span>
                         <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 rounded-xl transition-opacity duration-300"></div>
                     </button>
@@ -140,8 +118,6 @@
         from { opacity: 0; transform: translateY(20px); }
         to { opacity: 1; transform: translateY(0); }
     }
-    .animate-fade-in {
-        animation: fade-in 0.6s ease-out;
-    }
+    .animate-fade-in { animation: fade-in 0.6s ease-out; }
 </style>
 {% endblock %}

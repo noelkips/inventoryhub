@@ -7,19 +7,16 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .bg-primary { background-color: #143C50; }
-        .bg-secondary { background-color: #C86450; }
-        .bg-gray { background-color: #A0A0A0; }
+        .bg-green { background-color: #22C55E; }
         .bg-light { background-color: #DCDCF0; }
         .bg-accent { background-color: #288CC8; }
         .bg-error { background-color: #B42828; }
         .text-primary { color: #143C50; }
-        .text-secondary { color: #C86450; }
-        .text-gray { color: #A0A0A0; }
         .text-light { color: #DCDCF0; }
-        .text-accent { color: #288CC8; }
         .text-error { color: #B42828; }
-        .hover-bg-secondary:hover { background-color: #C86450; }
-        .hover-bg-accent:hover { background-color: #288CC8; }
+        .hover-bg-green:hover { background-color: #22C55E !important; }
+        .coming-soon { opacity: 0.6; cursor: not-allowed; pointer-events: none; }
+        #sidebar { padding-top: 5rem; }
     </style>
 </head>
 <body class="flex flex-col min-h-screen bg-light text-primary">
@@ -32,10 +29,9 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
                     </svg>
                 </button>
-                <a href="{% url 'dashboard' %}" class="text-xl font-bold text-white no-underline hover:text-light">{{ "MOHI IT" }}</a>
+                <a href="{% url 'dashboard' %}" class="text-xl font-bold text-white no-underline hover:text-light">MOHI IT</a>
             </div>
             <div class="flex items-center space-x-4">
-                <a href="{% url 'dashboard' %}" class="text-white hover:text-light">Home</a>
                 <div class="relative">
                     <button id="accountDropdown" class="flex items-center space-x-2 focus:outline-none">
                         <span>{{ user.username }}</span>
@@ -44,8 +40,8 @@
                         </svg>
                     </button>
                     <div id="accountMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                        <a href="{% url 'profile' %}" class="block px-4 py-2 text-gray hover:bg-gray-200">See Profile</a>
-                        <a href="{% url 'change_password' %}" class="block px-4 py-2 text-gray hover:bg-gray-200">Change Password</a>
+                        <a href="{% url 'profile' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-200">See Profile</a>
+                        <a href="{% url 'change_password' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-200">Change Password</a>
                         <a href="{% url 'logout' %}" class="block px-4 py-2 text-error hover:bg-gray-200">Logout</a>
                     </div>
                 </div>
@@ -55,103 +51,232 @@
 
     <!-- Sidebar -->
     <aside id="sidebar"
-    class="bg-primary text-white w-64 p-6 shadow-md fixed h-screen overflow-y-auto z-40 transition-transform duration-300 -translate-x-full md:translate-x-0">
-    <nav>
-        <ul class="space-y-4">
+           class="bg-primary text-white w-64 p-6 shadow-md fixed h-screen overflow-y-auto z-40 transition-transform duration-300 -translate-x-full md:translate-x-0">
+        <nav>
+            <ul class="space-y-4">
 
-            <!-- Home -->
-            <li>
-                <a href="{% url 'dashboard' %}" class="flex items-center text-white hover:bg-secondary px-4 py-2 rounded">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                    </svg>
-                    Home
-                </a>
-            </li>
-
-            <!-- Device Management -->
-            <li>
-                <a href="#" class="flex items-center justify-between hover:bg-secondary px-4 py-2 rounded" id="manageDevicesToggle">
-                    <span class="flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <!-- 1. HOME - FIRST ITEM -->
+                <li>
+                    <a href="{% url 'dashboard' %}" class="flex items-center text-white hover:bg-green px-4 py-2 rounded transition">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                         </svg>
-                        Device Management
+                        <span>Home</span>
+                    </a>
+                </li>
+
+                <!-- 2. Device Management -->
+                <li>
+                    <a href="#" class="flex items-center justify-between hover:bg-green px-4 py-2 rounded transition" id="manageDevicesToggle">
+                        <span class="flex items-center">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                            </svg>
+                            <span>Device Management</span>
+                        </span>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </a>
+                    <ul id="manageDevicesDropdown" class="ml-8 space-y-1 pt-1 hidden text-sm">
+                        <li><a href="{% url 'import_add' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            Add Device
+                        </a></li>
+                        <li><a href="{% url 'display_approved_imports' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            View Devices
+                        </a></li>
+                        <li><a href="{% url 'display_unapproved_imports' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Unapproved
+                        </a></li>
+                        <li><a href="{% url 'display_disposed_imports' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                            Disposed
+                        </a></li>
+                    </ul>
+                </li>
+
+                <!-- 3. IT Operations -->
+                {% if not user.is_trainer %}
+                <li>
+                    <a href="#" class="flex items-center justify-between hover:bg-green px-4 py-2 rounded transition" id="itOperationsToggle">
+                        <span class="flex items-center">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span>IT Operations</span>
+                        </span>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </a>
+                    <ul id="itOperationsDropdown" class="ml-8 space-y-1 pt-1 hidden text-sm">
+                        <li><a href="{% url 'mission_critical_list' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                            </svg>
+                            Mission Critical Assets
+                        </a></li>
+                        <li><a href="{% url 'backup_registry_list' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V8"></path>
+                            </svg>
+                            Backup Registry
+                        </a></li>
+                        <li>
+                            <span class="flex items-center px-3 py-1.5 text-gray-400 coming-soon">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Work Plans <span class="ml-1 text-xs">(Coming Soon)</span>
+                            </span>
+                        </li>
+                    </ul>
+                </li>
+                {% else %}
+                <!-- Trainer View -->
+                <li>
+                    <span class="flex items-center px-4 py-2 text-gray-400 coming-soon">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        My Work Plan <span class="ml-1 text-xs">(Coming Soon)</span>
                     </span>
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                </a>
-                <ul id="manageDevicesDropdown" class="ml-4 space-y-2 pt-2 hidden">
-                    <li><a href="{% url 'import_add' %}" class="flex items-center hover:bg-secondary px-4 py-2 rounded block">➕ Add Device</a></li>
-                    <li><a href="{% url 'display_approved_imports' %}" class="flex items-center hover:bg-secondary px-4 py-2 rounded block">📘 View Devices</a></li>
-                    <li><a href="{% url 'display_unapproved_imports' %}" class="flex items-center hover:bg-secondary px-4 py-2 rounded block">🕓 Unapproved Devices</a></li>
-                    <li><a href="{% url 'display_disposed_imports' %}" class="flex items-center hover:bg-secondary px-4 py-2 rounded block">🗑️ Disposed Devices</a></li>
-                </ul>
-            </li>
+                </li>
+                {% endif %}
 
-            {% if user.is_superuser %}
-            <!-- PPM Management -->
-            <li>
-                <a href="#" class="flex items-center justify-between hover:bg-secondary px-4 py-2 rounded" id="ppmManagementToggle">
-                    <span class="flex items-center">⚙️ PPM Management</span>
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                </a>
-                <ul id="ppmManagementDropdown" class="ml-4 space-y-2 pt-2 hidden">
-                    <li><a href="{% url 'ppm_device_list' %}" class="hover:bg-secondary px-4 py-2 rounded block">📋 PPM Devices</a></li>
-                    <li><a href="{% url 'ppm_history' %}" class="hover:bg-secondary px-4 py-2 rounded block">🕑 PPM History</a></li>
-                    <li><a href="{% url 'manage_activities' %}" class="hover:bg-secondary px-4 py-2 rounded block">🧭 Manage Activities</a></li>
-                    <li><a href="{% url 'manage_periods' %}" class="hover:bg-secondary px-4 py-2 rounded block">🗓 Manage Periods</a></li>
+                <!-- Superuser Only -->
+                {% if user.is_superuser %}
+                <!-- PPM Management -->
+                <li>
+                    <a href="#" class="flex items-center justify-between hover:bg-green px-4 py-2 rounded transition" id="ppmManagementToggle">
+                        <span class="flex items-center">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                            </svg>
+                            <span>PPM Management</span>
+                        </span>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </a>
+                    <ul id="ppmManagementDropdown" class="ml-8 space-y-1 pt-1 hidden text-sm">
+                        <li><a href="{% url 'ppm_device_list' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-2m3 2v-2m3 2v-2M9 21h10a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h4m2 4h.01"></path>
+                            </svg>
+                            PPM Devices
+                        </a></li>
+                        <li><a href="{% url 'ppm_history' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            PPM History
+                        </a></li>
+                        <li><a href="{% url 'manage_activities' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                            </svg>
+                            Manage Activities
+                        </a></li>
+                        <li><a href="{% url 'manage_periods' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            Manage Periods
+                        </a></li>
+                        <li><a href="{% url 'ppm_report' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                            PPM Reports
+                        </a></li>
+                    </ul>
+                </li>
 
-                    <!-- NEW: PPM Reports -->
-                    <li><a href="{% url 'ppm_report' %}" class="hover:bg-secondary px-4 py-2 rounded block">📊 See PPM Reports</a></li>
-                </ul>
-            </li>
+                <!-- User Management -->
+                <li>
+                    <a href="#" class="flex items-center justify-between hover:bg-green px-4 py-2 rounded transition" id="manageUsersToggle">
+                        <span class="flex items-center">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M12 4.354a4 4 0 110 5.292M15 21h3a2 2 0 002-2v-1a2 2 0 00-2-2H9a2 2 0 00-2 2v1a2 2 0 002 2h3m-6 0h6"></path>
+                            </svg>
+                            <span>User Management</span>
+                        </span>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </a>
+                    <ul id="manageUsersDropdown" class="ml-8 space-y-1 pt-1 hidden text-sm">
+                        <li><a href="{% url 'manage_users' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            Manage Users
+                        </a></li>
+                        <li><a href="{% url 'user_add' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                            </svg>
+                            Add User
+                        </a></li>
+                        <li><a href="{% url 'manage_groups' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21h3a2 2 0 002-2v-1a2 2 0 00-2-2H9a2 2 0 00-2 2v1a2 2 0 002 2h3m-6 0h6"></path>
+                            </svg>
+                            Manage Groups
+                        </a></li>
+                    </ul>
+                </li>
 
-            <!-- User Management -->
-            <li>
-                <a href="#" class="flex items-center justify-between hover:bg-secondary px-4 py-2 rounded" id="manageUsersToggle">
-                    <span class="flex items-center">👥 User Management</span>
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                </a>
-                <ul id="manageUsersDropdown" class="ml-4 space-y-2 pt-2 hidden">
-                    <li><a href="{% url 'manage_users' %}" class="hover:bg-secondary px-4 py-2 rounded block">🔧 Manage Users</a></li>
-                    <li><a href="{% url 'user_add' %}" class="hover:bg-secondary px-4 py-2 rounded block">➕ Add User</a></li>
-                    <li><a href="{% url 'manage_groups' %}" class="hover:bg-secondary px-4 py-2 rounded block">👥 Manage Groups</a></li>
-                </ul>
-            </li>
+                <!-- Admin Interface -->
+                <li>
+                    <a href="/admin/" class="flex items-center hover:bg-green px-4 py-2 rounded transition">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <span>Admin Interface</span>
+                    </a>
+                </li>
+                {% endif %}
 
-            <!-- Admin -->
-            <li>
-                <a href="/admin/" class="flex items-center hover:bg-secondary px-4 py-2 rounded">
-                    ⚙️ Admin Interface
-                </a>
-            </li>
-            {% endif %}
-
-            <!-- Notifications -->
-            <li>
-                <a href="{% url 'notifications_view' %}" class="flex items-center hover:bg-secondary px-4 py-2 rounded relative">
-                    🔔 Notifications
-                    {% if unread_count > 0 %}
-                    <span id="notificationBadge" class="absolute top-0 left-5 inline-flex items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-600 rounded-full">
-                        {{ unread_count }}
-                    </span>
-                    {% endif %}
-                </a>
-            </li>
-        </ul>
-    </nav>
-</aside>
+                <!-- Notifications -->
+                <li>
+                    <a href="{% url 'notifications_view' %}" class="flex items-center hover:bg-green px-4 py-2 rounded relative transition">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                        </svg>
+                        <span>Notifications</span>
+                        {% if unread_count > 0 %}
+                        <span id="notificationBadge" class="absolute top-1 left-16 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-red-600 rounded-full">
+                            {{ unread_count }}
+                        </span>
+                        {% endif %}
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
 
     <!-- Main Content -->
     <main class="flex-1 p-6 mt-16 md:ml-64">
@@ -159,99 +284,44 @@
         {% endblock %}
     </main>
 
-    <!-- Scripts for Header and Sidebar -->
+    <!-- Scripts -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Mobile menu toggle
-            document.getElementById('mobileMenuToggle').addEventListener('click', function() {
-                const sidebar = document.getElementById('sidebar');
+            const sidebar = document.getElementById('sidebar');
+            document.getElementById('mobileMenuToggle').addEventListener('click', () => {
                 sidebar.classList.toggle('-translate-x-full');
-                sidebar.classList.toggle('md:translate-x-0');
             });
 
-            // Account dropdown toggle
-            document.getElementById('accountDropdown').addEventListener('click', function(e) {
+            document.getElementById('accountDropdown').addEventListener('click', (e) => {
                 e.preventDefault();
-                const menu = document.getElementById('accountMenu');
-                menu.classList.toggle('hidden');
+                document.getElementById('accountMenu').classList.toggle('hidden');
             });
 
-            // Device Management dropdown toggle
-            const manageDevicesToggle = document.getElementById('manageDevicesToggle');
-            if (manageDevicesToggle) {
-                manageDevicesToggle.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const dropdown = document.getElementById('manageDevicesDropdown');
-                    if (dropdown) dropdown.classList.toggle('hidden');
-                });
-            }
-
-            const itOperationsToggle = document.getElementById('itOperationsToggle');
-            if (itOperationsToggle) {
-                itOperationsToggle.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const dropdown = document.getElementById('itOperationsDropdown');
-                    if (dropdown) dropdown.classList.toggle('hidden');
-                });
-            }
-
-            // PPM Management dropdown toggle
-            const ppmManagementToggle = document.getElementById('ppmManagementToggle');
-            if (ppmManagementToggle) {
-                ppmManagementToggle.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const dropdown = document.getElementById('ppmManagementDropdown');
-                    if (dropdown) dropdown.classList.toggle('hidden');
-                });
-            }
-
-            // User Management dropdown toggle
-            const manageUsersToggle = document.getElementById('manageUsersToggle');
-            if (manageUsersToggle) {
-                manageUsersToggle.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const dropdown = document.getElementById('manageUsersDropdown');
-                    if (dropdown) dropdown.classList.toggle('hidden');
-                });
-            }
-
-            // Close dropdowns when clicking outside
-            document.addEventListener('click', function(e) {
-                const accountMenu = document.getElementById('accountMenu');
-                const accountButton = document.getElementById('accountDropdown');
-                const manageDevicesDropdown = document.getElementById('manageDevicesDropdown');
-                const manageDevicesButton = document.getElementById('manageDevicesToggle');
-                const itOperationsDropdown = document.getElementById('itOperationsDropdown');
-                const itOperationsButton = document.getElementById('itOperationsToggle');
-                const ppmManagementDropdown = document.getElementById('ppmManagementDropdown');
-                const ppmManagementButton = document.getElementById('ppmManagementToggle');
-                const manageUsersDropdown = document.getElementById('manageUsersDropdown');
-                const manageUsersButton = document.getElementById('manageUsersToggle');
-
-                if (accountButton && !accountButton.contains(e.target) && !accountMenu.contains(e.target)) {
-                    accountMenu.classList.add('hidden');
-                }
-                if (manageDevicesButton && manageDevicesDropdown && !manageDevicesButton.contains(e.target) && !manageDevicesDropdown.contains(e.target)) {
-                    manageDevicesDropdown.classList.add('hidden');
-                }
-                if (itOperationsButton && itOperationsDropdown && !itOperationsButton.contains(e.target) && !itOperationsDropdown.contains(e.target)) {
-                    itOperationsDropdown.classList.add('hidden');
-                }
-                if (ppmManagementButton && ppmManagementDropdown && !ppmManagementButton.contains(e.target) && !ppmManagementDropdown.contains(e.target)) {
-                    ppmManagementDropdown.classList.add('hidden');
-                }
-                if (manageUsersButton && manageUsersDropdown && !manageUsersButton.contains(e.target) && !manageUsersDropdown.contains(e.target)) {
-                    manageUsersDropdown.classList.add('hidden');
+            ['manageDevicesToggle', 'itOperationsToggle', 'ppmManagementToggle', 'manageUsersToggle'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const dropdown = document.getElementById(id.replace('Toggle', 'Dropdown'));
+                        if (dropdown) dropdown.classList.toggle('hidden');
+                    });
                 }
             });
 
-            // Notification badge disappearance on click
-            document.querySelectorAll('a[href="{% url "notifications_view" %}"]').forEach(link => {
-                link.addEventListener('click', function(e) {
-                    const badge = document.getElementById('notificationBadge');
-                    if (badge) {
-                        badge.style.display = 'none';
+            document.addEventListener('click', (e) => {
+                ['accountMenu', 'manageDevicesDropdown', 'itOperationsDropdown', 'ppmManagementDropdown', 'manageUsersDropdown'].forEach(id => {
+                    const menu = document.getElementById(id);
+                    const btn = document.getElementById(id.replace('Dropdown', 'Toggle')) || document.getElementById('accountDropdown');
+                    if (menu && btn && !btn.contains(e.target) && !menu.contains(e.target)) {
+                        menu.classList.add('hidden');
                     }
+                });
+            });
+
+            document.querySelectorAll('a[href*="notifications"]').forEach(link => {
+                link.addEventListener('click', () => {
+                    const badge = document.getElementById('notificationBadge');
+                    if (badge) badge.style.display = 'none';
                 });
             });
         });

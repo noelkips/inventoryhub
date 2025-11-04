@@ -1,0 +1,164 @@
+[
+    {
+      "model": "it_operations.MissionCriticalAsset",
+      "pk": 1,
+      "fields": {
+        "name": "ERP Portal (Learners & Staff Management)",
+        "category": "Other",
+        "location_scope": "All Centers & HQ",
+        "purpose_function": "Learners and staff managent",
+        "dependency_linked_system": "Internet connection",
+        "backup_recovery_method": "Cloud backup, regular export",
+        "department": 1,
+        "criticality_level": "High",
+        "notes": "Access controlled via HQ servers",
+        "created_by": 1,
+        "created_at": "2025-11-04T00:00:00Z",
+        "updated_at": "2025-11-04T00:00:00Z"
+      }
+    },
+    {
+      "model": "it_operations.MissionCriticalAsset",
+      "pk": 2,
+      "fields": {
+        "name": "QuickBooks",
+        "category": "Other",
+        "location_scope": "HQ, Sabaki",
+        "purpose_function": "Finance management, accounting",
+        "dependency_linked_system": "local server at pangani and server room",
+        "backup_recovery_method": "Local backup + cloud sync",
+        "department": 1,
+        "criticality_level": "High",
+        "notes": "Licensed users only",
+        "created_by": 1,
+        "created_at": "2025-11-04T00:00:00Z",
+        "updated_at": "2025-11-04T00:00:00Z"
+      }
+    },
+    {
+      "model": "it_operations.MissionCriticalAsset",
+      "pk": 3,
+      "fields": {
+        "name": "SmartCare (Health Management System)",
+        "category": "Other",
+        "location_scope": "Health Centers",
+        "purpose_function": "Manage patient records & clinical data",
+        "dependency_linked_system": "SmartCare Server at Pangani and Joska",
+        "backup_recovery_method": "Daily backup to external drive",
+        "department": 1,
+        "criticality_level": "High",
+        "notes": "Data protection critical",
+        "created_by": 1,
+        "created_at": "2025-11-04T00:00:00Z",
+        "updated_at": "2025-11-04T00:00:00Z"
+      }
+    },
+    {
+      "model": "it_operations.MissionCriticalAsset",
+      "pk": 4,
+      "fields": {
+        "name": "Starlink Internet",
+        "category": "Infrastructure",
+        "location_scope": "Centers",
+        "purpose_function": "Internet connectivity for all systems",
+        "dependency_linked_system": "Electricity supply",
+        "backup_recovery_method": "Redundant units in key centers",
+        "department": 1,
+        "criticality_level": "High",
+        "notes": "Key dependency for ERP",
+        "created_by": 1,
+        "created_at": "2025-11-04T00:00:00Z",
+        "updated_at": "2025-11-04T00:00:00Z"
+      }
+    },
+    {
+      "model": "it_operations.MissionCriticalAsset",
+      "pk": 5,
+      "fields": {
+        "name": "SmartCare Server",
+        "category": "Storage",
+        "location_scope": "HQ and Joska",
+        "purpose_function": "Hosts health management system",
+        "dependency_linked_system": "Local network",
+        "backup_recovery_method": "Mirror backup on NAS and Google drive",
+        "department": 1,
+        "criticality_level": "High",
+        "notes": "Needs physical security",
+        "created_by": 1,
+        "created_at": "2025-11-04T00:00:00Z",
+        "updated_at": "2025-11-04T00:00:00Z"
+      }
+    },
+    {
+      "model": "it_operations.MissionCriticalAsset",
+      "pk": 6,
+      "fields": {
+        "name": "Routers and Network Devices\nFirewall at HQ",
+        "category": "Network",
+        "location_scope": "All Centers & HQ",
+        "purpose_function": "Network connectivity",
+        "dependency_linked_system": "Internet service",
+        "backup_recovery_method": "Configuration backups",
+        "department": 1,
+        "criticality_level": "High",
+        "notes": "Spare routers available at HQ",
+        "created_by": 1,
+        "created_at": "2025-11-04T00:00:00Z",
+        "updated_at": "2025-11-04T00:00:00Z"
+      }
+    },
+    {
+      "model": "it_operations.MissionCriticalAsset",
+      "pk": 7,
+      "fields": {
+        "name": "Backup NAS System",
+        "category": "Backup",
+        "location_scope": "HQ",
+        "purpose_function": "Centralized backup repository",
+        "dependency_linked_system": "All systems",
+        "backup_recovery_method": "Automatic scheduled backup",
+        "department": 1,
+        "criticality_level": "High",
+        "notes": "Encrypted and monitored",
+        "created_by": 1,
+        "created_at": "2025-11-04T00:00:00Z",
+        "updated_at": "2025-11-04T00:00:00Z"
+      }
+    },
+    {
+      "model": "it_operations.MissionCriticalAsset",
+      "pk": 8,
+      "fields": {
+        "name": "E-learning (Cisco Academy Portal)",
+        "category": "Other",
+        "location_scope": "Select Centers & HQ",
+        "purpose_function": "Online learning and certification",
+        "dependency_linked_system": "Internet",
+        "backup_recovery_method": "Cloud based",
+        "department": 1,
+        "criticality_level": "Medium",
+        "notes": "Dependent on Cisco cloud uptime",
+        "created_by": 1,
+        "created_at": "2025-11-04T00:00:00Z",
+        "updated_at": "2025-11-04T00:00:00Z"
+      }
+    },
+    {
+      "model": "it_operations.MissionCriticalAsset",
+      "pk": 9,
+      "fields": {
+        "name": "Power Supply / UPS",
+        "category": "Power",
+        "location_scope": "HQ & Data Centers",
+        "purpose_function": "Ensure uptime for servers and routers",
+        "dependency_linked_system": "Electricity grid",
+        "backup_recovery_method": "Periodic battery check",
+        "department": 1,
+        "criticality_level": "High",
+        "notes": "Needs maintenance schedule",
+        "created_by": 1,
+        "created_at": "2025-11-04T00:00:00Z",
+        "updated_at": "2025-11-04T00:00:00Z"
+      }
+    }
+  ]
