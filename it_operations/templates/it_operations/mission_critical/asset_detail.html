@@ -1,0 +1,150 @@
+<!-- asset_detail.html -->
+{% extends 'dashboard.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-3xl">
+    <div class="flex justify-between items-center mb-6">
+        <div class="flex items-center gap-4">
+            <div class="p-4 bg-gradient-to-br from-blue-600 to-teal-600 rounded-2xl shadow-2xl transform hover:scale-105 transition-transform duration-300">
+                <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z"></path>
+                    <path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z"></path>
+                    <path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z"></path>
+                </svg>
+            </div>
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">{{ asset.name }}</h1>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'mission_critical_update' asset.pk %}" class="bg-gradient-to-r from-blue-600 to-teal-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"></path>
+                </svg>
+                Edit
+            </a>
+            <a href="{% url 'mission_critical_delete' asset.pk %}" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                </svg>
+                Delete
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-xl p-8 border-2 border-slate-200 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+                <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide mb-2 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 1.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L7.586 10 5.293 7.707a1 1 0 010-1.414zM11 12a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"></path>
+                    </svg>
+                    Category
+                </h3>
+                <p class="text-lg bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent font-medium">{{ asset.get_category_display }}</p>
+            </div>
+            <div>
+                <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide mb-2 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                    </svg>
+                    Criticality Level
+                </h3>
+                <p class="text-lg">
+                    <span class="px-3 py-1 rounded text-white text-sm
+                        {% if asset.criticality_level == 'Critical' %}bg-red-600
+                        {% elif asset.criticality_level == 'High' %}bg-orange-600
+                        {% elif asset.criticality_level == 'Medium' %}bg-yellow-600
+                        {% else %}bg-green-600{% endif %}">
+                        {{ asset.criticality_level }}
+                    </span>
+                </p>
+            </div>
+            <div>
+                <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide mb-2 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M13 6a3 3 0 11-6 0 5 5 0 013.096-4.64 5.325 5.325 0 00-.013-1.71A1 1 0 0110 2h.002a1 1 0 01-.001 0zm.002 6a21.9 21.9 0 01-3.064 8.293 17.92 17.92 0 01-.652-.902c-.42.69-1.868.87-2.383.25-.937-1.406-.5-3.417 1.091-5.265a4.04 4.04 0 00.634-1.051A6.045 6.045 0 004 11.5 6 6 0 0010 5.5a5.99 5.99 0 004.126 5.719c-.546.031-1.092.187-1.6.411-.203.09-.402.19-.598.298-.41.222-.824.414-1.244.618.223.424.249.934.347 1.23.075.23.258.419.459.571.424.32 1.054.647 1.837.855a10.957 10.957 0 003.032.505c.421-.372 1.083-.722 1.778-1.072 1.413-.7 2.5-2.159 2.5-3.721A4.5 4.5 0 0015.5 3h.5m-.478 2.349A5.045 5.045 0 0111 4.5a5 5 0 00-1 9.88c.509.07 1.016.15 1.5.245.248.134.526.272.81.405.144.083.29.163.434.244a21.917 21.917 0 003.478-.712"></path>
+                    </svg>
+                    Department
+                </h3>
+                <p class="text-lg bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent font-medium">{{ asset.department.name|default:"N/A" }}</p>
+            </div>
+            <div>
+                <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide mb-2 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                    </svg>
+                    Location/Scope
+                </h3>
+                <p class="text-lg bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent font-medium">{{ asset.location_scope }}</p>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide mb-2 flex items-center gap-2">
+                <svg class="w-5 h-5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                </svg>
+                Purpose/Function
+            </h3>
+            <p class="text-gray-700 bg-blue-50 p-4 rounded-lg">{{ asset.purpose_function }}</p>
+        </div>
+
+        {% if asset.dependency_linked_system %}
+        <div class="mb-6">
+            <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide mb-2 flex items-center gap-2">
+                <svg class="w-5 h-5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 4.414V7a1 1 0 102 0V3a1 1 0 00-1-1h-4zM5 5a3 3 0 00-3 3v8a3 3 0 003 3h8a3 3 0 003-3V8a3 3 0 00-3-3H5z"></path>
+                </svg>
+                Dependency/Linked System
+            </h3>
+            <p class="text-gray-700 bg-blue-50 p-4 rounded-lg">{{ asset.dependency_linked_system }}</p>
+        </div>
+        {% endif %}
+
+        <div class="mb-6">
+            <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide mb-2 flex items-center gap-2">
+                <svg class="w-5 h-5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z"></path>
+                    <path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z"></path>
+                    <path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z"></path>
+                </svg>
+                Backup/Recovery Method
+            </h3>
+            <p class="text-gray-700 bg-blue-50 p-4 rounded-lg">{{ asset.backup_recovery_method }}</p>
+        </div>
+
+        {% if asset.notes %}
+        <div class="mb-6">
+            <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide mb-2 flex items-center gap-2">
+                <svg class="w-5 h-5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5z"></path>
+                </svg>
+                Notes
+            </h3>
+            <p class="text-gray-700 bg-blue-50 p-4 rounded-lg">{{ asset.notes }}</p>
+        </div>
+        {% endif %}
+
+        <div class="border-t-2 border-slate-200 pt-4 text-sm text-gray-500 bg-blue-50 p-4 rounded-lg">
+            <p class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                </svg>
+                Created by: {{ asset.created_by.username|default:"N/A" }} on {{ asset.created_at|date:"M d, Y" }}
+            </p>
+            <p class="flex items-center gap-2 mt-1">
+                <svg class="w-4 h-4 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h.01a1 1 0 100-2H6zm2 0a1 1 0 000 2h.01a1 1 0 100-2H8zm2 0a1 1 0 000 2h.01a1 1 0 100-2H10zm2 0a1 1 0 000 2h.01a1 1 0 100-2H12zm-6 3a1 1 0 000 2h.01a1 1 0 100-2H6zm2 0a1 1 0 000 2h.01a1 1 0 100-2H8zm2 0a1 1 0 000 2h.01a1 1 0 100-2H10zm2 0a1 1 0 000 2h.01a1 1 0 100-2H12zm-6 3a1 1 0 000 2h.01a1 1 0 100-2H6zm2 0a1 1 0 000 2h.01a1 1 0 100-2H8zm2 0a1 1 0 000 2h.01a1 1 0 100-2H10zm2 0a1 1 0 000 2h.01a1 1 0 100-2H12z" clip-rule="evenodd"></path>
+                </svg>
+                Last updated: {{ asset.updated_at|date:"M d, Y H:i" }}
+            </p>
+        </div>
+    </div>
+
+    <a href="{% url 'mission_critical_list' %}" class="text-teal-600 hover:text-teal-700 font-medium flex items-center gap-2 group">
+        <svg class="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"></path>
+        </svg>
+        Back to Assets
+    </a>
+</div>
+{% endblock %}

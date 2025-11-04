@@ -44,9 +44,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'ictinventory',
+    
     'devices',
     'ppm',
+    'it_operations',
     'simple_history',
     
 ]

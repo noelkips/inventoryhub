@@ -45,4 +45,4 @@ xhtml2pdf = "==0.2.17"
 [dev-packages]
 
 [requires]
-python_version = "3.10"
+python_version = "3.13.7"

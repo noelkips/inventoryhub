@@ -1,0 +1,93 @@
+{% extends 'dashboard.html' %}
+{% load static %}
+
+{% block title %}Work Plan Calendar - MOHI IT{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-6">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-primary mb-4">Work Plan Calendar</h1>
+        <p class="text-gray-600">Manage and view your weekly work plans</p>
+    </div>
+
+    <!-- Work Plans Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for work_plan in work_plans %}
+            <div class="bg-white rounded-lg shadow hover:shadow-xl transition-all duration-300 p-6 border-l-4 border-accent transform hover:-translate-y-1">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-primary">
+                            Week of {{ work_plan.week_start_date|date:"M d, Y" }}
+                        </h3>
+                        <p class="text-sm text-gray-500 mt-1">
+                            {{ work_plan.week_start_date|date:"l" }} - {{ work_plan.week_end_date|date:"l, M d" }}
+                        </p>
+                    </div>
+                    {% if work_plan.get_current_week_status == 'current' %}
+                        <span class="px-3 py-1 bg-accent/10 text-accent rounded-full text-xs font-semibold">Current</span>
+                    {% elif work_plan.get_current_week_status == 'past' %}
+                        <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-semibold">Past</span>
+                    {% else %}
+                        <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">Upcoming</span>
+                    {% endif %}
+                </div>
+
+                <!-- Task Summary -->
+                <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+                    <p class="text-sm text-gray-700">
+                        <span class="font-semibold text-primary">{{ work_plan.tasks.count }}</span> tasks planned
+                    </p>
+                </div>
+
+                <!-- Status Breakdown -->
+                <div class="grid grid-cols-3 gap-2 mb-4">
+                    <div class="text-center p-2 bg-green-50 rounded-lg border border-green-100">
+                        <p class="text-xs text-gray-600 mb-1">Completed</p>
+                        <p class="text-lg font-bold text-green-600">
+                            {{ work_plan.tasks.filter.status='Completed'.count|default:0 }}
+                        </p>
+                    </div>
+                    <div class="text-center p-2 bg-yellow-50 rounded-lg border border-yellow-100">
+                        <p class="text-xs text-gray-600 mb-1">Not Completed</p>
+                        <p class="text-lg font-bold text-yellow-600">
+                            {{ work_plan.tasks.filter.status='Not Completed'.count|default:0 }}
+                        </p>
+                    </div>
+                    <div class="text-center p-2 bg-red-50 rounded-lg border border-red-100">
+                        <p class="text-xs text-gray-600 mb-1">Not Done</p>
+                        <p class="text-lg font-bold text-red-600">
+                            {{ work_plan.tasks.filter.status='Not Done'.count|default:0 }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <a href="{% url 'it_operations:detail' work_plan.pk %}" 
+                   class="block w-full text-center bg-accent hover:bg-accent/90 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-300 transform hover:shadow-lg">
+                    View Details
+                </a>
+            </div>
+        {% empty %}
+            <div class="col-span-full text-center py-16 bg-white rounded-lg shadow">
+                <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <p class="text-gray-500 text-lg mb-4">No work plans yet. Create one to get started.</p>
+                <a href="{% url 'it_operations:calendar' %}" class="inline-block px-6 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors">
+                    Create Work Plan
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+/* Custom MOHI IT Colors */
+.bg-primary { background-color: #143C50; }
+.text-primary { color: #143C50; }
+.bg-accent { background-color: #288CC8; }
+.text-accent { color: #288CC8; }
+.bg-secondary { background-color: #C86450; }
+.text-secondary { color: #C86450; }
+</style>
+{% endblock %}

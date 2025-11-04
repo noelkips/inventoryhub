@@ -1,0 +1,87 @@
+{% extends 'dashboard.html' %}
+{% load workplan_extras %}
+{% block title %}My Work Plans - MOHI IT{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-6">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-primary mb-2">My Work Plans</h1>
+        <p class="text-gray-600">Manage your weekly work schedules</p>
+    </div>
+
+    {% if work_plans %}
+        <div class="space-y-4">
+            {% for work_plan in work_plans %}
+                <div class="bg-white rounded-lg shadow hover:shadow-xl transition-all duration-300 p-6 border-l-4 border-accent transform hover:-translate-y-1">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                                <h2 class="text-xl font-bold text-primary">
+                                    Week of {{ work_plan.week_start_date|date:"M d, Y" }}
+                                </h2>
+                                {% if work_plan.get_current_week_status == 'current' %}
+                                    <span class="px-3 py-1 bg-accent/10 text-accent rounded-full text-xs font-semibold">Current</span>
+                                {% elif work_plan.get_current_week_status == 'past' %}
+                                    <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-semibold">Past</span>
+                                {% else %}
+                                    <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">Upcoming</span>
+                                {% endif %}
+                            </div>
+                            <p class="text-sm text-gray-600 mb-1">
+                                {{ work_plan.week_start_date|date:"l" }} - {{ work_plan.week_end_date|date:"l, M d" }}
+                            </p>
+                            
+                           <!-- Progress Info -->
+                            <div class="flex flex-wrap gap-4 mt-3 text-sm">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                                    <span class="text-green-600 font-medium">
+                                        {{ work_plan.completed_count|default:0 }} Completed
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 bg-yellow-500 rounded-full"></span>
+                                    <span class="text-yellow-600 font-medium">
+                                        {{ work_plan.not_completed_count|default:0 }} Not Completed
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 bg-red-500 rounded-full"></span>
+                                    <span class="text-red-600 font-medium">
+                                        {{ work_plan.not_done_count|default:0 }} Not Done
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <p class="text-sm text-gray-500 mt-3">
+                                <span class="font-semibold text-primary">{{ work_plan.tasks.count }}</span> total tasks
+                            </p>
+                        </div>
+                        <a href="{% url 'work_plan_detail' work_plan.pk %}" 
+                           class="px-6 py-2 bg-accent hover:bg-accent/90 text-white rounded-lg font-semibold transition-all duration-300 shadow hover:shadow-lg whitespace-nowrap">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-16 bg-white rounded-lg shadow">
+            <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            <p class="text-gray-500 text-lg mb-4">No work plans yet. Create one to get started.</p>
+            <a href="{% url 'it_operations:calendar' %}" class="inline-block px-6 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors">
+                Create Work Plan
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.bg-primary { background-color: #143C50; }
+.text-primary { color: #143C50; }
+.bg-accent { background-color: #288CC8; }
+.text-accent { color: #288CC8; }
+</style>
+{% endblock %}
