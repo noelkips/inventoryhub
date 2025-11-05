@@ -9,6 +9,7 @@ User = get_user_model()
 # ============ MISSION CRITICAL ASSETS ============
 class MissionCriticalAsset(models.Model):
     CATEGORY_CHOICES = [
+        ('Application', 'Application'),
         ('Infrastructure', 'Infrastructure'),
         ('Network', 'Network'),
         ('Security', 'Security'),
@@ -17,6 +18,7 @@ class MissionCriticalAsset(models.Model):
         ('Power', 'Power'),
         ('Cooling', 'Cooling'),
         ('Other', 'Other'),
+
     ]
     
     CRITICALITY_LEVEL_CHOICES = [
@@ -28,7 +30,12 @@ class MissionCriticalAsset(models.Model):
     
     name = models.CharField(max_length=255, help_text="Name/Description of the asset")
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
-    location_scope = models.CharField(max_length=255, help_text="Location/Scope (e.g., HQ & Data Centers)")
+    location_scope = models.CharField(
+    max_length=255,
+    blank=True,           
+    null=True,           
+    help_text="Location/Scope (e.g., HQ & Data Centers)"
+)
     purpose_function = models.TextField(help_text="Purpose/Function of the asset")
     dependency_linked_system = models.TextField(blank=True, null=True, help_text="Dependency/Linked System")
     backup_recovery_method = models.TextField(help_text="Backup/Recovery Method")
@@ -259,3 +266,4 @@ class WorkPlanComment(models.Model):
     
     def __str__(self):
         return f"Comment by {self.user.username} on {self.work_plan}"
+

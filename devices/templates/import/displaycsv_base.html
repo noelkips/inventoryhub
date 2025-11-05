@@ -41,9 +41,7 @@
                 <select name="centre" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">All Centres</option>
                     {% for c in centres %}
-                        <option value="{{ c.id }}" {% if centre_filter == c.id|stringformat:'s' %}selected{% endif %}>
-                            {{ c.name }}
-                        </option>
+                        <option value="{{ c.id }}" {% if centre_filter == c.id|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -51,12 +49,10 @@
             <!-- Department Filter -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
-                <select name="department" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 cursor-pointer focus:ring-blue-500">
+                <select name="department" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">All Departments</option>
                     {% for d in departments %}
-                        <option value="{{ d.id }}" {% if department_filter == d.id|stringformat:'s' %}selected{% endif %}>
-                            {{ d.name }}
-                        </option>
+                        <option value="{{ d.id }}" {% if department_filter == d.id|stringformat:'s' %}selected{% endif %}>{{ d.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -67,9 +63,7 @@
                 <select name="items_per_page" onchange="this.form.submit()"
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     {% for opt in items_per_page_options %}
-                        <option value="{{ opt }}" {% if report_data.items_per_page|add:0 == opt %}selected{% endif %}>
-                            {{ opt }}
-                        </option>
+                        <option value="{{ opt }}" {% if report_data.items_per_page|add:0 == opt %}selected{% endif %}>{{ opt }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -107,7 +101,7 @@
         </div>
     {% endif %}
 
-    <!-- Debug (Only in DEBUG mode) -->
+    <!-- Debug -->
     {% if settings.DEBUG %}
         <div class="mb-4 p-2 bg-yellow-100 border border-yellow-400 text-yellow-700 text-xs rounded">
             Debug: view_name = {{ view_name|default:"Not set" }} | unapproved_count = {{ unapproved_count|default:"0" }}
@@ -165,7 +159,6 @@
                                                 class="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Dispose</button>
                                     {% endif %}
 
-                                    <!-- DELETE: Only IT Manager or Senior IT Officer -->
                                     {% if user.is_it_manager or user.is_senior_it_officer %}
                                         <button onclick="openModal('deleteModal{{ item.id }}')"
                                                 class="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Delete</button>
@@ -182,7 +175,7 @@
                             </td>
                         </tr>
 
-                        <!-- View Modal -->
+                        <!-- ==================== VIEW MODAL ==================== -->
                         <div id="viewModal{{ item.id }}" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
                             <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-screen overflow-y-auto animate__animated animate__zoomIn">
                                 <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-t-lg flex justify-between items-center">
@@ -221,47 +214,187 @@
                             </div>
                         </div>
 
-                        <!-- Edit Modal -->
+                        <!-- ==================== EDIT MODAL ==================== -->
                         {% if user.is_superuser or user.is_trainer %}
-                            <!-- [Edit Modal Code – keep your existing one] -->
-                            <!-- ... (paste your full edit modal here) ... -->
-                        {% endif %}
-
-                        <!-- Dispose Modal -->
-                        {% if user.is_superuser and not user.is_trainer %}
-                            <!-- [Dispose Modal Code] -->
-                        {% endif %}
-
-                        <!-- DELETE MODAL – ONLY FOR IT MANAGER / SENIOR IT -->
-                        {% if user.is_it_manager or user.is_senior_it_officer %}
-                            <div id="deleteModal{{ item.id }}" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
-                                <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md animate__animated animate__zoomIn">
-                                    <h3 class="text-lg font-bold text-red-600 mb-3">Confirm Delete</h3>
-                                    <p class="text-gray-700 mb-4">
-                                        Are you sure you want to <strong>permanently delete</strong> this device?
-                                    </p>
-                                    <p class="text-sm text-gray-600 mb-4">
-                                        <strong>Serial:</strong> {{ item.serial_number|default:"N/A" }}
-                                    </p>
-                                    <form action="{% url 'import_delete' item.id %}" method="POST">
+                        <div id="editModal{{ item.id }}" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+                            <div class="bg-white rounded-lg shadow-xl w-full max-w-7xl mx-4 md:mx-6 max-h-[80vh] md:max-h-[90vh] overflow-y-auto relative animate__animated animate__zoomIn">
+                                <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-t-lg flex justify-between items-center">
+                                    <h3 class="text-xl font-semibold">Edit Device</h3>
+                                    <button onclick="closeModal('editModal{{ item.id }}')" class="text-white hover:text-gray-200 text-2xl">&times;</button>
+                                </div>
+                                <div class="p-6">
+                                    <form action="{% url 'import_update' item.id %}" method="POST" onsubmit="return validateForm(this)">
                                         {% csrf_token %}
-                                        <div class="flex space-x-3">
-                                            <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 font-medium">
-                                                Delete Device
-                                            </button>
-                                            <button type="button" onclick="closeModal('deleteModal{{ item.id }}')"
-                                                    class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 font-medium">
-                                                Cancel
-                                            </button>
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <div>
+                                                <div class="mb-4">
+                                                    <label class="block text-gray-700 font-medium mb-1">Centre</label>
+                                                    <select name="centre" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" {% if user.is_trainer %}disabled{% endif %}>
+                                                        <option value="None">Select Centre</option>
+                                                        {% for centre in centres %}
+                                                            <option value="{{ centre.id }}" {% if centre == item.centre %}selected{% endif %}>{{ centre.name }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                    {% if user.is_trainer %}
+                                                        <input type="hidden" name="centre" value="{{ user.centre.id }}">
+                                                    {% endif %}
+                                                </div>
+                                                <div class="mb-4">
+                                                    <label class="block text-gray-700 font-medium mb-1">Department</label>
+                                                    <select name="department" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                                        <option value="">Select Department</option>
+                                                        {% for dept in departments %}
+                                                            <option value="{{ dept.id }}" {% if dept.id == item.department.id %}selected{% endif %}>{{ dept.name }} ({{ dept.department_code }})</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="mb-4">
+                                                    <label class="block text-gray-700 font-medium mb-1">Hardware</label>
+                                                    <input type="text" name="hardware" value="{{ item.hardware|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                </div>
+                                                <div class="mb-4">
+                                                    <label class="block text-gray-700 font-medium mb-1">System Model</label>
+                                                    <input type="text" name="system_model" value="{{ item.system_model|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                </div>
+                                                <div class="mb-4">
+                                                    <label class="block text-gray-700 font-medium mb-1">Processor</label>
+                                                    <input type="text" name="processor" value="{{ item.processor|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div class="mb-4">
+                                                    <label class="block text-gray-700 font-medium mb-1">RAM (GB)</label>
+                                                    <input type="text" name="ram_gb" value="{{ item.ram_gb|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                </div>
+                                                <div class="mb-4">
+                                                    <label class="block text-gray-700 font-medium mb-1">HDD (GB)</label>
+                                                    <input type="text" name="hdd_gb" value="{{ item.hdd_gb|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                </div>
+                                                <div class="mb-4">
+                                                    <label class="block text-gray-700 font-medium mb-1">Serial Number</label>
+                                                    <input type="text" name="serial_number" value="{{ item.serial_number|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                                </div>
+                                                <div class="mb-4">
+                                                    <label class="block text-gray-700 font-medium mb-1">Assignee First Name</label>
+                                                    <input type="text" name="assignee_first_name" value="{{ item.assignee_first_name|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                </div>
+                                                <div class="mb-4">
+                                                    <label class="block text-gray-700 font-medium mb-1">Assignee Last Name</label>
+                                                    <input type="text" name="assignee_last_name" value="{{ item.assignee_last_name|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div class="mb-4">
+                                                    <label class="block text-gray-700 font-medium mb-1">Assignee Email</label>
+                                                    <input type="email" name="assignee_email_address" value="{{ item.assignee_email_address|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                </div>
+                                                <div class="mb-4">
+                                                    <label class="block text-gray-700 font-medium mb-1">Device Condition</label>
+                                                    <input type="text" name="device_condition" value="{{ item.device_condition|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                </div>
+                                                <div class="mb-4">
+                                                    <label class="block text-gray-700 font-medium mb-1">Status</label>
+                                                    <input type="text" name="status" value="{{ item.status|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                </div>
+                                                <div class="mb-4">
+                                                    <label class="block text-gray-700 font-medium mb-1">Date</label>
+                                                    <input type="date" name="date" value="{{ item.date|date:'Y-m-d' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                </div>
+                                                {% if user.is_trainer %}
+                                                    <div class="mb-4">
+                                                        <label class="block text-gray-700 font-medium mb-1">Reason for Update</label>
+                                                        <textarea name="reason_for_update" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required>{{ item.reason_for_update|default_if_none:'' }}</textarea>
+                                                    </div>
+                                                {% endif %}
+                                                {% if user.is_superuser %}
+                                                    <div class="mb-4">
+                                                        <label class="block text-gray-700 font-medium mb-1">
+                                                            <input type="checkbox" name="is_approved" {% if item.is_approved %}checked{% endif %} class="mr-2"> Approve
+                                                        </label>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="mt-6 flex justify-end space-x-3">
+                                            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200">Save</button>
+                                            <button type="button" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200" onclick="closeModal('editModal{{ item.id }}')">Cancel</button>
                                         </div>
                                     </form>
                                 </div>
                             </div>
+                        </div>
                         {% endif %}
 
-                        <!-- Approve Modal -->
+                        <!-- ==================== DISPOSE MODAL ==================== -->
+                        {% if user.is_superuser and not user.is_trainer %}
+                        <div id="disposeModal{{ item.id }}" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+                            <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md mx-4 animate__animated animate__zoomIn">
+                                <h3 class="text-lg font-bold mb-4 text-gray-800">Dispose Device</h3>
+                                <p class="text-gray-600 mb-4">Are you sure you want to dispose this device (Serial: {{ item.serial_number|default:"N/A" }})?</p>
+                                <form action="{% url 'dispose_device' item.id %}" method="POST" onsubmit="return validateDisposalForm(this)">
+                                    {% csrf_token %}
+                                    <div class="mb-4">
+                                        <label class="block text-gray-700 font-medium mb-1" for="disposal_reason_{{ item.id }}">Reason for Disposal</label>
+                                        <textarea id="disposal_reason_{{ item.id }}" name="disposal_reason" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" rows="4" required></textarea>
+                                    </div>
+                                    <div class="flex space-x-3 mt-4">
+                                        <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition duration-200">Dispose</button>
+                                        <button type="button" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200" onclick="closeModal('disposeModal{{ item.id }}')">Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- ==================== DELETE MODAL ==================== -->
+                        {% if user.is_it_manager or user.is_senior_it_officer %}
+                        <div id="deleteModal{{ item.id }}" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+                            <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md animate__animated animate__zoomIn">
+                                <h3 class="text-lg font-bold text-red-600 mb-3">Confirm Delete</h3>
+                                <p class="text-gray-700 mb-4">
+                                    Are you sure you want to <strong>permanently delete</strong> this device?
+                                </p>
+                                <p class="text-sm text-gray-600 mb-4">
+                                    <strong>Serial:</strong> {{ item.serial_number|default:"N/A" }}
+                                </p>
+                                <form action="{% url 'import_delete' item.id %}" method="POST">
+                                    {% csrf_token %}
+                                    <div class="flex space-x-3">
+                                        <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 font-medium">
+                                            Delete Device
+                                        </button>
+                                        <button type="button" onclick="closeModal('deleteModal{{ item.id }}')"
+                                                class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 font-medium">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- ==================== APPROVE MODAL ==================== -->
                         {% if user.is_superuser and not user.is_trainer and not item.is_approved %}
-                            <!-- [Approve Modal Code] -->
+                        <div id="approveModal{{ item.id }}" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+                            <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md mx-4 animate__animated animate__zoomIn">
+                                <h3 class="text-lg font-bold mb-4 text-gray-800">Confirm Approval</h3>
+                                <p class="text-gray-600">Approve this device (Serial: {{ item.serial_number|default:"N/A" }})?</p>
+                                {% with pending_update=entry.pending_update %}
+                                    {% if pending_update %}
+                                        <p class="mb-2"><strong class="text-gray-700">Reason for Update:</strong> {{ pending_update.reason_for_update|default:"N/A" }}</p>
+                                        <p class="mb-2"><strong class="text-gray-700">Updated By:</strong> {{ pending_update.updated_by|default:"N/A" }}</p>
+                                        <p class="mb-2"><strong class="text-gray-700">Update Requested:</strong> {{ pending_update.created_at|date:"Y-m-d H:i"|default:"N/A" }}</p>
+                                    {% endif %}
+                                {% endwith %}
+                                <form action="{% url 'import_approve' item.id %}" method="POST">
+                                    {% csrf_token %}
+                                    <div class="flex space-x-3 mt-4">
+                                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition duration-200">Approve</button>
+                                        <button type="button" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200" onclick="closeModal('approveModal{{ item.id }}')">Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
                         {% endif %}
 
                         {% endwith %}
@@ -275,7 +408,7 @@
         </table>
     </div>
 
-    <!-- Pagination -->
+    <!-- Pagination (unchanged) -->
     {% if paginator.num_pages > 1 %}
         <div class="mt-6 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div class="text-gray-600 text-sm">
@@ -330,48 +463,49 @@
 
     <!-- Approve All Modal -->
     {% if user.is_superuser and not user.is_trainer and unapproved_count > 0 %}
-        <div id="approveAllModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
-            <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md animate__animated animate__zoomIn">
-                <h3 class="text-lg font-bold text-green-600 mb-3">Bulk Approve</h3>
-                <p class="text-gray-700 mb-4">Approve all {{ unapproved_count }} unapproved devices?</p>
-                <form action="{% url 'import_approve_all' %}?{% if report_data.search_query %}search={{ report_data.search_query|urlencode }}&{% endif %}{% if centre_filter %}centre={{ centre_filter }}&{% endif %}{% if department_filter %}department={{ department_filter }}&{% endif %}page={{ data.number }}&items_per_page={{ report_data.items_per_page }}"
-                      method="POST">
-                    {% csrf_token %}
-                    <div class="flex space-x-3">
-                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-medium">
-                            Approve All
-                        </button>
-                        <button type="button" onclick="closeModal('approveAllModal')"
-                                class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 font-medium">
-                            Cancel
-                        </button>
-                    </div>
-                </form>
-            </div>
+    <div id="approveAllModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md animate__animated animate__zoomIn">
+            <h3 class="text-lg font-bold text-green-600 mb-3">Bulk Approve</h3>
+            <p class="text-gray-700 mb-4">Approve all {{ unapproved_count }} unapproved devices?</p>
+            <form action="{% url 'import_approve_all' %}?{% if report_data.search_query %}search={{ report_data.search_query|urlencode }}&{% endif %}{% if centre_filter %}centre={{ centre_filter }}&{% endif %}{% if department_filter %}department={{ department_filter }}&{% endif %}page={{ data.number }}&items_per_page={{ report_data.items_per_page }}"
+                  method="POST">
+                {% csrf_token %}
+                <div class="flex space-x-3">
+                    <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-medium">
+                        Approve All
+                    </button>
+                    <button type="button" onclick="closeModal('approveAllModal')"
+                            class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 font-medium">
+                        Cancel
+                    </button>
+                </div>
+            </form>
         </div>
+    </div>
     {% endif %}
 </div>
 
 <!-- JavaScript -->
 <script type="text/javascript">
-    // Modal Functions
-    function openModal(id) {
-        document.getElementById(id).classList.remove('hidden');
-    }
-    function closeModal(id) {
-        document.getElementById(id).classList.add('hidden');
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    function validateForm(form) {
+        {% if user.is_trainer %}
+            const reason = form.querySelector('[name="reason_for_update"]').value;
+            if (!reason) { alert('Reason for update is required.'); return false; }
+        {% endif %}
+        const serial = form.querySelector('[name="serial_number"]').value;
+        if (!serial) { alert('Serial number is required.'); return false; }
+        return true;
     }
 
-    // Update Items Per Page
-    function updateItemsPerPage(select) {
-        const itemsPerPage = select.value;
-        const urlParams = new URLSearchParams(window.location.search);
-        urlParams.set('items_per_page', itemsPerPage);
-        urlParams.set('page', 1);
-        window.location.href = getCurrentUrl() + "?" + urlParams.toString();
+    function validateDisposalForm(form) {
+        const reason = form.querySelector('[name="disposal_reason"]').value.trim();
+        if (!reason) { alert('Reason for disposal is required.'); return false; }
+        return true;
     }
 
-    // Export to Excel
     function exportToExcel(scope) {
         const base = "{% url 'export_to_excel' %}";
         let url = scope === 'all'
@@ -380,7 +514,6 @@
         window.location.href = url;
     }
 
-    // Get Current View URL
     function getCurrentUrl() {
         {% if view_name == 'display_approved_imports' %}
             return "{% url 'display_approved_imports' %}";
