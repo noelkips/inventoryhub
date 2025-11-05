@@ -24,4 +24,12 @@ urlpatterns = [
     path('<int:pk>/add-task/', views.add_task, name='add_task'),
     path('task/<int:pk>/status/', views.update_task_status, name='update_task_status'),
     path('task/<int:pk>/delete/', views.delete_task, name='delete_task'),
+
+
+    path('incident-reports/', views.incident_report_list, name='incident_report_list'),
+    path('incident-reports/create/', views.incident_report_create, name='incident_report_create'),
+    path('incident-reports/<int:pk>/', views.incident_report_detail, name='incident_report_detail'),
+    path('incident-reports/<int:pk>/update/', views.incident_report_update, name='incident_report_update'),
+    path('incident-reports/<int:pk>/delete/', views.incident_report_delete, name='incident_report_delete'),
+    path('incident-reports/<int:pk>/download-pdf/', views.download_incident_report_pdf, name='download_incident_report_pdf'),
 ]

@@ -4,6 +4,7 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 from devices.models import Centre, Department
 
+
 User = get_user_model()
 
 # ============ MISSION CRITICAL ASSETS ============
@@ -266,4 +267,77 @@ class WorkPlanComment(models.Model):
     
     def __str__(self):
         return f"Comment by {self.user.username} on {self.work_plan}"
+    
+
+
+
+# ============ INCIDENT REPORT ============
+
+def get_next_incident_number():
+    """
+    Generates the next incident number based on the last one, e.g., MOH-IT-2025-001
+    """
+    last_incident = IncidentReport.objects.all().order_by('id').last()
+    year = timezone.now().year
+    
+    if not last_incident:
+        return f'MOH-IT-{year}-001'
+    
+    try:
+        # Assumes format MOH-IT-YEAR-XXX
+        last_number_int = int(last_incident.incident_number.split('-')[-1])
+        new_number_int = last_number_int + 1
+        return f'MOH-IT-{year}-{new_number_int:03d}'
+    except (ValueError, IndexError):
+        # Fallback if parsing fails
+        return f'MOH-IT-{year}-001'
+
+class IncidentReport(models.Model):
+    # Section 1: Report Info
+    reported_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='incident_reports_created')
+    reporter_title_role = models.CharField(max_length=255, help_text="Title / Role of the person reporting")
+    incident_number = models.CharField(max_length=50, unique=True, default=get_next_incident_number)
+    date_of_report = models.DateTimeField(auto_now_add=True)
+    
+    # NEW: Collaborators
+    collaborators = models.ManyToManyField(User, related_name='incident_collaborations', blank=True)
+    
+    # Section 2: Incident Info
+    incident_type = models.CharField(max_length=255, help_text="e.g., INTERNET OUTAGE, SERVER DOWN")
+    date_of_incident = models.DateTimeField(
+        help_text="Date and time the incident occurred",
+        blank=True,  # REQUIRED FOR FORM SUBMISSION
+        null=True    # REQUIRED FOR DATABASE
+    )
+    location = models.CharField(max_length=255, help_text="e.g., BUSTANI (CEO'S RESIDENCE)")
+    specific_area = models.CharField(max_length=255, blank=True, null=True, help_text="Specific area (if applicable)")
+    
+    # Section 3: Description
+    description = models.TextField(help_text="Detailed description of the incident")
+    
+    # Section 4: Parties Involved (as a text block)
+    parties_involved = models.TextField(blank=True, null=True, help_text="Name / Role / Contact / Statement of parties involved")
+
+    # Section 5: Witnesses (as a text block)
+    witnesses = models.TextField(blank=True, null=True, help_text="Name / Role / Contact of witnesses")
+    
+    # Section 6: Immediate Actions
+    immediate_actions_taken = models.TextField(blank=True, null=True, help_text="Immediate actions taken")
+    
+    # Section 7: Reported To
+    reported_to = models.CharField(max_length=255, blank=True, null=True, help_text="Name/Role of person(s) the incident was reported to")
+    
+    # Section 8: Follow-up
+    follow_up_actions_required = models.TextField(blank=True, null=True, help_text="Any follow-up actions required")
+    
+    # Section 9: Notes
+    additional_notes = models.TextField(blank=True, null=True, help_text="Additional notes or recommendations")
+    
+    class Meta:
+        ordering = ['-date_of_incident']
+        verbose_name = 'Incident Report'
+        verbose_name_plural = 'Incident Reports'
+    
+    def __str__(self):
+        return self.incident_number
 

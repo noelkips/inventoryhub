@@ -1,0 +1,134 @@
+{% extends 'dashboard.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-5xl">
+    <div class="mb-8 animate-fade-in">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+            <div class="p-4 bg-gradient-to-br from-blue-600 to-teal-600 rounded-2xl shadow-2xl transform hover:scale-105 transition-transform duration-300 flex-shrink-0">
+                <svg class="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 11-2 0 1 1 0 012 0zm0-4a1 1 0 11-2 0 1 1 0 012 0zm-2 8a1 1 0 100-2h8a1 1 0 100 2H6zm2-4a1 1 0 100-2h4a1 1 0 100 2H8z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <h1 class="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">
+                {{ action }} Incident Report
+            </h1>
+        </div>
+    </div>
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-slate-200">
+            <h2 class="text-lg font-bold text-gray-800 mb-6 uppercase tracking-wide">Report & Incident Details</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Reported By</label>
+                    <input type="text" value="{{ request.user.username }}" disabled class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 bg-slate-100 text-gray-500 cursor-not-allowed">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Your Title / Role *</label>
+                    <input type="text" name="reporter_title_role" value="{{ report.reporter_title_role|default:'' }}" required class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Incident Type *</label>
+                    <input type="text" name="incident_type" value="{{ report.incident_type|default:'' }}" placeholder="e.g., INTERNET OUTAGE" required class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Date of Incident *</label>
+                    <input type="datetime-local" name="date_of_incident" value="{{ report.date_of_incident|date:'Y-m-d\TH:i' }}" required class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Location *</label>
+                    <input type="text" name="location" value="{{ report.location|default:'' }}" placeholder="e.g., BUSTANI (CEO'S RESIDENCE)" required class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Specific Area (Optional)</label>
+                    <input type="text" name="specific_area" value="{{ report.specific_area|default:'' }}" class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-slate-200">
+            <label class="block text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Collaborators (Optional)</label>
+            <p class="text-sm text-gray-600 mb-4">Select other users who worked on this incident. (Hold Ctrl/Cmd to select multiple)</p>
+            <select name="collaborators" multiple class="w-full h-40 border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+                {% for user in all_users %}
+                    {% if user != request.user %}
+                    <option value="{{ user.id }}" 
+                        {% if user in report.collaborators.all %}selected{% endif %}>
+                        {{ user.username }}
+                    </option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-slate-200">
+            <label class="block text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Incident Description *</label>
+            <textarea name="description" required rows="5" class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">{{ report.description|default:'' }}</textarea>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-slate-200">
+                <label class="block text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Parties Involved</label>
+                <p class="text-sm text-gray-600 mb-4">Enter each person on a new line, e.g., "John Mwangi / IT Support / Statement..."</p>
+                <textarea name="parties_involved" rows="5" class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">{{ report.parties_involved|default:'' }}</textarea>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-slate-200">
+                <label class="block text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Witnesses</label>
+                <textarea name="witnesses" rows="5" class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">{{ report.witnesses|default:'' }}</textarea>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-slate-200">
+                <label class="block text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Immediate Actions Taken</label>
+                <textarea name="immediate_actions_taken" rows="5" class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">{{ report.immediate_actions_taken|default:'' }}</textarea>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-slate-200">
+                <label class="block text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Follow-up Actions Required</label>
+                <textarea name="follow_up_actions_required" rows="5" class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">{{ report.follow_up_actions_required|default:'' }}</textarea>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-slate-200">
+                <label class="block text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Reported To</label>
+                <input type="text" name="reported_to" value="{{ report.reported_to|default:'' }}" class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-slate-200">
+                <label class="block text-sm font-bold text-gray-800 mb-2 uppercase tracking-wide">Additional Notes / Recommendations</label>
+                <textarea name="additional_notes" rows="3" class="w-full border-2 border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">{{ report.additional_notes|default:'' }}</textarea>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-r from-slate-100 to-blue-100 rounded-2xl p-4 sm:p-6 border-2 border-slate-300">
+            <div class="flex flex-col sm:flex-row gap-4 justify-end">
+                <button type="submit" class="group relative inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-teal-600 text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-bold shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 hover:from-blue-700 hover:to-teal-700 w-full sm:w-auto">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span>{{ action }} Report</span>
+                </button>
+                <a href="{% if report %}{% url 'incident_report_detail' report.pk %}{% else %}{% url 'incident_report_list' %}{% endif %}" class="group relative inline-flex items-center justify-center gap-2 bg-white text-gray-700 px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-2 border-slate-300 hover:border-slate-400 w-full sm:w-auto">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span>Cancel</span>
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
