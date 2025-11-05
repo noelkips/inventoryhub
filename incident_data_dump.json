@@ -1,0 +1,50 @@
+[
+{
+  "model": "it_operations.incidentreport",
+  "pk": 1,
+  "fields": {
+    "reported_by": 7,
+    "reporter_title_role": "CiscoTrainer",
+    "incident_number": "MOH-IT-2025-001",
+    "date_of_report": "2025-11-05T10:30:34.077Z",
+    "incident_type": "test",
+    "date_of_incident": "2025-11-04T10:30:00Z",
+    "location": "test",
+    "specific_area": "test",
+    "description": " Charles Gichimu / Logistics & Accounts Assistant û Bustani (Elpida) / charles.gichimu@mohiafrica.org\r\nA casual worker on the neighbors side accidentally cut the ethernet cable connecting the access point which\r\nis located at the car parking area. John Mwangi / IT Support Officer û Pangani / john.mwangi@mohiafrica.org\r\n I requested a picture of the damaged cable, received it via WhatsApp, and assured that I would report early\r\nthe next morning to assess and restore the connection.\r\n",
+    "parties_involved": "test",
+    "witnesses": "test",
+    "immediate_actions_taken": "test",
+    "reported_to": "Noel",
+    "follow_up_actions_required": " Charles Gichimu / Logistics & Accounts Assistant û Bustani (Elpida) / charles.gichimu@mohiafrica.org\r\nò A casual worker on the neighbors side accidentally cut the ethernet cable connecting the access point which\r\nis located at the car parking area.\r\nò John Mwangi / IT Support Officer û Pangani / john.mwangi@mohiafrica.org\r\nò I requested a picture of the damaged cable, received it via WhatsApp, and assured that I would report early\r\nthe next morning to assess and restore the connection.\r\n",
+    "additional_notes": "test",
+    "collaborators": [
+      8
+    ]
+  }
+},
+{
+  "model": "it_operations.incidentreport",
+  "pk": 2,
+  "fields": {
+    "reported_by": 7,
+    "reporter_title_role": "It support Officer",
+    "incident_number": "MOH-IT-2025-002",
+    "date_of_report": "2025-11-05T11:27:12.150Z",
+    "incident_type": "Internet Outage",
+    "date_of_incident": "2025-11-18T11:23:00Z",
+    "location": "Bustani ",
+    "specific_area": "Garden",
+    "description": "An internet outage at Bustani (Kiambu) was reported by Charles Gichimu on 30th October 2025, caused by a casual worker accidentally cutting the Ethernet cable to the outdoor access point. Photos were shared via WhatsApp for assessment.",
+    "parties_involved": "Charles Gichimu / Logistics & Accounts Assistant û Bustani (Elpida) / charles.gichimu@mohiafrica.org\r\n\r\nA casual worker on the neighbors side accidentally cut the ethernet cable connecting the access point which is located at the car parking area. \r\n\r\n\r\nJohn Mwangi / IT Support Officer û Pangani / john.mwangi@mohiafrica.org\r\nI requested a picture of the damaged cable, received it via WhatsApp, and assured that I would report early the next morning to assess and restore the connection.\r\n\r\n",
+    "witnesses": "",
+    "immediate_actions_taken": "30th October 2025: Received incident report and assessment photo from Charles Gichimu. Notified him that a site visit would be conducted the following day.\r\n31st October 2025 (around 9:00 a.m.): Arrived on site to carry out repairs.\r\nInspected the damaged cable and connected one end using a CAT6 module. Crimped the other end of the cable with an RJ45 connector and securely joined the two ends. \r\nTaped the connection thoroughly to enhance protection against rain and moisture. \r\nTested the connection and confirmed the access point was receiving service and successfully broadcasting wireless internet.\r\n\r\n",
+    "reported_to": "test",
+    "follow_up_actions_required": "",
+    "additional_notes": "During future infrastructure improvements or restructuring, we will ensure that all network cables are properly enclosed and protected.\r\nAvoid leaving cables exposed or hanging, especially in outdoor or shared boundary areas where they can be easily damaged.\r\nUse trunking or conduit to secure and protect Ethernet cables from accidental cuts, weather elements, and physical interference.\r\nConsider conducting a brief inspection of outdoor cabling during routine maintenance to identify potential risks early.\r\n",
+    "collaborators": [
+      10
+    ]
+  }
+}
+]
