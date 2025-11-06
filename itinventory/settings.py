@@ -161,3 +161,54 @@ MEDIA_URL = "/media/"
 
 AUTH_USER_MODEL = 'devices.CustomUser'
 LOGIN_URL = '/admin/login/'
+
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,  # Keep Django's default loggers
+    
+    # Define the format of the log message
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {asctime} {message}',
+            'style': '{',
+        },
+    },
+    
+    # Define where the logs will go (e.g., a file)
+    'handlers': {
+        'error_file': {
+            'level': 'ERROR',  # Log only ERROR and CRITICAL messages
+            'class': 'logging.FileHandler',
+            # This is the crucial part:
+            'filename': os.path.join(BASE_DIR, 'logs/errors.log'),
+            'formatter': 'verbose', # Use the 'verbose' formatter defined above
+        },
+        'debug_file': {
+            'level': 'DEBUG', # Log EVERYTHING from DEBUG level up
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs/debug.log'),
+            'formatter': 'simple',
+        },
+    },
+    
+    # Define which loggers to use
+    'loggers': {
+        'django': {
+            'handlers': ['error_file'], # Send 'django' logger messages to 'error_file'
+            'level': 'ERROR',          # Only process ERROR messages
+            'propagate': True,
+        },
+        # You can add this logger to get all-level logs for debugging
+        # 'your_app_name': {
+        #     'handlers': ['debug_file'],
+        #     'level': 'DEBUG',
+        #     'propagate': True,
+        # },
+    },
+}

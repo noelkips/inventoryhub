@@ -9,7 +9,6 @@
         <h2 class="text-xl sm:text-2xl font-bold mb-4 text-gray-800">No Active PPM Period</h2>
     {% endif %}
 
-    <!-- Messages -->
     {% if messages %}
         <div id="messages" class="mb-4">
             {% for message in messages %}
@@ -20,7 +19,6 @@
         </div>
     {% endif %}
 
-    <!-- Filters -->
     <div class="bg-white p-3 sm:p-4 rounded-lg shadow-md mb-6">
         <form method="get" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <div>
@@ -38,6 +36,16 @@
                     </select>
                 </div>
             {% endif %}
+
+            <div>
+                <label for="ppm_status" class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">PPM Status</label>
+                <select name="ppm_status" id="ppm_status" class="w-full border rounded-md p-2 text-sm sm:text-base">
+                    <option value="">All Devices</option>
+                    <option value="done" {% if report_data.ppm_status_filter == 'done' %}selected{% endif %}>PPM Done</option>
+                    <option value="not_done" {% if report_data.ppm_status_filter == 'not_done' %}selected{% endif %}>PPM Not Done</option>
+                </select>
+            </div>
+            
             <div>
                 <label for="items_per_page" class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Items per Page</label>
                 <select name="items_per_page" id="items_per_page" class="w-full border rounded-md p-2 text-sm sm:text-base" onchange="updateItemsPerPage(this)">
@@ -52,7 +60,6 @@
         </form>
     </div>
 
-    <!-- Devices Table -->
     <div class="bg-white p-3 sm:p-4 rounded-lg shadow-md">
         <h3 class="text-base sm:text-lg font-semibold mb-4 text-gray-800">Devices ({{ report_data.total_records }})</h3>
         {% if devices and active_period %}
@@ -73,7 +80,6 @@
                             <tr class="hover:bg-gray-50">
                                 <td class="py-2 px-2 sm:py-2 sm:px-4 border font-mono text-xs sm:text-sm">{{ device.serial_number }}</td>
 
-                                <!-- NEW HARDWARE COLUMN -->
                                 <td class="py-2 px-2 sm:py-2 sm:px-4 border text-xs sm:text-sm">
                                     <div><strong>{{ device.hardware|default:"—" }}</strong></div>
                                     {% if device.system_model %}
@@ -110,15 +116,14 @@
                 </table>
             </div>
 
-            <!-- Pagination -->
             <div class="flex flex-col md:flex-row justify-between items-center mt-4 space-y-4 md:space-y-0">
                 <div class="text-gray-600 text-sm sm:text-base">
                     Showing {{ devices.start_index }} to {{ devices.end_index }} of {{ report_data.total_records }} devices
                 </div>
                 <div class="flex flex-wrap space-x-1">
                     {% if devices.has_previous %}
-                        <a href="{% url 'ppm_device_list' %}?page=1&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">First</a>
-                        <a href="{% url 'ppm_device_list' %}?page={{ devices.previous_page_number }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">Prev</a>
+                        <a href="{% url 'ppm_device_list' %}?page=1&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}{% if report_data.ppm_status_filter %}&ppm_status={{ report_data.ppm_status_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">First</a>
+                        <a href="{% url 'ppm_device_list' %}?page={{ devices.previous_page_number }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}{% if report_data.ppm_status_filter %}&ppm_status={{ report_data.ppm_status_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">Prev</a>
                     {% endif %}
                     {% for num in page_range %}
                         {% if num is None %}
@@ -126,12 +131,12 @@
                         {% elif num == devices.number %}
                             <span class="px-2 py-1 bg-blue-600 text-white rounded transition duration-200 text-sm sm:text-base">{{ num }}</span>
                         {% else %}
-                            <a href="{% url 'ppm_device_list' %}?page={{ num }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">{{ num }}</a>
+                            <a href="{% url 'ppm_device_list' %}?page={{ num }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}{% if report_data.ppm_status_filter %}&ppm_status={{ report_data.ppm_status_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">{{ num }}</a>
                         {% endif %}
                     {% endfor %}
                     {% if devices.has_next %}
-                        <a href="{% url 'ppm_device_list' %}?page={{ devices.next_page_number }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">Next</a>
-                        <a href="{% url 'ppm_device_list' %}?page={{ paginator.num_pages }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">Last</a>
+                        <a href="{% url 'ppm_device_list' %}?page={{ devices.next_page_number }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}{% if report_data.ppm_status_filter %}&ppm_status={{ report_data.ppm_status_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">Next</a>
+                        <a href="{% url 'ppm_device_list' %}?page={{ paginator.num_pages }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}{% if report_data.ppm_status_filter %}&ppm_status={{ report_data.ppm_status_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">Last</a>
                     {% endif %}
                 </div>
             </div>
@@ -140,14 +145,12 @@
         {% endif %}
     </div>
 
-    <!-- PPM Task Modal -->
     {% if user.is_superuser %}
         <div id="ppmTaskModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden" role="dialog">
             <div class="relative top-10 sm:top-20 mx-auto p-4 sm:p-5 border w-full max-w-md sm:w-96 shadow-lg rounded-md bg-white">
                 <div class="mt-3 text-center">
                     <h3 class="text-base sm:text-lg font-medium text-gray-900" id="modalTitle">Add PPM Task for <span id="deviceName"></span></h3>
                     <div class="mt-2 text-left">
-                        <!-- Hardware Details Section -->
                         <div class="mb-4 border-b pb-4">
                             <h4 class="text-sm sm:text-md font-medium text-gray-700 mb-2">Device Details</h4>
                             <div id="hardwareDetails">
@@ -159,7 +162,6 @@
                             </div>
                             <p id="noHardwareMessage" class="text-gray-600 text-xs sm:text-sm hidden">No hardware details available.</p>
                         </div>
-                        <!-- Form -->
                         <form id="ppmTaskForm" method="post" action="">
                             {% csrf_token %}
                             <div class="mb-4">
@@ -308,11 +310,35 @@ $(document).ready(function() {
         $('.alert').fadeOut('slow', function() { $(this).remove(); });
     }, 5000);
 
+    // FIX: The original updateItemsPerPage function was broken because it used a static URL. 
+    // The filter values need to be dynamically pulled from the current URL to update correctly.
+
     function updateItemsPerPage(select) {
         const itemsPerPage = select.value;
         const urlParams = new URLSearchParams(window.location.search);
         urlParams.set('items_per_page', itemsPerPage);
         urlParams.set('page', 1);
+        
+        // Retain other filters
+        if ('{{ report_data.search_query }}') {
+            urlParams.set('search', '{{ report_data.search_query }}');
+        } else {
+            urlParams.delete('search');
+        }
+
+        if ('{{ report_data.centre_filter }}') {
+            urlParams.set('centre', '{{ report_data.centre_filter }}');
+        } else {
+            urlParams.delete('centre');
+        }
+
+        if ('{{ report_data.ppm_status_filter }}') { // NEW: Retain PPM Status filter
+            urlParams.set('ppm_status', '{{ report_data.ppm_status_filter }}');
+        } else {
+            urlParams.delete('ppm_status');
+        }
+
+
         window.location.href = "{% url 'ppm_device_list' %}?" + urlParams.toString();
     }
 });

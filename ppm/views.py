@@ -23,6 +23,8 @@ import xlsxwriter
 from io import BytesIO
 import random
 import logging
+from django.db.models import Q, Exists, OuterRef 
+
 
 def is_superuser(user):
     return user.is_superuser
@@ -31,14 +33,15 @@ logger = logging.getLogger(__name__)
 
 
 
-def is_superuser(user):
-    return user.is_superuser
 
 @user_passes_test(is_superuser)
 def ppm_device_list(request):
     centres = Centre.objects.all()
     search_query = request.GET.get('search', '').strip()
     centre_filter = request.GET.get('centre', '')
+    # NEW: Get the PPM status filter
+    ppm_status_filter = request.GET.get('ppm_status', '') 
+    
     try:
         items_per_page = int(request.GET.get('items_per_page', 10))
         if items_per_page not in [10, 25, 50, 100]:
@@ -47,11 +50,24 @@ def ppm_device_list(request):
         items_per_page = 10
 
     active_period = PPMPeriod.objects.filter(is_active=True).first()
+    
     if not active_period:
         devices = Import.objects.none()
         messages.warning(request, "No active PPM period. Please create and activate a period.")
     else:
         devices = Import.objects.all()
+
+        # Efficiently annotate the QuerySet with PPM status (has_ppm_task)
+        # This replaces the slower loop that was previously iterating over all devices
+        ppm_task_exists = PPMTask.objects.filter(
+            device=OuterRef('pk'), 
+            period=active_period
+        )
+        devices = devices.annotate(
+            has_ppm_task=Exists(ppm_task_exists)
+        )
+        
+        # Apply Search and Centre Filters
         if search_query:
             devices = devices.filter(
                 Q(serial_number__icontains=search_query) |
@@ -62,9 +78,16 @@ def ppm_device_list(request):
         if centre_filter and centre_filter != '':
             devices = devices.filter(centre_id=centre_filter)
 
-        # Check for existing PPM tasks in the active period
-        for device in devices:
-            device.has_ppm_task = PPMTask.objects.filter(device=device, period=active_period).exists()
+        # NEW: Apply PPM Status Filter
+        if ppm_status_filter == 'done':
+            # Filter for devices where the PPM task exists (Done)
+            devices = devices.filter(has_ppm_task=True)
+        elif ppm_status_filter == 'not_done':
+            # Filter for devices where the PPM task does not exist (Not Done)
+            devices = devices.filter(has_ppm_task=False)
+
+        # NOTE: The manual loop to set device.has_ppm_task is no longer needed here 
+        # because the annotation ensures it's set on the resulting objects.
 
     paginator = Paginator(devices, items_per_page)
     page_number = request.GET.get('page', 1)
@@ -93,6 +116,7 @@ def ppm_device_list(request):
     report_data = {
         'search_query': search_query,
         'centre_filter': centre_filter,
+        'ppm_status_filter': ppm_status_filter, # NEW: Add the filter to report_data
         'items_per_page': items_per_page,
         'total_records': paginator.count,
     }
@@ -105,7 +129,7 @@ def ppm_device_list(request):
         'active_period': active_period,
         'items_per_page_options': [10, 25, 50, 100],
         'page_range': page_range,
-        'view_name': 'ppm_device_list',  # For URL in template
+        'view_name': 'ppm_device_list',
     }
     return render(request, 'ppm/ppm_device_list.html', context)
 

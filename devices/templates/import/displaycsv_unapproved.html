@@ -43,16 +43,6 @@
 <div class="container mx-auto p-4">
     <h2 class="text-2xl font-bold mb-4 text-gray-800">IT Inventory (Unapproved)</h2>
 
-    <!-- Single Search Bar -->
-    <div class="mb-4">
-        <form method="GET" action="{% url 'display_unapproved_imports' %}" class="flex space-x-2">
-            <input type="text" name="search" value="{{ report_data.search_query|default:'' }}" placeholder="Search all fields..." class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200">Search</button>
-        </form>
-        {% if report_data.search_query and not data_with_pending %}
-            <p class="text-red-600 mt-2">No results found for "{{ report_data.search_query }}". Please try a different search term or check for typos.</p>
-        {% endif %}
-    </div>
 
     <!-- Quick Stats -->
     <div class="mt-6 bg-white rounded-lg shadow-sm p-4">
@@ -62,10 +52,7 @@
                 <p class="text-sm text-gray-600">Total Imports</p>
                 <p class="text-lg font-semibold">{{ total_devices|default:"0" }}</p>
             </div>
-            <div class="p-3 border-b">
-                <p class="text-sm text-gray-600">Approved Imports</p>
-                <p class="text-lg font-semibold">{{ approved_imports|default:"0" }}</p>
-            </div>
+          
             <div class="p-3 border-b">
                 <p class="text-sm text-gray-600">Unapproved Imports</p>
                 <p class="text-lg font-semibold">{{ unapproved_count|default:"0" }}</p>

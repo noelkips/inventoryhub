@@ -1198,6 +1198,9 @@ def change_password(request):
             return redirect('change_password')
     return render(request, 'accounts/change_password.html', {})
 
+from django.db.models import Q, Count # Ensure Count is imported
+# ... other imports like render, redirect, Paginator, etc.
+from .models import Import, PendingUpdate, Centre, Department # (and other models)
 
 @login_required
 def display_approved_imports(request):
@@ -1205,20 +1208,33 @@ def display_approved_imports(request):
         data = Import.objects.filter(is_approved=True, is_disposed=False)
     elif request.user.is_trainer:
         data = (Import.objects.filter(centre=request.user.centre,
-                                      is_approved=True, is_disposed=False)
+                                       is_approved=True, is_disposed=False)
                 if request.user.centre else Import.objects.none())
     else:
         data = Import.objects.none()
 
     # ---------- FILTERS ----------
-    centre_filter    = request.GET.get('centre', '').strip()
+    centre_filter     = request.GET.get('centre', '').strip()
     department_filter = request.GET.get('department', '').strip()
-    search_query     = request.GET.get('search', '').strip()
+    search_query      = request.GET.get('search', '').strip()
+    show_duplicates   = request.GET.get('show_duplicates', '').strip() # New filter
 
     if centre_filter:
         data = data.filter(centre__id=centre_filter)
     if department_filter:
         data = data.filter(department__id=department_filter)
+
+    # --- New Duplicate Filter Logic ---
+    if show_duplicates == 'on':
+        # Find serial numbers that are duplicates *within the current filtered set*
+        duplicate_serials = (
+            data.values('serial_number')
+                .annotate(serial_count=Count('serial_number'))
+                .filter(serial_count__gt=1)
+                .values_list('serial_number', flat=True)
+        )
+        # Filter the main queryset to only these serials
+        data = data.filter(serial_number__in=duplicate_serials)
 
     if search_query:
         data = data.filter(
@@ -1240,6 +1256,7 @@ def display_approved_imports(request):
         )
 
     # ---------- pagination ----------
+    # (Pagination logic remains the same)
     items_per_page = request.GET.get('items_per_page', '10')
     try:
         items_per_page = int(items_per_page)
@@ -1257,23 +1274,27 @@ def display_approved_imports(request):
     except EmptyPage:
         page_obj = paginator.page(paginator.num_pages)
 
+
     # ---------- pending updates ----------
+    # (This logic remains the same)
     data_with_pending = []
     for item in page_obj:
         pending = PendingUpdate.objects.filter(import_record=item) \
-                                      .order_by('-created_at').first()
+                                       .order_by('-created_at').first()
         data_with_pending.append({'item': item, 'pending_update': pending})
 
     # ---------- stats ----------
+    # (This logic remains the same)
     total_devices = (Import.objects.count() if request.user.is_superuser else
-                     (Import.objects.filter(centre=request.user.centre).count()
-                      if request.user.is_trainer and request.user.centre else 0))
+                   (Import.objects.filter(centre=request.user.centre).count()
+                    if request.user.is_trainer and request.user.centre else 0))
     unapproved_count = (Import.objects.filter(is_approved=False, is_disposed=False).count()
                         if request.user.is_superuser else
                         (Import.objects.filter(centre=request.user.centre,
                                                is_approved=False, is_disposed=False).count()
                          if request.user.is_trainer and request.user.centre else 0))
     approved_imports = total_devices - unapproved_count
+
 
     # ---------- context ----------
     context = {
@@ -1289,6 +1310,7 @@ def display_approved_imports(request):
         'departments': Department.objects.all(),
         'centre_filter': centre_filter,
         'department_filter': department_filter,
+        'show_duplicates': show_duplicates, # Pass new filter to context
         'items_per_page_options': [10, 25, 50, 100, 500],
         'unapproved_count': unapproved_count,
         'total_devices': total_devices,
@@ -1299,7 +1321,7 @@ def display_approved_imports(request):
 
 
 # ----------------------------------------------------------------------
-#  UNAPPROVED IMPORTS (same changes – only the filter block is new)
+#  UNAPPROVED IMPORTS (Applying the same changes)
 # ----------------------------------------------------------------------
 @login_required
 def display_unapproved_imports(request):
@@ -1307,19 +1329,30 @@ def display_unapproved_imports(request):
         data = Import.objects.filter(is_approved=False, is_disposed=False)
     elif request.user.is_trainer:
         data = (Import.objects.filter(centre=request.user.centre,
-                                      is_approved=False, is_disposed=False)
+                                       is_approved=False, is_disposed=False)
                 if request.user.centre else Import.objects.none())
     else:
         data = Import.objects.none()
 
-    centre_filter    = request.GET.get('centre', '').strip()
+    centre_filter     = request.GET.get('centre', '').strip()
     department_filter = request.GET.get('department', '').strip()
-    search_query     = request.GET.get('search', '').strip()
+    search_query      = request.GET.get('search', '').strip()
+    show_duplicates   = request.GET.get('show_duplicates', '').strip() # New filter
 
     if centre_filter:
         data = data.filter(centre__id=centre_filter)
     if department_filter:
         data = data.filter(department__id=department_filter)
+
+    # --- New Duplicate Filter Logic ---
+    if show_duplicates == 'on':
+        duplicate_serials = (
+            data.values('serial_number')
+                .annotate(serial_count=Count('serial_number'))
+                .filter(serial_count__gt=1)
+                .values_list('serial_number', flat=True)
+        )
+        data = data.filter(serial_number__in=duplicate_serials)
 
     if search_query:
         data = data.filter(
@@ -1340,6 +1373,7 @@ def display_unapproved_imports(request):
             Q(reason_for_update__icontains=search_query)
         )
 
+    # (Pagination logic remains the same)
     items_per_page = request.GET.get('items_per_page', '10')
     try:
         items_per_page = int(items_per_page)
@@ -1357,15 +1391,17 @@ def display_unapproved_imports(request):
     except EmptyPage:
         page_obj = paginator.page(paginator.num_pages)
 
+    # (Pending updates logic remains the same)
     data_with_pending = []
     for item in page_obj:
         pending = PendingUpdate.objects.filter(import_record=item) \
-                                      .order_by('-created_at').first()
+                                       .order_by('-created_at').first()
         data_with_pending.append({'item': item, 'pending_update': pending})
 
+    # (Stats logic remains the same)
     total_devices = (Import.objects.count() if request.user.is_superuser else
-                     (Import.objects.filter(centre=request.user.centre).count()
-                      if request.user.is_trainer and request.user.centre else 0))
+                   (Import.objects.filter(centre=request.user.centre).count()
+                    if request.user.is_trainer and request.user.centre else 0))
     unapproved_count = data.count()
     approved_imports = total_devices - unapproved_count
 
@@ -1382,6 +1418,7 @@ def display_unapproved_imports(request):
         'departments': Department.objects.all(),
         'centre_filter': centre_filter,
         'department_filter': department_filter,
+        'show_duplicates': show_duplicates, # Pass new filter to context
         'items_per_page_options': [10, 25, 50, 100, 500],
         'unapproved_count': unapproved_count,
         'total_devices': total_devices,
@@ -1392,7 +1429,7 @@ def display_unapproved_imports(request):
 
 
 # ----------------------------------------------------------------------
-#  DISPOSED IMPORTS (same filter block)
+#  DISPOSED IMPORTS (Applying the same changes)
 # ----------------------------------------------------------------------
 @login_required
 def display_disposed_imports(request):
@@ -1404,14 +1441,25 @@ def display_disposed_imports(request):
     else:
         data = Import.objects.none()
 
-    centre_filter    = request.GET.get('centre', '').strip()
+    centre_filter     = request.GET.get('centre', '').strip()
     department_filter = request.GET.get('department', '').strip()
-    search_query     = request.GET.get('search', '').strip()
+    search_query      = request.GET.get('search', '').strip()
+    show_duplicates   = request.GET.get('show_duplicates', '').strip() # New filter
 
     if centre_filter:
         data = data.filter(centre__id=centre_filter)
     if department_filter:
         data = data.filter(department__id=department_filter)
+
+    # --- New Duplicate Filter Logic ---
+    if show_duplicates == 'on':
+        duplicate_serials = (
+            data.values('serial_number')
+                .annotate(serial_count=Count('serial_number'))
+                .filter(serial_count__gt=1)
+                .values_list('serial_number', flat=True)
+        )
+        data = data.filter(serial_number__in=duplicate_serials)
 
     if search_query:
         data = data.filter(
@@ -1429,9 +1477,10 @@ def display_disposed_imports(request):
             Q(assignee_email_address__icontains=search_query) |
             Q(device_condition__icontains=search_query) |
             Q(status__icontains=search_query) |
-            Q(disposal_reason__icontains=search_query)
+            Q(disposal_reason__icontains=search_query) # Added disposal_reason
         )
 
+    # (Pagination logic remains the same)
     items_per_page = request.GET.get('items_per_page', '10')
     try:
         items_per_page = int(items_per_page)
@@ -1449,15 +1498,17 @@ def display_disposed_imports(request):
     except EmptyPage:
         page_obj = paginator.page(paginator.num_pages)
 
+    # (Pending updates logic remains the same)
     data_with_pending = []
     for item in page_obj:
         pending = PendingUpdate.objects.filter(import_record=item) \
-                                      .order_by('-created_at').first()
+                                       .order_by('-created_at').first()
         data_with_pending.append({'item': item, 'pending_update': pending})
 
+    # (Stats logic remains the same)
     total_devices = (Import.objects.count() if request.user.is_superuser else
-                     (Import.objects.filter(centre=request.user.centre).count()
-                      if request.user.is_trainer and request.user.centre else 0))
+                   (Import.objects.filter(centre=request.user.centre).count()
+                    if request.user.is_trainer and request.user.centre else 0))
     unapproved_count = (Import.objects.filter(is_approved=False, is_disposed=False).count()
                         if request.user.is_superuser else
                         (Import.objects.filter(centre=request.user.centre,
@@ -1478,6 +1529,7 @@ def display_disposed_imports(request):
         'departments': Department.objects.all(),
         'centre_filter': centre_filter,
         'department_filter': department_filter,
+        'show_duplicates': show_duplicates, # Pass new filter to context
         'items_per_page_options': [10, 25, 50, 100, 500],
         'unapproved_count': unapproved_count,
         'total_devices': total_devices,
@@ -1487,6 +1539,7 @@ def display_disposed_imports(request):
     return render(request, 'import/displaycsv_disposed.html', context)
 
 
+# (Your dispose_device function remains unchanged)
 @login_required
 def dispose_device(request, device_id):
     device = get_object_or_404(Import, id=device_id)
@@ -1507,7 +1560,9 @@ def dispose_device(request, device_id):
             messages.success(request, f"Device {device.serial_number} disposed successfully.")
             return redirect('display_approved_imports')
     return render(request, 'import/dispose_device.html', {'device': device})
- 
+
+
+    
 @login_required
 def mark_notification_read(request, pk):
     notification = get_object_or_404(Notification, pk=pk, user=request.user)
