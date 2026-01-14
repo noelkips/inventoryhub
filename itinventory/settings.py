@@ -279,15 +279,18 @@ else:
 # ============================================================================
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-EMAIL_HOST = 'mohiit.org'          # Outgoing server (SMTP)
-EMAIL_PORT = 465                   # SSL SMTP port
-EMAIL_USE_SSL = True               # Required for port 465
+        # Outgoing server (SMTP)
+             # Required for port 465
 # EMAIL_USE_TLS = False            # Do NOT use TLS with port 465
 
-EMAIL_HOST_USER = 'nonreply@mohiit.org'
-EMAIL_HOST_PASSWORD = 'Norex@99!'
-
-DEFAULT_FROM_EMAIL = 'nonreply@mohiit.org'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+EMAIL_HOST = os.getenv('EMAIL_HOST')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_PORT = 465                   # SSL SMTP port
+EMAIL_USE_SSL = True  
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
 
 # ============================================================================
 # LOGGING CONFIGURATION

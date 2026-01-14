@@ -48,7 +48,8 @@ class Command(BaseCommand):
             )
 
             recipients = [
-                "inventory@mohiafrica.org",
+                "itinventory@mohiafrica.org",
+                "noel.langat@mohiafrica.org",
                 "santana.macharia@mohiafrica.org"
             ]
 
