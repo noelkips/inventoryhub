@@ -27,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-=7ap+(zql*g##=bjqpdk9sgtd76k%ayih&k&qz(2y(t0^!7u^x'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 if DEBUG:
     ALLOWED_HOSTS = []
@@ -246,8 +246,6 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
 
-# At the top, ensure you have DEBUG defined (usually already there)
-DEBUG = True  # or False in production
 
 # ============================================================================
 # ⭐ DEVELOPMENT-ONLY SECURITY RELAXATION
@@ -272,9 +270,8 @@ if DEBUG:
     # Allow iframe embedding during development (useful for testing)
     X_FRAME_OPTIONS = 'ALLOWALL'  # or 'SAMEORIGIN' if you prefer slightly safer
 
-    print("DEVELOPMENT MODE: Security restrictions relaxed (HTTP allowed, no redirects)")
 else:
-    print("PRODUCTION MODE: Full security settings enforced")
+    pass
 
 
 # ============================================================================

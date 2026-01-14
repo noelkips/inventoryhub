@@ -1,12 +1,63 @@
-venv/
-# .gitignore
-.env
-*.env
-.env.*
-.env.local
-
-
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+.git/
+.git
+.sqlite3
+
+
+
+# Distribution / packaging
+build/
+dist/
+.installed.cfg
+pip-wheel-metadata/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+.env
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Editor / IDE
+.vscode/
+.idea/
+
+
+
+# Logs, databases, and media
+
+logs/
 db.sqlite3
+db_test.sqlite3
+db.sqlite3-journal
+media/
+
+# Django static files (if you collect static into repo, adjust as needed)
+
+
+# Django local settings and secret files
+local_settings.py
+.env
+.env.*
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+coverage/
+htmlcov/
+
+# Caches
+.cache/
+.mypy_cache/
+.pyre/
+
 
