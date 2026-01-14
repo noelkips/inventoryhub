@@ -1,5 +1,3 @@
-# Django core
-from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
@@ -17,8 +15,9 @@ from io import TextIOWrapper
 
 # Models
 from devices.models import CustomUser, DeviceUserHistory, Import, Centre, Notification, PendingUpdate, Department
+from it_operations.models import BackupRegistry, WorkPlan, IncidentReport, MissionCriticalAsset, WorkPlanTask
 from devices.forms import ClearanceForm
-from ppm.models import PPMTask, PPMPeriod
+from ppm.models import PPMTask, PPMPeriod, PPMActivity
 
 # Third-party & Standard Library
 import csv
@@ -40,13 +39,38 @@ from reportlab.platypus import (
     Frame, PageTemplate
 )
 
+# Django Shortcuts and HTTP
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import Http404
+
 # Logging
 logger = logging.getLogger(__name__)
 
-def handle_uploaded_file(file, user):
+#
+# ==============================================================================
+#  1. CORRECTED FILE HANDLING LOGIC
+# ==============================================================================
+#
+
+
+def handle_uploaded_file(file, user, centre, department, category):
+    """
+    Processes an uploaded CSV file to bulk-create Import records.
+    Centre, department, and category are provided from the form, NOT from CSV.
+    
+    Args:
+        file: The uploaded CSV file
+        user: The user uploading the file
+        centre: Centre object (pre-selected from form)
+        department: Department object (pre-selected from form)
+        category: Category string (pre-selected from form)
+    
+    Returns:
+        Dictionary with import statistics
+    """
+    
+    # Simplified header mapping - NO centre, department, or category in CSV
     header_mapping = {
-        'centre_code': 'centre_code',
-        'department': 'department_code',
         'hardware': 'hardware',
         'system_model': 'system_model',
         'processor': 'processor',
@@ -61,199 +85,317 @@ def handle_uploaded_file(file, user):
         'date': 'date',
     }
 
+    stats = {
+        'total_rows': 0,
+        'created_count': 0,
+        'skipped_existing': 0,
+        'skipped_validation': 0,
+    }
+
     try:
         file.seek(0)
         decoded_file = TextIOWrapper(file.file, encoding='utf-8-sig')
         reader = csv.reader(decoded_file)
         headers = next(reader, None)
+
         if not headers:
             raise ValueError("CSV file is empty or invalid.")
 
         headers = [h.lower().strip() for h in headers]
-        if 'centre_code' not in headers or 'department_code' not in headers:
-            raise ValueError("Missing required headers: centre_code or department_code")
 
-        centre_code_index = headers.index('centre_code')
+        # Only serial_number is required in CSV
+        if 'serial_number' not in headers:
+            raise ValueError("Missing required header: 'serial_number'")
+
+        serial_number_index = headers.index('serial_number')
+        
         import_instances = []
         admins = CustomUser.objects.filter(is_superuser=True, is_trainer=False)
 
         for row in reader:
             if not any(row):  # Skip empty rows
                 continue
-            serial_number = [value.strip() for header, value in zip(headers, row) if header == 'serial_number']
-            if serial_number and Import.objects.filter(serial_number=serial_number[0]).exists():
-                continue
-            import_instance = Import(added_by=user)
-            centre_code = row[centre_code_index].strip() if centre_code_index < len(row) else None
-            if centre_code:
-                try:
-                    centre = Centre.objects.get(centre_code=centre_code)
-                    if user.is_trainer and not user.is_superuser and user.centre and centre != user.centre:
-                        raise ValueError("You can only add devices for your own centre.")
-                    import_instance.centre = centre
-                except Centre.DoesNotExist:
-                    import_instance.centre = None
+            
+            stats['total_rows'] += 1
+
+            # Get serial number
+            serial_number = row[serial_number_index].strip() if serial_number_index < len(row) else None
+            if not serial_number:
+                logger.warning("Skipping row with empty serial number.")
+                stats['skipped_validation'] += 1
+                continue 
+            
+            # Check if serial number already exists
+            if Import.objects.filter(serial_number=serial_number).exists():
+                logger.info(f"Skipping existing serial number: {serial_number}")
+                stats['skipped_existing'] += 1
+                continue 
+
+            # Create instance with form-provided values
+            import_instance = Import(
+                added_by=user,
+                serial_number=serial_number,
+                centre=centre,  # From form
+                department=department,  # From form
+                category=category  # From form
+            )
+
+            # Map all other fields from CSV
             for header, value in zip(headers, row):
-                value = value.strip()
+                value = value.strip() if value else ''
                 field_name = header_mapping.get(header)
-                if field_name and field_name != 'centre_code':
-                    if field_name == 'department_code':
+
+                if not field_name or field_name == 'serial_number':
+                    continue
+                
+                if field_name == 'date' and value:
+                    date_value = None
+                    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'):
                         try:
-                            department = Department.objects.get(code=value) if value else None
-                            setattr(import_instance, 'department', department)
-                        except Department.DoesNotExist:
-                            setattr(import_instance, 'department', None)
-                    elif field_name == 'date' and value:
-                        try:
-                            for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'):
-                                try:
-                                    date_value = datetime.strptime(value, fmt).date()
-                                    setattr(import_instance, field_name, date_value)
-                                    break
-                                except ValueError:
-                                    continue
-                            else:
-                                setattr(import_instance, field_name, None)
-                        except Exception:
-                            setattr(import_instance, field_name, None)
-                    else:
-                        setattr(import_instance, field_name, value or None)
-            import_instance.is_approved = False if user.is_trainer else True
-            import_instance.approved_by = user if user.is_superuser else None
+                            date_value = datetime.strptime(value, fmt).date()
+                            break
+                        except ValueError:
+                            continue
+                    setattr(import_instance, field_name, date_value)
+                else:
+                    setattr(import_instance, field_name, value or None)
+
+            # Set approval status
+            import_instance.is_approved = not user.is_trainer
+            import_instance.approved_by = user if not user.is_trainer and user.is_superuser else None
+            
+            # Set date if not provided
+            if not import_instance.date:
+                import_instance.date = timezone.now().date()
+            
             import_instances.append(import_instance)
 
+        # Bulk create
         if import_instances:
             with transaction.atomic():
-                Import.objects.bulk_create(import_instances)
-                # Create notifications for admins
+                created_imports = Import.objects.bulk_create(
+                    import_instances, 
+                    batch_size=500, 
+                    ignore_conflicts=True
+                )
+                stats['created_count'] = len(created_imports)
+                
+                # Create notifications for trainers
                 if user.is_trainer:
-                    for import_instance in import_instances:
+                    created_serials = [imp.serial_number for imp in created_imports]
+                    newly_created_imports = Import.objects.filter(serial_number__in=created_serials)
+                    
+                    for import_obj in newly_created_imports:
                         for admin in admins:
                             Notification.objects.create(
                                 user=admin,
-                                message=f"New device added by {user.username} with serial number {import_instance.serial_number} awaiting approval.",
+                                message=f"New device added by {user.username} with serial number {import_obj.serial_number} awaiting approval.",
                                 content_type=ContentType.objects.get_for_model(Import),
-                                object_id=import_instance.pk
+                                object_id=import_obj.pk
                             )
-        else:
-            raise ValueError("No valid devices to import.")
+        
+        return stats
 
     except ValueError as ve:
+        logger.warning(f"Validation error during CSV import for user {user.username}: {str(ve)}")
         raise
     except Exception as e:
-        logger.error(f"Error processing CSV file: {str(e)}")
-        raise
+        logger.error(f"Error processing CSV file for user {user.username}: {str(e)}", exc_info=True)
+        raise ValueError(f"An unexpected error occurred: {str(e)}")
     finally:
-        decoded_file.detach()
+        if 'decoded_file' in locals() and decoded_file:
+            decoded_file.detach()
 
 @login_required
-def upload_csv(request):
-    if request.method == 'POST':
-        if 'file' in request.FILES:
-            try:
-                file = request.FILES['file']
-                if not file.name.lower().endswith('.csv'):
-                    messages.error(request, "Only CSV files are accepted.")
-                    return redirect('import_add')
-                handle_uploaded_file(file, request.user)
-                messages.success(request, "CSV file uploaded successfully. Devices are pending approval." if request.user.is_trainer else "CSV file uploaded successfully.")
-                return redirect('display_approved_imports')
-            except ValueError as ve:
-                messages.error(request, str(ve))
-            except Exception as e:
-                messages.error(request, f"Error processing CSV file: {str(e)}")
-        else:
-            try:
-                with transaction.atomic():
-                    centre_id = request.POST.get('centre')
-                    centre = Centre.objects.get(id=centre_id) if centre_id and centre_id != 'None' else None
-                    user = CustomUser.objects.create_user(
-                        username=request.POST.get('username'),
-                        email=request.POST.get('email'),
-                        password=request.POST.get('password'),
-                        first_name=request.POST.get('first_name', ''),
-                        last_name=request.POST.get('last_name', ''),
-                        centre=centre,
-                        is_trainer=request.POST.get('is_trainer') == 'on',
-                        is_staff=request.POST.get('is_staff') == 'on',
-                        is_superuser=request.POST.get('is_superuser') == 'on'
-                    )
-                    user.save()
-                    messages.success(request, "User added successfully.")
-                    return redirect('manage_users')
-            except Exception as e:
-                messages.error(request, f"Error adding user: {str(e)}")
-        return redirect('import_add')
-    return render(request, 'import/uploadcsv.html', {'centres': Centre.objects.all()})
+def download_csv_template(request):
+    """
+    Generates a CSV template file for device bulk upload.
+    The headers match the keys in the 'header_mapping' of handle_uploaded_file.
+    """
+    response = HttpResponse(
+        content_type='text/csv',
+        headers={'Content-Disposition': 'attachment; filename="device_upload_template.csv"'},
+    )
+
+    # These headers are the *keys* from your header_mapping
+    # We put serial_number first as it's the most critical
+    headers = [
+        'serial_number',
+        'hardware',
+        'system_model',
+        'processor',
+        'ram_gb',
+        'hdd_gb',
+        'assignee_first_name',
+        'assignee_last_name',
+        'assignee_email_address',
+        'device_condition',
+        'status',
+        'date',
+    ]
+
+    writer = csv.writer(response)
+    writer.writerow(headers)  # Write only the header row
+
+    return response
+
 
 @login_required
 def import_add(request):
+    user = request.user
+    """Add new device - single or bulk upload"""
     if request.method == 'POST':
+        
+        # === FILE UPLOAD (BULK) ===
         if 'file' in request.FILES:
             file = request.FILES['file']
             if not file.name.lower().endswith('.csv'):
                 messages.error(request, "Only CSV files are accepted.")
                 return redirect('import_add')
+            
             try:
-                handle_uploaded_file(file, request.user)
-                messages.success(request, "CSV file uploaded successfully. Devices are pending approval." if request.user.is_trainer else "CSV file uploaded successfully.")
+                # Get centre, department, and category from form
+                centre_id = request.POST.get('bulk_centre')
+                department_id = request.POST.get('bulk_department')
+                category = request.POST.get('bulk_category')
+
+                # Validate form inputs
+                if not department_id:
+                    messages.error(request, "Please select a department before uploading.")
+                    return redirect('import_add')
+                
+                if not category:
+                    messages.error(request, "Please select a device category before uploading.")
+                    return redirect('import_add')
+
+                # Get centre object
+                if user.is_trainer:
+                    if not request.user.centre:
+                        messages.error(request, "Your account is not assigned to a centre. Please contact an administrator.")
+                        return redirect('import_add')
+                    centre = request.user.centre
+                else:
+                    if not centre_id:
+                        messages.error(request, "Please select a centre before uploading.")
+                        return redirect('import_add')
+                    try:
+                        centre = Centre.objects.get(id=centre_id)
+                    except Centre.DoesNotExist:
+                        messages.error(request, "Invalid centre selected.")
+                        return redirect('import_add')
+
+                # Get department object
+                try:
+                    department = Department.objects.get(id=department_id)
+                except Department.DoesNotExist:
+                    messages.error(request, "Invalid department selected.")
+                    return redirect('import_add')
+
+                # Process CSV with form-provided values
+                upload_stats = handle_uploaded_file(file, request.user, centre, department, category)
+
+                created_count = upload_stats.get('created_count', 0)
+                skipped_existing = upload_stats.get('skipped_existing', 0)
+                skipped_validation = upload_stats.get('skipped_validation', 0)
+
+                # Build success/warning messages
+                if created_count > 0:
+                    approval_msg = " Pending approval." if request.user.is_trainer else ""
+                    messages.success(
+                        request, 
+                        f"Successfully imported {created_count} new devices to {centre.name} - {department.name} ({category}).{approval_msg}"
+                    )
+
+                if skipped_existing > 0:
+                    messages.warning(
+                        request, 
+                        f"Skipped {skipped_existing} devices because their serial numbers already exist."
+                    )
+                
+                if skipped_validation > 0:
+                    messages.warning(
+                        request, 
+                        f"Skipped {skipped_validation} rows due to validation errors (e.g., missing serial number)."
+                    )
+
+                if created_count == 0 and skipped_existing == 0:
+                    messages.info(request, "No devices were imported. Please check your CSV file.")
+
                 return redirect('display_approved_imports')
+
             except ValueError as ve:
                 messages.error(request, str(ve))
                 return redirect('import_add')
             except Exception as e:
+                logger.error(f"Error during bulk upload: {str(e)}", exc_info=True)
                 messages.error(request, f"Error processing CSV file: {str(e)}")
                 return redirect('import_add')
+        
+        # === MANUAL SINGLE DEVICE SUBMISSION ===
         else:
             try:
                 with transaction.atomic():
-                    centre_id = request.POST.get('centre')
-                    centre = Centre.objects.get(id=centre_id) if centre_id and centre_id != '' else None
-                    if request.user.is_trainer and centre != request.user.centre:
-                        messages.error(request, "You can only add records for your own centre.")
-                        return redirect('import_add')
-                    required_fields = {
-                        'department': request.POST.get('department'),
-                        'hardware': request.POST.get('hardware'),
-                        'system_model': request.POST.get('system_model'),
-                        'serial_number': request.POST.get('serial_number'),
-                        'assignee_first_name': request.POST.get('assignee_first_name'),
-                        'assignee_last_name': request.POST.get('assignee_last_name'),
-                        'device_condition': request.POST.get('device_condition'),
-                        'status': request.POST.get('status')
-                    }
-                    for field_name, value in required_fields.items():
-                        if not value:
-                            messages.error(request, f"{field_name.replace('_', ' ').title()} is required.")
+                    # Get centre
+                    if request.user.is_trainer:
+                        if not request.user.centre:
+                            messages.error(request, "Your account is not assigned to a centre.")
                             return redirect('import_add')
+                        centre = request.user.centre
+                    else:
+                        centre_id = request.POST.get('centre')
+                        if not centre_id:
+                            messages.error(request, "Centre is required.")
+                            return redirect('import_add')
+                        centre = Centre.objects.get(id=centre_id)
+                    
+                    # Get department
                     department_id = request.POST.get('department')
-                    department = Department.objects.get(id=department_id) if department_id and department_id != 'None' else None
-                    if not department:
+                    if not department_id:
                         messages.error(request, "Department is required.")
                         return redirect('import_add')
+                    department = Department.objects.get(id=department_id)
+                    
+                    # Get category
+                    category = request.POST.get('category')
+                    if not category:
+                        messages.error(request, "Device category is required.")
+                        return redirect('import_add')
+                    
+                    # Get serial number
+                    serial_number = request.POST.get('serial_number')
+                    if not serial_number:
+                        messages.error(request, "Serial Number is required.")
+                        return redirect('import_add')
+                    
+                    # Check for duplicate serial number
+                    if Import.objects.filter(serial_number=serial_number).exists():
+                        messages.error(request, f"Serial number {serial_number} already exists.")
+                        return redirect('import_add')
+
+                    # Create device instance
                     import_instance = Import(
                         added_by=request.user,
                         centre=centre,
                         department=department,
+                        category=category,
                         hardware=request.POST.get('hardware'),
                         system_model=request.POST.get('system_model'),
                         processor=request.POST.get('processor'),
                         ram_gb=request.POST.get('ram_gb'),
                         hdd_gb=request.POST.get('hdd_gb'),
-                        serial_number=request.POST.get('serial_number'),
+                        serial_number=serial_number,
                         assignee_first_name=request.POST.get('assignee_first_name'),
                         assignee_last_name=request.POST.get('assignee_last_name'),
                         assignee_email_address=request.POST.get('assignee_email_address'),
                         device_condition=request.POST.get('device_condition'),
                         status=request.POST.get('status'),
                         date=timezone.now().date(),
-                        is_approved=False if request.user.is_trainer else True,
-                        approved_by=request.user if request.user.is_superuser else None
+                        is_approved=not request.user.is_trainer,
+                        approved_by=request.user if not request.user.is_trainer and request.user.is_superuser else None
                     )
-                    if import_instance.serial_number and Import.objects.filter(serial_number=import_instance.serial_number).exists():
-                        messages.error(request, f"Serial number {import_instance.serial_number} already exists.")
-                        return redirect('import_add')
                     import_instance.save()
+                    
+                    # Create notification for trainers
                     if request.user.is_trainer:
                         admins = CustomUser.objects.filter(is_superuser=True, is_trainer=False)
                         for admin in admins:
@@ -263,8 +405,11 @@ def import_add(request):
                                 content_type=ContentType.objects.get_for_model(Import),
                                 object_id=import_instance.pk
                             )
-                    messages.success(request, "Device added successfully." + (" Pending approval." if request.user.is_trainer else ""))
+                    
+                    approval_msg = " Pending approval." if request.user.is_trainer else ""
+                    messages.success(request, f"Device added successfully.{approval_msg}")
                     return redirect('display_approved_imports')
+            
             except Centre.DoesNotExist:
                 messages.error(request, "Invalid centre selected.")
                 return redirect('import_add')
@@ -272,50 +417,55 @@ def import_add(request):
                 messages.error(request, "Invalid department selected.")
                 return redirect('import_add')
             except Exception as e:
+                logger.error(f"Error adding manual device: {str(e)}", exc_info=True)
                 messages.error(request, f"Error adding device: {str(e)}")
                 return redirect('import_add')
-    return render(request, 'import/add.html', {'centres': Centre.objects.all(), 'departments': Department.objects.all()})
+
+    # === GET REQUEST - Show Form ===
+    all_centres = Centre.objects.all().order_by('name')
+    all_departments = Department.objects.all().order_by('name')
+    
+    context = {
+        'centres': all_centres,
+        'departments': all_departments
+    }
+    return render(request, 'import/add.html', context)
 
 
 @login_required
 def import_update(request, pk):
+    """Update existing device"""
     import_instance = get_object_or_404(Import, pk=pk)
+    
+    # Permission check for trainers
     if request.user.is_trainer and import_instance.centre != request.user.centre:
         messages.error(request, "You can only update records for your own centre.")
         return redirect('display_approved_imports')
+    
     if request.method == 'POST':
         try:
             with transaction.atomic():
-                # Log form data for debugging
-                logger.debug(f"Form data for device {import_instance.serial_number}: {request.POST}")
-
                 # Get form values
-                centre_id = request.POST.get('centre', '').strip()
                 department_id = request.POST.get('department', '').strip()
+                category = request.POST.get('category', '').strip()
                 serial_number = request.POST.get('serial_number', '').strip()
-                hardware = request.POST.get('hardware', '').strip()
-                system_model = request.POST.get('system_model', '').strip()
-                processor = request.POST.get('processor', '').strip()
-                ram_gb = request.POST.get('ram_gb', '').strip()
-                hdd_gb = request.POST.get('hdd_gb', '').strip()
-                assignee_first_name = request.POST.get('assignee_first_name', '').strip()
-                assignee_last_name = request.POST.get('assignee_last_name', '').strip()
-                assignee_email_address = request.POST.get('assignee_email_address', '').strip()
-                device_condition = request.POST.get('device_condition', '').strip()
-                status = request.POST.get('status', '').strip()
-                reason_for_update = request.POST.get('reason_for_update', '').strip()
-                date_str = request.POST.get('date', '').strip()
-
-                # Validate centre
-                centre = Centre.objects.get(id=centre_id) if centre_id and centre_id != 'None' else None
-                if request.user.is_trainer and centre != request.user.centre:
-                    messages.error(request, "You can only update records for your own centre.")
-                    return redirect('display_approved_imports')
+                
+                # Handle centre (trainers can't change it)
+                if request.user.is_trainer:
+                    centre = request.user.centre
+                else:
+                    centre_id = request.POST.get('centre', '').strip()
+                    centre = Centre.objects.get(id=centre_id) if centre_id else None
 
                 # Validate department
-                department = Department.objects.get(id=department_id) if department_id and department_id != 'None' else None
+                department = Department.objects.get(id=department_id) if department_id else None
                 if not department:
                     messages.error(request, "Department is required.")
+                    return redirect('display_approved_imports')
+
+                # Validate category
+                if not category:
+                    messages.error(request, "Device category is required.")
                     return redirect('display_approved_imports')
 
                 # Validate serial number
@@ -323,12 +473,8 @@ def import_update(request, pk):
                     messages.error(request, f"Serial number {serial_number} already exists.")
                     return redirect('display_approved_imports')
 
-                # Validate reason for update for trainers
-                if request.user.is_trainer and not reason_for_update:
-                    messages.error(request, "Reason for update is required for trainers.")
-                    return redirect('display_approved_imports')
-
                 # Parse date
+                date_str = request.POST.get('date', '').strip()
                 date_value = None
                 if date_str:
                     for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'):
@@ -338,49 +484,54 @@ def import_update(request, pk):
                         except ValueError:
                             continue
 
-                # Collect fields to update (only changed fields)
+                # Collect changed fields
                 fields_to_update = {}
                 form_data = {
                     'centre': centre,
                     'department': department,
-                    'hardware': hardware,
-                    'system_model': system_model,
-                    'processor': processor,
-                    'ram_gb': ram_gb,
-                    'hdd_gb': hdd_gb,
+                    'category': category,
+                    'hardware': request.POST.get('hardware', '').strip(),
+                    'system_model': request.POST.get('system_model', '').strip(),
+                    'processor': request.POST.get('processor', '').strip(),
+                    'ram_gb': request.POST.get('ram_gb', '').strip(),
+                    'hdd_gb': request.POST.get('hdd_gb', '').strip(),
                     'serial_number': serial_number,
-                    'assignee_first_name': assignee_first_name,
-                    'assignee_last_name': assignee_last_name,
-                    'assignee_email_address': assignee_email_address,
-                    'device_condition': device_condition,
-                    'status': status,
-                    'reason_for_update': reason_for_update,
+                    'assignee_first_name': request.POST.get('assignee_first_name', '').strip(),
+                    'assignee_last_name': request.POST.get('assignee_last_name', '').strip(),
+                    'assignee_email_address': request.POST.get('assignee_email_address', '').strip(),
+                    'device_condition': request.POST.get('device_condition', '').strip(),
+                    'status': request.POST.get('status', '').strip(),
+                    'reason_for_update': request.POST.get('reason_for_update', '').strip(),
                     'date': date_value,
                 }
 
                 # Compare with current values
                 for field, new_value in form_data.items():
                     current_value = getattr(import_instance, field, None)
-                    # Handle None/empty equivalence
-                    current_str = str(current_value) if current_value is not None else ''
-                    new_str = str(new_value) if new_value is not None else ''
+                    
                     if field in ['centre', 'department']:
-                        if new_value != current_value:  # Compare objects directly
+                        if new_value != current_value:
                             fields_to_update[field] = new_value
-                    elif field == 'date':
+                    elif field in ['date']:
                         if new_value and new_value != current_value:
                             fields_to_update[field] = new_value
-                    elif new_str and new_str != current_str and new_str != 'N/A':
-                        fields_to_update[field] = new_value
-
-                # Log fields to be updated
-                logger.debug(f"Fields to update for device {import_instance.serial_number}: {fields_to_update}")
+                    else:
+                        current_str = str(current_value) if current_value else ''
+                        new_str = str(new_value) if new_value else ''
+                        if new_str and new_str != current_str:
+                            fields_to_update[field] = new_value
 
                 if not fields_to_update:
                     messages.info(request, "No changes detected.")
                     return redirect('display_approved_imports')
 
+                # Handle trainer updates (requires approval)
                 if request.user.is_trainer:
+                    reason_for_update = request.POST.get('reason_for_update', '').strip()
+                    if not reason_for_update:
+                        messages.error(request, "Reason for update is required for trainers.")
+                        return redirect('display_approved_imports')
+                    
                     pending_update = PendingUpdate.objects.create(
                         import_record=import_instance,
                         **fields_to_update,
@@ -389,6 +540,8 @@ def import_update(request, pk):
                     import_instance.is_approved = False
                     import_instance.approved_by = None
                     import_instance.save()
+                    
+                    # Notify admins
                     admins = CustomUser.objects.filter(is_superuser=True, is_trainer=False)
                     for admin in admins:
                         Notification.objects.create(
@@ -400,26 +553,37 @@ def import_update(request, pk):
                     messages.success(request, "Update submitted for approval.")
                     return redirect('notifications_view')
                 else:
-                    # Only update changed fields
+                    # Direct update for non-trainers
                     for field, value in fields_to_update.items():
                         setattr(import_instance, field, value)
+                    
                     import_instance.is_approved = True if request.user.is_superuser else import_instance.is_approved
                     import_instance.approved_by = request.user if request.user.is_superuser else import_instance.approved_by
                     import_instance.save()
+                    
                     messages.success(request, "Device updated successfully.")
                     return redirect('display_approved_imports')
+                    
         except Department.DoesNotExist:
             messages.error(request, "Invalid department selected.")
             return redirect('display_approved_imports')
+        except Centre.DoesNotExist:
+            messages.error(request, "Invalid centre selected.")
+            return redirect('display_approved_imports')
         except Exception as e:
-            logger.error(f"Error updating device {import_instance.serial_number}: {str(e)}")
+            logger.error(f"Error updating device {import_instance.serial_number}: {str(e)}", exc_info=True)
             messages.error(request, f"Error updating device: {str(e)}")
             return redirect('display_approved_imports')
+    
+    # GET request - show edit form
     return render(request, 'import/edit.html', {
         'import_instance': import_instance,
-        'centres': Centre.objects.all(),
-        'departments': Department.objects.all()
+        'centres': Centre.objects.all().order_by('name'),
+        'departments': Department.objects.all().order_by('name')
     })
+
+
+
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser and not u.is_trainer)
@@ -714,7 +878,6 @@ def clear_all_notifications(request):
     return HttpResponseRedirect('/dashboard/')
 
 
-
 @login_required
 def device_history(request, pk):
     device = get_object_or_404(Import, pk=pk)
@@ -817,13 +980,18 @@ def device_history(request, pk):
         'history': history_data,
         'user_history': user_history_data
     })
+# Make sure you have these imports at the top of your views.py
 
 @login_required
 def export_to_excel(request):
-    scope        = request.GET.get('scope', 'page')
+    # === GET PARAMETERS ===
+    scope = request.GET.get('scope', 'page')
     search_query = request.GET.get('search', '')
-    page_number  = request.GET.get('page', '1')
+    page_number = request.GET.get('page', '1')
     items_per_page = request.GET.get('items_per_page', '10')
+    
+    # ***** NEW: Get the view context *****
+    view_context = request.GET.get('view_context', 'display_approved_imports')
 
     # ---- pagination / validation -------------------------------------------------
     try:
@@ -832,25 +1000,34 @@ def export_to_excel(request):
             items_per_page = 10
     except ValueError:
         items_per_page = 10
-
     try:
         page_number = int(page_number) if page_number else 1
     except ValueError:
         page_number = 1
 
-    # ---- queryset ---------------------------------------------------------------
+    # ---- base queryset ----------------------------------------------------------
     if request.user.is_superuser:
-        data = Import.objects.all()
+        base_qs = Import.objects.all()
     elif request.user.is_trainer:
-        data = Import.objects.filter(centre=request.user.centre)
+        base_qs = Import.objects.filter(centre=request.user.centre)
     else:
-        data = Import.objects.none()
+        base_qs = Import.objects.none()
 
+    # ***** NEW: Apply filtering based on view context *****
+    if view_context == 'display_unapproved_imports':
+        data = base_qs.filter(is_approved=False, is_disposed=False)
+    elif view_context == 'display_disposed_imports':
+        data = base_qs.filter(is_disposed=True)
+    else: # Default to 'display_approved_imports'
+        data = base_qs.filter(is_approved=True, is_disposed=False)
+
+    # ---- apply search -----------------------------------------------------------
     if search_query:
         query = (
             Q(centre__name__icontains=search_query) |
             Q(centre__centre_code__icontains=search_query) |
             Q(department__name__icontains=search_query) |
+            Q(category__icontains=search_query) |  # ***** ADDED: category search *****
             Q(hardware__icontains=search_query) |
             Q(system_model__icontains=search_query) |
             Q(processor__icontains=search_query) |
@@ -881,7 +1058,7 @@ def export_to_excel(request):
 
     # ---- headers ----------------------------------------------------------------
     headers = [
-        'Centre', 'Department', 'Hardware', 'System Model',
+        'Centre', 'Department', 'Category', 'Hardware', 'System Model', # ***** ADDED: Category *****
         'Processor', 'RAM (GB)', 'HDD (GB)', 'Serial Number',
         'Assignee First Name', 'Assignee Last Name', 'Assignee Email',
         'Device Condition', 'Status', 'Date', 'Added By',
@@ -893,8 +1070,8 @@ def export_to_excel(request):
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
     for cell in ws[1]:
-        cell.font  = header_font
-        cell.fill  = header_fill
+        cell.font = header_font
+        cell.fill = header_fill
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
     # ---- data rows --------------------------------------------------------------
@@ -902,6 +1079,7 @@ def export_to_excel(request):
         row = [
             item.centre.name if item.centre else 'N/A',
             item.department.name if item.department else 'N/A',
+            item.get_category_display() or 'N/A',  # ***** ADDED: Category data *****
             item.hardware or 'N/A',
             item.system_model or 'N/A',
             item.processor or 'N/A',
@@ -927,7 +1105,6 @@ def export_to_excel(request):
         for cell in row:
             cell.alignment = wrap_align
 
-    # auto‑size columns (a little extra room for wrapped text)
     for col in ws.columns:
         max_length = 0
         column = col[0].column_letter
@@ -937,7 +1114,7 @@ def export_to_excel(request):
                     max_length = len(str(cell.value))
             except:
                 pass
-        adjusted_width = min(max_length + 2, 50)   # cap at 50 to avoid huge sheets
+        adjusted_width = min(max_length + 2, 50)
         ws.column_dimensions[column].width = adjusted_width
 
     # ---- response ---------------------------------------------------------------
@@ -949,12 +1126,17 @@ def export_to_excel(request):
     wb.save(response)
     return response
 
+
 @login_required
 def export_to_pdf(request):
+    # === GET PARAMETERS ===
     scope = request.GET.get('scope', 'page')
     search_query = request.GET.get('search', '')
     page_number = request.GET.get('page', '1')
     items_per_page = request.GET.get('items_per_page', '10')
+
+    # ***** NEW: Get the view context *****
+    view_context = request.GET.get('view_context', 'display_approved_imports')
 
     # --- Pagination ---
     try:
@@ -968,20 +1150,30 @@ def export_to_pdf(request):
     except ValueError:
         page_number = 1
 
-    # --- Queryset ---
+    # --- Base Queryset ---
     if request.user.is_superuser:
-        qs = Import.objects.select_related('centre', 'department', 'added_by', 'approved_by')
+        base_qs = Import.objects.select_related('centre', 'department', 'added_by', 'approved_by')
     elif request.user.is_trainer:
-        qs = Import.objects.filter(centre=request.user.centre)\
-                           .select_related('centre', 'department', 'added_by', 'approved_by')
+        base_qs = Import.objects.filter(centre=request.user.centre)\
+                             .select_related('centre', 'department', 'added_by', 'approved_by')
     else:
-        qs = Import.objects.none()
+        base_qs = Import.objects.none()
 
+    # ***** NEW: Apply filtering based on view context *****
+    if view_context == 'display_unapproved_imports':
+        qs = base_qs.filter(is_approved=False, is_disposed=False)
+    elif view_context == 'display_disposed_imports':
+        qs = base_qs.filter(is_disposed=True)
+    else: # Default to 'display_approved_imports'
+        qs = base_qs.filter(is_approved=True, is_disposed=False)
+
+    # --- Apply Search ---
     if search_query:
         qs = qs.filter(
             Q(centre__name__icontains=search_query) |
             Q(centre__centre_code__icontains=search_query) |
             Q(department__name__icontains=search_query) |
+            Q(category__icontains=search_query) |  # ***** ADDED: category search *****
             Q(hardware__icontains=search_query) |
             Q(system_model__icontains=search_query) |
             Q(processor__icontains=search_query) |
@@ -1004,7 +1196,7 @@ def export_to_pdf(request):
         except (PageNotAnInteger, EmptyPage):
             data = paginator.page(1)
     else:
-        data = list(qs.iterator())  # force evaluation
+        data = list(qs.iterator())
 
     # --- Response ---
     response = HttpResponse(content_type='application/pdf')
@@ -1018,7 +1210,6 @@ def export_to_pdf(request):
         rightMargin=10*mm, leftMargin=10*mm,
         topMargin=15*mm, bottomMargin=18*mm
     )
-
     elements = []
     styles = getSampleStyleSheet()
 
@@ -1045,10 +1236,10 @@ def export_to_pdf(request):
     ))
     elements.append(Spacer(1, 6*mm))
 
-    # --- Table: Your Exact Column Widths ---
-    col_widths = [70, 70, 70, 85, 95, 120, 65, 80, 80]  # mm
+    # --- Table: Column Widths & Headers ***** UPDATED ***** ---
+    col_widths = [65, 65, 60, 65, 80, 95, 120, 60, 80, 80]  # (pts) Added width for Category
     headers = [
-        'Centre', 'Department', 'Hardware', 'Model',
+        'Centre', 'Department', 'Category', 'Hardware', 'Model',
         'Specs & serial number', 'Assignee',
         'Condition', 'Status & Date', 'Disposal Reason'
     ]
@@ -1077,6 +1268,7 @@ def export_to_pdf(request):
         row = [
             Paragraph(safe(item.centre.name if item.centre else ''), cell_style),
             Paragraph(safe(item.department.name if item.department else ''), cell_style),
+            Paragraph(safe(item.get_category_display()), cell_style), # ***** ADDED: Category data *****
             Paragraph(safe(item.hardware), cell_style),
             Paragraph(safe(item.system_model), cell_style),
             Paragraph(specs, cell_style),
@@ -1093,33 +1285,30 @@ def export_to_pdf(request):
     table = Table(table_data, colWidths=col_widths)
     table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#143C50')),
-        ('TEXTCOLOR',  (0,0), (-1,0), colors.whitesmoke),
-        ('ALIGN',      (0,0), (-1,-1), 'LEFT'),
-        ('FONTSIZE',   (0,0), (-1,0), 8),
-        ('FONTSIZE',   (0,1), (-1,-1), 7.5),
-        ('VALIGN',     (0,0), (-1,-1), 'TOP'),
-        ('GRID',       (0,0), (-1,-1), 0.5, colors.grey),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('FONTSIZE', (0,0), (-1,0), 8),
+        ('FONTSIZE', (0,1), (-1,-1), 7.5),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
         ('LEFTPADDING', (0,0), (-1,-1), 4),
-        ('RIGHTPADDING',(0,0), (-1,-1), 4),
-        ('TOPPADDING',  (0,1), (-1,-1), 3),
-        ('BOTTOMPADDING',(0,1), (-1,-1), 3),
+        ('RIGHTPADDING', (0,0), (-1,-1), 4),
+        ('TOPPADDING', (0,1), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,1), (-1,-1), 3),
     ]))
     elements.append(table)
 
-    # --- WATERMARK + PAGE NUMBERS (Same as ppm_report) ---
+    # --- WATERMARK + PAGE NUMBERS ---
     def add_page_elements(canvas, doc):
-        # Page number
         canvas.saveState()
         canvas.setFont("Helvetica", 9)
         canvas.setFillColor(colors.grey)
         page_text = f"Page {doc.page}"
         canvas.drawCentredString(148.5 * mm, 6 * mm, page_text)
         canvas.restoreState()
-
-        # Watermark
         canvas.saveState()
         canvas.setFont("Helvetica", 60)
-        canvas.setFillGray(0.9, 0.15)  # Light but visible
+        canvas.setFillGray(0.9, 0.15)
         canvas.rotate(45)
         canvas.drawCentredString(400, 100, "MOHI IT")
         canvas.restoreState()
@@ -1136,6 +1325,7 @@ def export_to_pdf(request):
         return HttpResponse(f"Error generating PDF: {e}", status=500)
 
     return response
+
 
 
 @login_required
@@ -1170,6 +1360,8 @@ def profile(request):
             return redirect('profile')
     return render(request, 'accounts/profile.html', {'user': request.user, 'centres': Centre.objects.all()})
 
+
+
 @login_required
 def change_password(request):
     if request.method == 'POST':
@@ -1199,7 +1391,6 @@ def change_password(request):
     return render(request, 'accounts/change_password.html', {})
 
 from django.db.models import Q, Count # Ensure Count is imported
-# ... other imports like render, redirect, Paginator, etc.
 from .models import Import, PendingUpdate, Centre, Department # (and other models)
 
 @login_required
@@ -1426,25 +1617,36 @@ def display_unapproved_imports(request):
         'view_name': 'display_unapproved_imports',
     }
     return render(request, 'import/displaycsv_unapproved.html', context)
-
-
 # ----------------------------------------------------------------------
 #  DISPOSED IMPORTS (Applying the same changes)
 # ----------------------------------------------------------------------
 @login_required
 def display_disposed_imports(request):
+    # 1. Establish the base queryset of ALL disposed devices relevant to the user
     if request.user.is_superuser:
-        data = Import.objects.filter(is_disposed=True)
+        # Base queryset includes all disposed devices for superusers
+        base_disposed_data = Import.objects.filter(is_disposed=True)
     elif request.user.is_trainer:
-        data = (Import.objects.filter(centre=request.user.centre, is_disposed=True)
-                if request.user.centre else Import.objects.none())
+        # Base queryset includes only disposed devices for the user's centre
+        base_disposed_data = (
+            Import.objects.filter(centre=request.user.centre, is_disposed=True)
+            if request.user.centre else Import.objects.none()
+        )
     else:
-        data = Import.objects.none()
+        base_disposed_data = Import.objects.none()
 
-    centre_filter     = request.GET.get('centre', '').strip()
+    # 2. Calculate the Quick Stats based on the full base queryset (before filters/search)
+    total_devices_count = base_disposed_data.count()
+    approved_disposed_count = base_disposed_data.filter(is_approved=True).count()
+    unapproved_disposed_count = base_disposed_data.filter(is_approved=False).count()
+
+    # 3. Apply GET filters (Centre, Department, Search, Duplicates) to the 'data' queryset
+    data = base_disposed_data  # Start applying filters/search on this queryset
+
+    centre_filter = request.GET.get('centre', '').strip()
     department_filter = request.GET.get('department', '').strip()
-    search_query      = request.GET.get('search', '').strip()
-    show_duplicates   = request.GET.get('show_duplicates', '').strip() # New filter
+    search_query = request.GET.get('search', '').strip()
+    show_duplicates = request.GET.get('show_duplicates', '').strip()
 
     if centre_filter:
         data = data.filter(centre__id=centre_filter)
@@ -1453,6 +1655,7 @@ def display_disposed_imports(request):
 
     # --- New Duplicate Filter Logic ---
     if show_duplicates == 'on':
+        from django.db.models import Count  # Ensure this is imported at the top of views.py
         duplicate_serials = (
             data.values('serial_number')
                 .annotate(serial_count=Count('serial_number'))
@@ -1462,6 +1665,7 @@ def display_disposed_imports(request):
         data = data.filter(serial_number__in=duplicate_serials)
 
     if search_query:
+        from django.db.models import Q  # Ensure this is imported at the top of views.py
         data = data.filter(
             Q(centre__name__icontains=search_query) |
             Q(centre__centre_code__icontains=search_query) |
@@ -1477,11 +1681,13 @@ def display_disposed_imports(request):
             Q(assignee_email_address__icontains=search_query) |
             Q(device_condition__icontains=search_query) |
             Q(status__icontains=search_query) |
-            Q(disposal_reason__icontains=search_query) # Added disposal_reason
+            Q(disposal_reason__icontains=search_query)
         )
 
-    # (Pagination logic remains the same)
+    # Pagination logic
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger  # Ensure these are imported
     items_per_page = request.GET.get('items_per_page', '10')
+
     try:
         items_per_page = int(items_per_page)
         if items_per_page not in [10, 25, 50, 100, 500]:
@@ -1491,6 +1697,7 @@ def display_disposed_imports(request):
 
     paginator = Paginator(data, items_per_page)
     page_number = request.GET.get('page', 1)
+
     try:
         page_obj = paginator.page(page_number)
     except PageNotAnInteger:
@@ -1498,44 +1705,38 @@ def display_disposed_imports(request):
     except EmptyPage:
         page_obj = paginator.page(paginator.num_pages)
 
-    # (Pending updates logic remains the same)
+    # Pending updates logic (if applicable)
     data_with_pending = []
     for item in page_obj:
-        pending = PendingUpdate.objects.filter(import_record=item) \
-                                       .order_by('-created_at').first()
-        data_with_pending.append({'item': item, 'pending_update': pending})
+        # If PendingUpdate is not relevant for disposed items, keep None
+        data_with_pending.append({'item': item, 'pending_update': None})
 
-    # (Stats logic remains the same)
-    total_devices = (Import.objects.count() if request.user.is_superuser else
-                   (Import.objects.filter(centre=request.user.centre).count()
-                    if request.user.is_trainer and request.user.centre else 0))
-    unapproved_count = (Import.objects.filter(is_approved=False, is_disposed=False).count()
-                        if request.user.is_superuser else
-                        (Import.objects.filter(centre=request.user.centre,
-                                               is_approved=False, is_disposed=False).count()
-                         if request.user.is_trainer and request.user.centre else 0))
-    approved_imports = total_devices - unapproved_count
-
+    # 4. Update the Context with the Correct Stats
     context = {
         'data_with_pending': data_with_pending,
         'paginator': paginator,
         'data': page_obj,
         'report_data': {
-            'total_records': paginator.count,
+            'total_records': paginator.count,  # This count is for the currently filtered/searched data
             'search_query': search_query,
             'items_per_page': items_per_page,
         },
+        'items_per_page_options': [10, 25, 50, 100, 500],
+
+        # CORRECTED STATS
+        'unapproved_count': unapproved_disposed_count,
+        'total_devices': total_devices_count,
+        'approved_imports': approved_disposed_count,
+        'view_name': 'display_disposed_imports',
+
+        # Filters and dropdowns
         'centres': Centre.objects.all(),
         'departments': Department.objects.all(),
         'centre_filter': centre_filter,
         'department_filter': department_filter,
-        'show_duplicates': show_duplicates, # Pass new filter to context
-        'items_per_page_options': [10, 25, 50, 100, 500],
-        'unapproved_count': unapproved_count,
-        'total_devices': total_devices,
-        'approved_imports': approved_imports,
-        'view_name': 'display_disposed_imports',
+        'show_duplicates': show_duplicates,
     }
+
     return render(request, 'import/displaycsv_disposed.html', context)
 
 
@@ -1574,276 +1775,6 @@ def mark_notification_read(request, pk):
     return HttpResponseRedirect('/dashboard/')
 
 
-@login_required
-def dashboard_view(request):
-    user = request.user
-    
-    # Base queries based on user role
-    if user.is_superuser and not user.is_trainer:
-        device_query = Import.objects.all()
-        ppm_query = PPMTask.objects.all()
-        user_scope = "all"
-    elif user.is_trainer and user.centre:
-        device_query = Import.objects.filter(centre=user.centre)
-        ppm_query = PPMTask.objects.filter(device__centre=user.centre)
-        user_scope = "centre"
-    else:
-        device_query = Import.objects.none()
-        ppm_query = PPMTask.objects.none()
-        user_scope = "none"
-    
-    # Get active PPM period
-    active_period = PPMPeriod.objects.filter(is_active=True).first()
-    
-    # === DEVICE STATISTICS ===
-    total_devices = device_query.count()
-    approved_devices = device_query.filter(is_approved=True, is_disposed=False).count()
-    pending_approvals = device_query.filter(is_approved=False, is_disposed=False).count()
-    disposed_devices = device_query.filter(is_disposed=True).count()
-    
-    # Device status breakdown
-    device_status_breakdown = device_query.filter(is_disposed=False).values('status').annotate(
-        count=Count('id')
-    ).order_by('-count')
-    
-    # Devices by centre - all centres
-    all_centres = Centre.objects.all()
-    devices_by_centre = []
-    for centre in all_centres:
-        count = device_query.filter(centre=centre, is_approved=True, is_disposed=False).count()
-        if user_scope == "centre" and centre != user.centre:
-            continue
-        devices_by_centre.append({'centre__name': centre.name, 'count': count})
-    devices_by_centre = sorted(devices_by_centre, key=lambda x: x['count'], reverse=True)
-    
-    # Devices by hardware type - grouped
-    hardware_counts = device_query.filter(is_approved=True, is_disposed=False).values('hardware').annotate(count=Count('id'))
-    grouped_hardware = {}
-    categories = {
-        'laptop': 'Laptop',
-        'monitor': 'Monitor',
-        'system unit': 'System Unit',
-        'printer': 'Printer',
-        'router': 'Routers/Switch/Server',
-        'switch': 'Routers/Switch/Server',
-        'server': 'Routers/Switch/Server',
-        'endcomputing': 'Endcomputing',
-        'television': 'Television'
-    }
-    for item in hardware_counts:
-        hw = item['hardware'].lower() if item['hardware'] else "unknown"
-        key = "Unknown"
-        for cat, label in categories.items():
-            if cat in hw:
-                key = label
-                break
-        grouped_hardware[key] = grouped_hardware.get(key, 0) + item['count']
-    devices_by_hardware = [{'hardware': k, 'count': v} for k, v in sorted(grouped_hardware.items(), key=lambda x: x[1], reverse=True)]
-    
-    # Device condition breakdown
-    device_condition_breakdown = device_query.filter(is_approved=True, is_disposed=False).values(
-        'device_condition'
-    ).annotate(count=Count('id')).order_by('-count')
-    
-    # Recent devices (last 30 days)
-    thirty_days_ago = timezone.now().date() - timedelta(days=30)
-    recent_devices_count = device_query.filter(date__gte=thirty_days_ago).count()
-    recent_devices = device_query.order_by('-date')[:10]
-    
-    # === PPM STATISTICS ===
-    active_period = PPMPeriod.objects.filter(is_active=True).first()
-    if active_period:
-        period = active_period
-        is_active_period = True
-    else:
-        period = PPMPeriod.objects.order_by('-end_date').first()
-        is_active_period = False
-    
-    total_ppm_tasks = 0
-    devices_with_ppm = 0
-    devices_without_ppm = 0
-    ppm_completion_rate = 0
-    ppm_status_labels = []
-    ppm_status_data = []
-    ppm_status_colors = []
-    ppm_tasks_by_activity = []
-    ppm_by_centre = []
-    period_name = None
-    
-    if period:
-        period_name = period.name
-        ppm_query_period = ppm_query.filter(period=period)
-        total_ppm_tasks = ppm_query_period.count()
-        devices_with_ppm = ppm_query_period.values('device').distinct().count()
-        devices_without_ppm = approved_devices - devices_with_ppm
-        ppm_completion_rate = round((devices_with_ppm / approved_devices * 100) if approved_devices > 0 else 0, 1)
-        
-        if is_active_period:
-            ppm_status_labels = ['PPM Done', 'PPM Not Done']
-            ppm_status_data = [devices_with_ppm, devices_without_ppm]
-            ppm_status_colors = ['#10B981', '#F59E0B']
-        else:
-            ppm_status_labels = ['PPM Done', 'PPM Overdue']
-            ppm_status_data = [devices_with_ppm, devices_without_ppm]
-            ppm_status_colors = ['#10B981', '#EF4444']
-        
-        # Tasks by activity for this period
-        ppm_tasks_by_activity = ppm_query_period.values(
-            'activities__name'
-        ).annotate(count=Count('id')).order_by('-count')
-        
-        # PPM by centre - all centres, device-based
-        ppm_by_centre = []
-        for centre in all_centres:
-            if user_scope == "centre" and centre != user.centre:
-                continue
-            centre_approved = device_query.filter(centre=centre, is_approved=True, is_disposed=False).count()
-            centre_with_ppm = ppm_query_period.filter(device__centre=centre).values('device').distinct().count()
-            ppm_by_centre.append({
-                'device__centre__name': centre.name,
-                'total': centre_approved,
-                'completed': centre_with_ppm
-            })
-        ppm_by_centre = sorted(ppm_by_centre, key=lambda x: x['completed'], reverse=True)
-    
-    # Overdue tasks - task based, across all
-    overdue_ppm_tasks = ppm_query.filter(
-        period__end_date__lt=timezone.now().date(),
-        completed_date__isnull=True
-    ).count()
-    
-    # Tasks due soon (next 7 days) - task based
-    seven_days_ahead = timezone.now().date() + timedelta(days=7)
-    tasks_due_soon = ppm_query.filter(
-        period__end_date__lte=seven_days_ahead,
-        period__end_date__gte=timezone.now().date(),
-        completed_date__isnull=True
-    ).count()
-    
-    # Tasks by period - all
-    ppm_tasks_by_period = ppm_query.values(
-        'period__name'
-    ).annotate(
-        total=Count('id'),
-        completed=Count(Case(When(completed_date__isnull=False, then=1), output_field=IntegerField()))
-    ).order_by('-total')[:5]
-    
-    # Average completion time (in days) - all
-    completed_tasks_with_time = ppm_query.filter(
-        completed_date__isnull=False,
-        period__start_date__isnull=False
-    ).annotate(
-        days_to_complete=F('completed_date') - F('period__start_date')
-    )
-    
-    avg_completion_time = None
-    if completed_tasks_with_time.exists():
-        total_days = sum([task.days_to_complete.days for task in completed_tasks_with_time])
-        avg_completion_time = round(total_days / completed_tasks_with_time.count(), 1)
-    
-    # Recent PPM completions - all
-    recent_ppm_completions = ppm_query.filter(
-        completed_date__isnull=False
-    ).order_by('-completed_date')[:5]
-    
-    # === USER & SYSTEM STATISTICS (Superuser only) ===
-    total_users = CustomUser.objects.count() if user.is_superuser else 0
-    active_users = CustomUser.objects.filter(is_active=True).count() if user.is_superuser else 0
-    total_centres = Centre.objects.count() if user.is_superuser else 0
-    pending_updates = PendingUpdate.objects.count() if user.is_superuser else (
-        PendingUpdate.objects.filter(import_record__centre=user.centre).count() if user.centre else 0
-    )
-    
-    # Users by centre
-    users_by_centre = CustomUser.objects.values(
-        'centre__name'
-    ).annotate(count=Count('id')).order_by('-count')[:10] if user.is_superuser else []
-    
-    # === NOTIFICATIONS ===
-    notifications = Notification.objects.filter(user=user).order_by('-created_at')[:5]
-    unread_count = Notification.objects.filter(user=user, is_read=False).count()
-    
-    # === MONTHLY TRENDS (Last 6 months) ===
-    six_months_ago = timezone.now().date() - timedelta(days=180)
-    
-    devices_monthly = []
-    ppm_completed_monthly = []
-    
-    for i in range(6):
-        month_start = timezone.now().date() - timedelta(days=30*(5-i))
-        month_end = timezone.now().date() - timedelta(days=30*(4-i))
-        
-        devices_count = device_query.filter(
-            date__gte=month_start,
-            date__lt=month_end
-        ).count()
-        
-        ppm_count = ppm_query.filter(
-            completed_date__gte=month_start,
-            completed_date__lt=month_end
-        ).count()
-        
-        devices_monthly.append({
-            'month': month_start.strftime('%b %Y'),
-            'count': devices_count
-        })
-        
-        ppm_completed_monthly.append({
-            'month': month_start.strftime('%b %Y'),
-            'count': ppm_count
-        })
-    
-    # === CONTEXT ===
-    context = {
-        'user_scope': user_scope,
-        
-        # Device stats
-        'total_devices': total_devices,
-        'approved_devices': approved_devices,
-        'pending_approvals': pending_approvals,
-        'disposed_devices': disposed_devices,
-        'recent_devices_count': recent_devices_count,
-        'recent_devices': recent_devices,
-        'device_status_breakdown': device_status_breakdown,
-        'devices_by_centre': devices_by_centre,
-        'devices_by_hardware': devices_by_hardware,
-        'device_condition_breakdown': device_condition_breakdown,
-        
-        # PPM stats
-        'total_ppm_tasks': total_ppm_tasks,
-        'devices_with_ppm': devices_with_ppm,
-        'devices_without_ppm': devices_without_ppm,
-        'overdue_ppm_tasks': overdue_ppm_tasks,
-        'tasks_due_soon': tasks_due_soon,
-        'ppm_completion_rate': ppm_completion_rate,
-        'ppm_tasks_by_activity': ppm_tasks_by_activity,
-        'ppm_tasks_by_period': ppm_tasks_by_period,
-        'avg_completion_time': avg_completion_time,
-        'ppm_by_centre': ppm_by_centre,
-        'recent_ppm_completions': recent_ppm_completions,
-        'ppm_status_labels': ppm_status_labels,
-        'ppm_status_data': ppm_status_data,
-        'ppm_status_colors': ppm_status_colors,
-        'period_name': period_name,
-        'is_active_period': is_active_period,
-        
-        # User & system stats
-        'total_users': total_users,
-        'active_users': active_users,
-        'total_centres': total_centres,
-        'pending_updates': pending_updates,
-        'users_by_centre': users_by_centre,
-        
-        # Notifications
-        'notifications': notifications,
-        'unread_count': unread_count,
-        
-        # Trends
-        'devices_monthly': devices_monthly,
-        'ppm_completed_monthly': ppm_completed_monthly,
-    }
-    
-    return render(request, 'index.html', context)
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -2250,120 +2181,507 @@ def download_clearance_form(request, device_id):
     return response
 
 
+
+HARDWARE_CATEGORIES = {
+    'Laptop': Q(hardware__icontains='laptop'),
+    'Monitor': Q(hardware__icontains='monitor'),
+    'System Unit': Q(hardware__icontains='system unit'),
+    'Printer': Q(hardware__icontains='printer'),
+    'Television': Q(hardware__icontains='television'),
+    'Routers/Switch/Server': (
+        Q(hardware__icontains='router') |
+        Q(hardware__icontains='switch') |
+        Q(hardware__icontains='server')
+    ),
+    'Unknown': (Q(hardware__isnull=True) | Q(hardware='')),
+    # You can add 'Endcomputing' if needed
+}
+
 @login_required
-def filtered_devices_view(request):
+def dashboard_view(request):
     user = request.user
     
-    # Base query based on user role
+    # Base queries based on user role
     if user.is_superuser and not user.is_trainer:
         device_query = Import.objects.all()
+        ppm_query = PPMTask.objects.all()
+        # IT Ops queries for superuser
+        incident_query = IncidentReport.objects.all()
+        workplan_query = WorkPlan.objects.all()
+        asset_query = MissionCriticalAsset.objects.all()
+        backup_query = BackupRegistry.objects.all()
+        user_scope = "all"
     elif user.is_trainer and user.centre:
         device_query = Import.objects.filter(centre=user.centre)
+        ppm_query = PPMTask.objects.filter(device__centre=user.centre)
+        # IT Ops queries for trainer (scoped)
+        incident_query = IncidentReport.objects.filter(reported_by=user) # Example: only see their own
+        workplan_query = WorkPlan.objects.filter(user=user) # Only see their own
+        asset_query = MissionCriticalAsset.objects.all() # Assuming trainers can see all assets
+        backup_query = BackupRegistry.objects.filter(centre=user.centre) # Only see their centre's backups
+        user_scope = "centre"
     else:
         device_query = Import.objects.none()
+        ppm_query = PPMTask.objects.none()
+        # IT Ops queries for none
+        incident_query = IncidentReport.objects.none()
+        workplan_query = WorkPlan.objects.none()
+        asset_query = MissionCriticalAsset.objects.none()
+        backup_query = BackupRegistry.objects.none()
+        user_scope = "none"
     
-    # Get filter parameters
-    filter_type = request.GET.get('type', '')  # hardware, centre, status, condition
-    filter_value = request.GET.get('value', '')
-    search_query = request.GET.get('search', '').strip()
-    items_per_page = request.GET.get('items_per_page', '25')
-    page_number = request.GET.get('page', '1')
+    # Get active PPM period
+    active_period = PPMPeriod.objects.filter(is_active=True).first()
     
-    # Apply filters
-    if filter_type == 'hardware' and filter_value:
-        # Handle grouped hardware categories
-        hardware_map = {
-            'Laptop': ['laptop'],
-            'Monitor': ['monitor'],
-            'System Unit': ['system unit'],
-            'Printer': ['printer'],
-            'Routers/Switch/Server': ['router', 'switch', 'server'],
-            'Endcomputing': ['endcomputing'],
-            'Television': ['television']
-        }
+    # === DEVICE STATISTICS ===
+    total_devices = device_query.count()
+    approved_devices = device_query.filter(is_approved=True, is_disposed=False).count()
+    pending_approvals = device_query.filter(is_approved=False, is_disposed=False).count()
+    disposed_devices = device_query.filter(is_disposed=True).count()
+    
+    device_status_breakdown = device_query.filter(is_disposed=False).values('status').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    all_centres = Centre.objects.all()
+    devices_by_centre = []
+    for centre in all_centres:
+        count = device_query.filter(centre=centre, is_approved=True, is_disposed=False).count()
+        if user_scope == "centre" and centre != user.centre:
+            continue
+        devices_by_centre.append({'centre__name': centre.name, 'count': count, 'centre_id': centre.id})
+    devices_by_centre = sorted(devices_by_centre, key=lambda x: x['count'], reverse=True)
+    
+    hardware_counts = device_query.filter(is_approved=True, is_disposed=False).values('hardware').annotate(count=Count('id'))
+    grouped_hardware = {}
+    categories = {
+        'laptop': 'Laptop',
+        'monitor': 'Monitor',
+        'system unit': 'System Unit',
+        'printer': 'Printer',
+        'router': 'Routers/Switch/Server',
+        'switch': 'Routers/Switch/Server',
+        'server': 'Routers/Switch/Server',
+        'endcomputing': 'Endcomputing',
+        'television': 'Television'
+    }
+    for item in hardware_counts:
+        hw = item['hardware'].lower() if item['hardware'] else "unknown"
+        key = "Unknown"
+        for cat, label in categories.items():
+            if cat in hw:
+                key = label
+                break
+        grouped_hardware[key] = grouped_hardware.get(key, 0) + item['count']
+    devices_by_hardware = [{'hardware': k, 'count': v} for k, v in sorted(grouped_hardware.items(), key=lambda x: x[1], reverse=True)]
+    
+    device_condition_breakdown = device_query.filter(is_approved=True, is_disposed=False).values(
+        'device_condition'
+    ).annotate(count=Count('id')).order_by('-count')
+    
+    thirty_days_ago = timezone.now().date() - timedelta(days=30)
+    recent_devices_count = device_query.filter(date__gte=thirty_days_ago).count()
+    recent_devices = device_query.order_by('-date')[:10]
+    
+    # === PPM STATISTICS ===
+    if active_period:
+        period = active_period
+        is_active_period = True
+    else:
+        period = PPMPeriod.objects.order_by('-end_date').first()
+        is_active_period = False
+    
+    total_ppm_tasks = 0
+    devices_with_ppm = 0
+    devices_without_ppm = 0
+    ppm_completion_rate = 0
+    ppm_status_labels = []
+    ppm_status_data = []
+    ppm_status_colors = []
+    ppm_tasks_by_activity = []
+    ppm_by_centre = []
+    period_name = None
+    period_id = None
+    
+    if period:
+        period_name = period.name
+        period_id = period.id
+        ppm_query_period = ppm_query.filter(period=period)
+        total_ppm_tasks = ppm_query_period.count()
+        devices_with_ppm = ppm_query_period.values('device').distinct().count()
+        devices_without_ppm = approved_devices - devices_with_ppm
+        ppm_completion_rate = round((devices_with_ppm / approved_devices * 100) if approved_devices > 0 else 0, 1)
         
-        if filter_value in hardware_map:
-            query = Q()
-            for term in hardware_map[filter_value]:
-                query |= Q(hardware__icontains=term)
-            device_query = device_query.filter(query)
+        if is_active_period:
+            ppm_status_labels = ['PPM Done', 'PPM Not Done']
+            ppm_status_data = [devices_with_ppm, devices_without_ppm]
+            ppm_status_colors = ['#10B981', '#F59E0B']
         else:
-            device_query = device_query.filter(hardware__icontains=filter_value)
-    
-    elif filter_type == 'centre' and filter_value:
-        device_query = device_query.filter(centre__name=filter_value)
-    
-    elif filter_type == 'status' and filter_value:
-        device_query = device_query.filter(status=filter_value)
-    
-    elif filter_type == 'condition' and filter_value:
-        device_query = device_query.filter(device_condition=filter_value)
-    
-    elif filter_type == 'ppm_status':
-        # Get active period
-        active_period = PPMPeriod.objects.filter(is_active=True).first()
-        if not active_period:
-            active_period = PPMPeriod.objects.order_by('-end_date').first()
+            ppm_status_labels = ['PPM Done', 'PPM Overdue']
+            ppm_status_data = [devices_with_ppm, devices_without_ppm]
+            ppm_status_colors = ['#10B981', '#EF4444']
         
-        if active_period:
-            devices_with_ppm = PPMTask.objects.filter(
-                period=active_period
-            ).values_list('device_id', flat=True).distinct()
-            
-            if filter_value == 'completed':
-                device_query = device_query.filter(id__in=devices_with_ppm)
-            elif filter_value == 'pending':
-                device_query = device_query.filter(is_approved=True, is_disposed=False).exclude(id__in=devices_with_ppm)
+        ppm_tasks_by_activity = ppm_query_period.values(
+            'activities__name'
+        ).annotate(count=Count('id')).order_by('-count')
+        
+        ppm_by_centre = []
+        for centre in all_centres:
+            if user_scope == "centre" and centre != user.centre:
+                continue
+            centre_approved = device_query.filter(centre=centre, is_approved=True, is_disposed=False).count()
+            centre_with_ppm = ppm_query_period.filter(device__centre=centre).values('device').distinct().count()
+            ppm_by_centre.append({
+                'device__centre__name': centre.name,
+                'centre_id': centre.id,
+                'total': centre_approved,
+                'completed': centre_with_ppm
+            })
+        ppm_by_centre = sorted(ppm_by_centre, key=lambda x: x['completed'], reverse=True)
     
-    # Default filter to approved and non-disposed
-    device_query = device_query.filter(is_approved=True, is_disposed=False)
+    overdue_ppm_tasks = ppm_query.filter(
+        period__end_date__lt=timezone.now().date(),
+        completed_date__isnull=True
+    ).count()
     
-    # Apply search
-    if search_query:
-        query = (
-            Q(serial_number__icontains=search_query) |
-            Q(hardware__icontains=search_query) |
-            Q(assignee_first_name__icontains=search_query) |
-            Q(assignee_last_name__icontains=search_query) |
-            Q(centre__name__icontains=search_query) |
-            Q(department__name__icontains=search_query)
-        )
-        device_query = device_query.filter(query)
+    seven_days_ahead = timezone.now().date() + timedelta(days=7)
+    tasks_due_soon = ppm_query.filter(
+        period__end_date__lte=seven_days_ahead,
+        period__end_date__gte=timezone.now().date(),
+        completed_date__isnull=True
+    ).count()
     
-    # Validate items_per_page
-    try:
-        items_per_page = int(items_per_page)
-        if items_per_page not in [10, 25, 50, 100, 500]:
-            items_per_page = 25
-    except ValueError:
-        items_per_page = 25
+    recent_ppm_completions = ppm_query.filter(
+        completed_date__isnull=False
+    ).order_by('-completed_date')[:5]
     
-    # Order by date
-    device_query = device_query.select_related('centre', 'department').order_by('-date', 'id')
+    # === USER & SYSTEM STATISTICS ===
+    total_users = CustomUser.objects.count() if user.is_superuser else 0
+    active_users = CustomUser.objects.filter(is_active=True).count() if user.is_superuser else 0
+    total_centres = Centre.objects.count() if user.is_superuser else 0
+    pending_updates = PendingUpdate.objects.count() if user.is_superuser else (
+        PendingUpdate.objects.filter(import_record__centre=user.centre).count() if user.centre else 0
+    )
     
-    # Pagination
-    paginator = Paginator(device_query, items_per_page)
-    try:
-        page_number = int(page_number) if page_number else 1
-        devices = paginator.page(page_number)
-    except:
-        devices = paginator.page(1)
+    # === NOTIFICATIONS ===
+    notifications = Notification.objects.filter(user=user).order_by('-created_at')[:5]
+    unread_count = Notification.objects.filter(user=user, is_read=False).count()
     
-    # Get filter display name
-    filter_display = filter_value if filter_value else "All Devices"
-    if filter_type == 'ppm_status':
-        filter_display = f"PPM {filter_value.title()}"
+    # === MONTHLY TRENDS ===
+    # (Your existing monthly trends logic...)
+    devices_monthly = []
+    ppm_completed_monthly = []
+    # (Loop to populate them...)
     
+    # --- NEW QUERIES: IT OPERATIONS ---
+    
+    # Incident Reports
+    recent_incidents = incident_query.order_by('-date_of_report')[:5]
+    open_incidents_count = incident_query.filter(status__in=['Open', 'In Progress']).count() # Use status field
+
+    # Work Plans
+    today = timezone.now().date()
+    current_work_plan = WorkPlan.objects.filter(
+        user=user, 
+        week_start_date__lte=today, 
+        week_end_date__gte=today
+    ).first()
+    
+    team_work_plans = WorkPlan.objects.filter(
+        week_start_date__lte=today, 
+        week_end_date__gte=today
+    )
+    # Get staff users who *should* submit plans (e.g., not superusers, are active)
+    total_staff = CustomUser.objects.filter(is_active=True, is_superuser=False, is_trainer=True).count()
+    submitted_work_plans = team_work_plans.count()
+
+    # Mission Critical Assets
+    critical_assets_count = asset_query.count()
+    asset_criticality_breakdown = asset_query.values('criticality_level').annotate(
+        count=Count('id')
+    ).order_by('criticality_level')
+
+    # Backup Registry
+    recent_backups = backup_query.order_by('-date')[:5]
+    
+    
+    # === CONTEXT ===
     context = {
-        'devices': devices,
-        'filter_type': filter_type,
-        'filter_value': filter_value,
-        'filter_display': filter_display,
-        'search_query': search_query,
-        'items_per_page': items_per_page,
-        'items_per_page_options': [10, 25, 50, 100, 500],
-        'paginator': paginator,
-        'total_devices': paginator.count,
+        'user_scope': user_scope,
+        
+        # Device stats
+        'total_devices': total_devices,
+        'approved_devices': approved_devices,
+        'pending_approvals': pending_approvals,
+        'disposed_devices': disposed_devices,
+        'recent_devices_count': recent_devices_count,
+        'recent_devices': recent_devices,
+        'device_status_breakdown': device_status_breakdown,
+        'devices_by_centre': devices_by_centre,
+        'devices_by_hardware': devices_by_hardware,
+        'device_condition_breakdown': device_condition_breakdown,
+        
+        # PPM stats
+        'total_ppm_tasks': total_ppm_tasks,
+        'devices_with_ppm': devices_with_ppm,
+        'devices_without_ppm': devices_without_ppm,
+        'overdue_ppm_tasks': overdue_ppm_tasks,
+        'tasks_due_soon': tasks_due_soon,
+        'ppm_completion_rate': ppm_completion_rate,
+        'ppm_tasks_by_activity': ppm_tasks_by_activity,
+        'ppm_by_centre': ppm_by_centre,
+        'recent_ppm_completions': recent_ppm_completions,
+        'ppm_status_labels': ppm_status_labels,
+        'ppm_status_data': ppm_status_data,
+        'ppm_status_colors': ppm_status_colors,
+        'period_name': period_name,
+        'period_id': period_id, # Pass the ID for filtering
+        'is_active_period': is_active_period,
+        
+        # User & system stats
+        'total_users': total_users,
+        'active_users': active_users,
+        'total_centres': total_centres,
+        'pending_updates': pending_updates,
+        
+        # Notifications
+        'notifications': notifications,
+        'unread_count': unread_count,
+        
+        # Trends
+        'devices_monthly': devices_monthly,
+        'ppm_completed_monthly': ppm_completed_monthly,
+        
+        # --- NEW CONTEXT: IT OPERATIONS ---
+        'recent_incidents': recent_incidents,
+        'open_incidents_count': open_incidents_count,
+        'current_work_plan': current_work_plan,
+        'total_staff_for_work_plans': total_staff,
+        'submitted_work_plans_count': submitted_work_plans,
+        'critical_assets_count': critical_assets_count,
+        'asset_criticality_breakdown': asset_criticality_breakdown,
+        'recent_backups': recent_backups,
     }
     
-    return render(request, 'import/zfiltered_devices.html', context)
+    return render(request, 'index.html', context)
+
+
+@login_required
+def filtered_list_view(request, list_type):
+    """
+    A single, unified view to handle all filtered lists from the dashboard.
+    Now includes:
+    - Stats based on filtered results
+    - Pagination
+    - Advanced filters
+    """
+    user = request.user
+    params = request.GET  # Get all URL parameters
+    
+    # Determine user scope
+    user_scope = "none"
+    if user.is_superuser:
+        user_scope = "all"
+    elif user.is_trainer and user.centre:
+        user_scope = "centre"
+
+    context = {
+        'list_type': list_type,
+        'page_title': f'Filtered List: {list_type.title()}',
+        'user': user,
+        'user_scope': user_scope,
+        'params': params.urlencode(), # Pass all params for pagination links
+        'filters': params, # Pass GET params to template for filter forms
+    }
+    
+    # Base querysets
+    qs = None
+    all_centres = Centre.objects.all().order_by('name')
+    all_departments = Department.objects.all().order_by('name')
+    
+    # 1. --- DEVICE LIST ---
+    if list_type == 'devices':
+        context['page_title'] = 'Filtered Devices'
+        context['all_centres'] = all_centres
+        context['all_departments'] = all_departments
+        context['all_hardware'] = HARDWARE_CATEGORIES.keys()
+        context['all_status'] = Import.objects.filter(is_approved=True).values_list('status', flat=True).distinct()
+        context['all_conditions'] = Import.objects.filter(is_approved=True).values_list('device_condition', flat=True).distinct()
+
+        if user_scope == "all":
+            qs = Import.objects.all()
+        elif user_scope == "centre":
+            qs = Import.objects.filter(centre=user.centre)
+        else:
+            qs = Import.objects.none()
+            
+        filters = Q(is_approved=True)
+
+        if params.get('clear'):
+            pass  # No filters
+        elif params.get('is_disposed'):
+            filters &= Q(is_disposed=True)
+        else:
+            filters &= Q(is_disposed=False)
+
+        if params.get('centre_id'):
+            filters &= Q(centre_id=params.get('centre_id'))
+        if params.get('department_id'):
+            filters &= Q(department_id=params.get('department_id'))
+        if params.get('status'):
+            filters &= Q(status=params.get('status'))
+        if params.get('device_condition'):
+            filters &= Q(device_condition=params.get('device_condition'))
+            
+        if params.get('hardware'):
+            hw_filter = params.get('hardware')
+            if hw_filter in HARDWARE_CATEGORIES:
+                filters &= HARDWARE_CATEGORIES[hw_filter]
+                
+        # Apply filters BEFORE calculating stats
+        filtered_qs = qs.filter(filters).order_by('centre__name', 'serial_number')
+        
+        # Calculate stats on the filtered queryset
+        context['stats'] = {
+            'total': filtered_qs.count(),
+            'by_status': filtered_qs.values('status').annotate(count=Count('status')).order_by('-count'),
+            'by_condition': filtered_qs.values('device_condition').annotate(count=Count('device_condition')).order_by('-count'),
+        }
+
+    # 2. --- PPM LIST ---
+    elif list_type == 'ppm':
+        context['page_title'] = 'Filtered PPM Tasks'
+        context['all_centres'] = all_centres
+        context['all_periods'] = PPMPeriod.objects.all().order_by('-start_date')
+
+        if user_scope == "all":
+            qs = PPMTask.objects.all()
+        elif user_scope == "centre":
+            qs = PPMTask.objects.filter(device__centre=user.centre)
+        else:
+            qs = PPMTask.objects.none()
+            
+        filters = Q()
+
+        if params.get('centre_id'):
+            filters &= Q(device__centre_id=params.get('centre_id'))
+        if params.get('period_id'):
+            filters &= Q(period_id=params.get('period_id'))
+        if params.get('activity'):
+            filters &= Q(activities__name=params.get('activity'))
+            
+        if params.get('ppm_status') == 'done':
+            filters &= Q(completed_date__isnull=False)
+        elif params.get('ppm_status') == 'pending':
+            filters &= Q(completed_date__isnull=True, period__is_active=True)
+        elif params.get('ppm_status') == 'overdue':
+            filters &= Q(completed_date__isnull=True, period__end_date__lt=timezone.now().date())
+        elif params.get('ppm_status') == 'due_soon':
+            seven_days_ahead = timezone.now().date() + timedelta(days=7)
+            filters &= Q(completed_date__isnull=True, 
+                         period__end_date__gte=timezone.now().date(),
+                         period__end_date__lte=seven_days_ahead)
+
+        filtered_qs = qs.filter(filters).distinct().order_by('period__name', 'device__serial_number')
+        
+        # Calculate stats
+        total_tasks = filtered_qs.count()
+        completed = filtered_qs.filter(completed_date__isnull=False).count()
+        pending = total_tasks - completed
+        
+        context['stats'] = {
+            'total': total_tasks,
+            'completed': completed,
+            'pending': pending,
+        }
+
+    # 3. --- ASSET LIST (NEW) ---
+    elif list_type == 'assets':
+        context['page_title'] = 'Mission Critical Assets'
+        context['all_criticality'] = [c[0] for c in MissionCriticalAsset.CRITICALITY_LEVEL_CHOICES]
+        context['all_departments'] = all_departments # Already defined
+
+        qs = MissionCriticalAsset.objects.all() # Assets are not centre-scoped in the model
+        filters = Q()
+
+        if params.get('department_id'):
+            filters &= Q(department_id=params.get('department_id'))
+        if params.get('criticality_level'):
+            filters &= Q(criticality_level=params.get('criticality_level'))
+        
+        filtered_qs = qs.filter(filters).order_by('name')
+        
+        context['stats'] = {
+            'total': filtered_qs.count(),
+            'by_criticality': filtered_qs.values('criticality_level').annotate(count=Count('id')).order_by(),
+        }
+
+    # 4. --- INCIDENT LIST (NEW) ---
+    elif list_type == 'incidents':
+        context['page_title'] = 'Incident Reports'
+        context['all_statuses'] = [s[0] for s in IncidentReport.STATUS_CHOICES]
+
+        if user_scope == "all":
+            qs = IncidentReport.objects.all()
+        elif user_scope == "centre":
+            qs = IncidentReport.objects.filter(reported_by=user) # Only see their own
+        else:
+            qs = IncidentReport.objects.none()
+
+        filters = Q()
+
+        if params.get('incident_number'):
+            filters &= Q(incident_number=params.get('incident_number'))
+        if params.get('status'):
+            filters &= Q(status=params.get('status'))
+        
+        filtered_qs = qs.filter(filters).order_by('-date_of_report')
+        
+        context['stats'] = {
+            'total': filtered_qs.count(),
+            'by_status': filtered_qs.values('status').annotate(count=Count('id')).order_by(),
+        }
+
+    # 5. --- WORKPLAN LIST (NEW) ---
+    elif list_type == 'workplans':
+        context['page_title'] = 'Work Plans'
+        context['all_staff'] = CustomUser.objects.filter(is_active=True, is_trainer=True).order_by('username')
+
+        if user_scope == "all":
+            qs = WorkPlan.objects.all()
+        elif user_scope == "centre":
+            qs = WorkPlan.objects.filter(user=user) # Only see their own
+        else:
+            qs = WorkPlan.objects.none()
+        
+        filters = Q()
+        
+        if params.get('user_id'):
+            filters &= Q(user_id=params.get('user_id'))
+        
+        # Add filter for current week
+        if params.get('week') == 'current':
+            today = timezone.now().date()
+            filters &= Q(week_start_date__lte=today, week_end_date__gte=today)
+
+        filtered_qs = qs.filter(filters).order_by('-week_start_date', 'user__username')
+        
+        context['stats'] = {
+            'total': filtered_qs.count(),
+            'users': filtered_qs.values('user__username').distinct().count()
+        }
+
+    else:
+        raise Http404("Invalid list type specified.")
+
+    # --- PAGINATION ---
+    paginator = Paginator(filtered_qs, 25) # Show 25 items per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context['page_obj'] = page_obj
+    context['total_results'] = paginator.count
+    context['is_paginated'] = page_obj.has_other_pages()
+    
+    # Use a single, unified template
+    return render(request, 'dashboard/filtering/master_list.html', context)

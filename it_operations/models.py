@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import datetime, timedelta
 from devices.models import Centre, Department
-
+from django.core.exceptions import ValidationError
 
 User = get_user_model()
 
@@ -83,191 +83,188 @@ class BackupRegistry(models.Model):
         return f"{self.get_system_display()} - {self.centre.name} ({self.date})"
 
 
-# ============ WORK PLAN ============
+
+from django.db import models
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from datetime import datetime, timedelta
+from devices.models import Centre, Department
+from django.core.exceptions import ValidationError
+
+User = get_user_model()
+
+# ============ WORK PLAN (The Container for the Week) ============
 class WorkPlan(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='work_plans')
-    week_start_date = models.DateField(help_text="Monday of the week")
-    week_end_date = models.DateField(help_text="Saturday of the week (Sunday excluded)")
+    
+    # We store the start of the week to identify the "Plan Period"
+    week_start_date = models.DateField(help_text="The Monday date of this work week")
+    week_end_date = models.DateField(help_text="The Saturday date of this work week")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         ordering = ['-week_start_date']
-        unique_together = ('user', 'week_start_date')
+        unique_together = ('user', 'week_start_date') # One plan per user per week
         verbose_name = 'Work Plan'
-        verbose_name_plural = 'Work Plans'
     
     def __str__(self):
         return f"{self.user.username} - Week of {self.week_start_date}"
-    
+
+    def save(self, *args, **kwargs):
+        # Auto-calculate week_end_date if not set (Monday + 5 days = Saturday)
+        if not self.week_end_date and self.week_start_date:
+            self.week_end_date = self.week_start_date + timedelta(days=5)
+        super().save(*args, **kwargs)
+
     def is_editable(self):
-        """Check if work plan can still be edited (before Monday 10 AM of next week)"""
+        """
+        Legacy method: Kept to avoid breaking other parts, but logic is now split.
+        """
+        return self.can_add_tasks
+
+    @property
+    def can_add_tasks(self):
+        """
+        Strict Rule: Adding NEW tasks is locked after Monday 10:00 AM of the current week.
+        """
         now = timezone.now()
-        next_monday = self.week_start_date + timedelta(days=7)
-        deadline = timezone.make_aware(datetime.combine(next_monday, datetime.min.time()).replace(hour=10))
-        return now < deadline
-    
-    def is_submitted(self):
-        """Check if work plan has tasks"""
-        return self.tasks.exists()
-    
-    def get_missing_days(self):
-        """Get days without tasks"""
-        days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-        days_with_tasks = set(self.tasks.values_list('day', flat=True).distinct())
-        return [day for day in days if day not in days_with_tasks]
-    
-    def get_current_week_status(self):
-        """Determine if this is current, past, or future week"""
-        today = timezone.now().date()
-        if self.week_start_date <= today <= self.week_end_date:
-            return 'current'
-        elif today > self.week_end_date:
-            return 'past'
-        else:
-            return 'future'
+        # Deadline is the Monday of this week at 10:00 AM
+        deadline_dt = datetime.combine(self.week_start_date, datetime.min.time()) + timedelta(hours=10)
+        deadline = timezone.make_aware(deadline_dt)
+        
+        # If we are past the deadline, return False
+        return now <= deadline
 
-
-class WorkPlanTask(models.Model):
-    DAY_CHOICES = [
-        ('Monday', 'Monday'),
-        ('Tuesday', 'Tuesday'),
-        ('Wednesday', 'Wednesday'),
-        ('Thursday', 'Thursday'),
-        ('Friday', 'Friday'),
-        ('Saturday', 'Saturday'),
-    ]
-    
-    STATUS_CHOICES = [
-        ('Completed', 'Completed'),
-        ('Not Completed', 'Not Completed'),
-        ('Not Done', 'Not Done'),
-    ]
-    
-    work_plan = models.ForeignKey(WorkPlan, on_delete=models.CASCADE, related_name='tasks')
-    day = models.CharField(max_length=10, choices=DAY_CHOICES)
-    
-    task_name = models.CharField(max_length=255, help_text="Task name/title")
-    centre = models.ForeignKey(Centre, on_delete=models.SET_NULL, null=True, blank=True, help_text="Centre/Location (optional)")
-    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, help_text="Department (optional)")
-    
-    human_resources = models.ManyToManyField(User, blank=True, related_name='assigned_tasks', help_text="Assigned staff members")
-    
-    items_needed = models.CharField(max_length=500, blank=True, null=True, help_text="Items/resources needed (e.g., Portal, Help desk)")
-    
-    comments = models.TextField(blank=True, null=True, help_text="Additional comments/details about the task")
-    
-    target = models.CharField(max_length=500, blank=True, null=True, help_text="Target/Desired outcome")
-    
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Not Done')
-    
-    status_updated_at = models.DateTimeField(auto_now=True)
-    status_updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='task_status_updates')
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_tasks')
-    
-    class Meta:
-        ordering = ['day', 'created_at']
-        verbose_name = 'Work Plan Task'
-        verbose_name_plural = 'Work Plan Tasks'
-    
-    def __str__(self):
-        return f"{self.work_plan.user.username} - {self.day}: {self.task_name}"
-    
-    def can_edit(self, user):
-        """Check if task can be edited based on week status and user role"""
-        work_plan = self.work_plan
-        week_status = work_plan.get_current_week_status()
-        
-        # IT Manager can always edit
-        if user.is_it_manager:
-            return True
-        
-        # Original creator can edit current week
-        if self.created_by == user and week_status == 'current':
-            return True
-        
-        # Can't edit future weeks (locked at status "Not Done")
-        if week_status == 'future':
-            return False
-        
-        return False
-    
-    def auto_update_status(self):
-        """Auto-update status based on week status"""
-        work_plan = self.work_plan
-        week_status = work_plan.get_current_week_status()
-        
-        if week_status == 'future':
-            self.status = 'Not Done'
-        elif week_status == 'past' and self.status != 'Completed':
-            self.status = 'Not Done'
-        
-        return self.status
-    
-    def get_status_color(self):
-        """Return color class based on status"""
-        status_colors = {
-            'Completed': 'bg-green-100 border-green-300 text-green-800',
-            'Not Completed': 'bg-yellow-100 border-yellow-300 text-yellow-800',
-            'Not Done': 'bg-red-100 border-red-300 text-red-800',
+    @property
+    def status_summary(self):
+        """Returns a dictionary of task counts for reports"""
+        total = self.tasks.count()
+        completed = self.tasks.filter(status='Completed').count()
+        not_done = self.tasks.filter(status='Not Done').count()
+        return {
+            'total': total, 
+            'completed': completed, 
+            'not_done': not_done
         }
-        return status_colors.get(self.status, 'bg-gray-100')
 
 
-class WorkPlanTaskComment(models.Model):
-    task = models.ForeignKey(WorkPlanTask, on_delete=models.CASCADE, related_name='task_comments')
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    comment = models.TextField()
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        ordering = ['-created_at']
-
-
-class WorkPlanActivity(models.Model):
-    work_plan = models.ForeignKey(WorkPlan, on_delete=models.CASCADE, related_name='activities')
-    day = models.CharField(max_length=10, choices=[
-        ('Monday', 'Monday'),
-        ('Tuesday', 'Tuesday'),
-        ('Wednesday', 'Wednesday'),
-        ('Thursday', 'Thursday'),
-        ('Friday', 'Friday'),
-    ])
-    activity = models.TextField(help_text="Description of the activity/task")
-    status = models.CharField(max_length=20, choices=[
-        ('Pending', 'Pending'),
-        ('In Progress', 'In Progress'),
-        ('Completed', 'Completed'),
-    ], default='Pending')
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        ordering = ['day']
+class PublicHoliday(models.Model):
+    """
+    Manages Kenyan Public Holidays to disable dates in the calendar.
+    """
+    name = models.CharField(max_length=100)
+    date = models.DateField(unique=True)
     
     def __str__(self):
-        return f"{self.work_plan.user.username} - {self.day}: {self.activity[:50]}"
+        return f"{self.name} - {self.date}"
 
 
-class WorkPlanComment(models.Model):
-    work_plan = models.ForeignKey(WorkPlan, on_delete=models.CASCADE, related_name='comments')
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    comment = models.TextField()
+# ============ WORK PLAN TASK (The Specific Item) ============
+class WorkPlanTask(models.Model):
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),         # Default when created
+        ('Completed', 'Completed'),     # User manually marks this
+        ('Rescheduled', 'Rescheduled'), # User moved it
+        ('Not Done', 'Not Done'),       # System marks this if week passes
+    ]
+
+    work_plan = models.ForeignKey(WorkPlan, on_delete=models.CASCADE, related_name='tasks')
+    
+    # REPLACED 'day' string with actual DateField
+    date = models.DateField(help_text="Specific calendar date for this task")
+    is_leave = models.BooleanField(default=False, help_text="Is the staff member on leave this day?")
+    # =========================================================
+    # EACH TASK HAS ITS OWN SET OF THESE FIELDS AS REQUESTED:
+    # =========================================================
+    task_name = models.CharField(max_length=255, help_text="What is the specific task?")
+    
+    # Location Info
+    centre = models.ForeignKey(Centre, on_delete=models.SET_NULL, null=True, blank=True)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
+
+    
+    # People Involved (Specific to this task)
+    collaborators = models.ManyToManyField(
+        User, 
+        blank=True, 
+        related_name='collaborating_tasks',
+        help_text="Internal IT Staff or Trainers working on this specific task"
+    )
+    
+    other_parties = models.TextField(
+        blank=True, 
+        null=True, 
+        help_text="External vendors, non-IT staff, or other stakeholders involved"
+    )
+    
+    # Execution Details (Specific to this task)
+    resources_needed = models.TextField(
+        blank=True, 
+        null=True, 
+        help_text="Hardware, Software, Transport, Budget, etc."
+    )
+    
+    target = models.CharField(
+        max_length=500, 
+        blank=True, 
+        null=True, 
+        help_text="Measurable outcome (e.g., '50 PCs serviced')"
+    )
+    
+    comments = models.TextField(blank=True, null=True, help_text="User remarks or justification")
+    reschedule_reason = models.TextField(
+    blank=True, 
+    null=True,
+    help_text="Reason for rescheduling this task (required when rescheduling)"
+)
+    # Status Tracking
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    status_updated_at = models.DateTimeField(auto_now=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
-    
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_tasks')
+
     class Meta:
-        ordering = ['-created_at']
-    
+        ordering = ['date', 'created_at']
+        verbose_name = 'Work Plan Task'
+
+    def clean(self):
+        super().clean()
+        
+        if self.work_plan:
+            # Only enforce date within week
+            if not (self.work_plan.week_start_date <= self.date <= self.work_plan.week_end_date):
+                raise ValidationError(
+                    f"Task date {self.date} must be between {self.work_plan.week_start_date} and {self.work_plan.week_end_date}"
+                )
+
+    def save(self, *args, **kwargs):
+        self.full_clean() # Run the validation above before saving
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"Comment by {self.user.username} on {self.work_plan}"
-    
+        return f"{self.task_name} ({self.date})"
+
+    @property
+    def display_status(self):
+        """
+        Frontend Logic for 'Active':
+        If status is 'Pending' AND the date has arrived (is today or in current week),
+        display as 'Active' to the user.
+        """
+        if self.status == 'Pending':
+            today = timezone.now().date()
+            # If today is within the plan's week, we consider it Active
+            if self.work_plan.week_start_date <= today <= self.work_plan.week_end_date:
+                return 'Active'
+        return self.status
+
+    @property
+    def is_overdue(self):
+        """Logic #4: Check if task is Pending and date is in the past."""
+        return self.status == 'Pending' and self.date < timezone.now().date()
 
 
 
@@ -298,6 +295,13 @@ class IncidentReport(models.Model):
     reporter_title_role = models.CharField(max_length=255, help_text="Title / Role of the person reporting")
     incident_number = models.CharField(max_length=50, unique=True, default=get_next_incident_number)
     date_of_report = models.DateTimeField(auto_now_add=True)
+    STATUS_CHOICES = [
+        ('Open', 'Open'),
+        ('In Progress', 'In Progress'),
+        ('Closed', 'Closed'),
+        ('Resolved', 'Resolved'),
+    ]
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Open')
     
     # NEW: Collaborators
     collaborators = models.ManyToManyField(User, related_name='incident_collaborations', blank=True)

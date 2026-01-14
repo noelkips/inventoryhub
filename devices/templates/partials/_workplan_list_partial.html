@@ -1,0 +1,23 @@
+<div class="p-4 lg:p-6 h-full flex flex-col">
+    <div class="flex-grow overflow-y-auto bg-white rounded-lg shadow-md border p-6">
+        {% for plan in plans %}
+            <h3 class="text-lg font-bold text-primary mb-4">
+                Tasks for {{ plan.user.username }} (Week of {{ plan.week_start_date|date:"M d" }})
+            </h3>
+            <div class="space-y-4">
+                {% for task in plan.tasks.all %}
+                <div class="p-4 border rounded-lg bg-gray-50">
+                    <p class="font-semibold">{{ task.task_name }}</p>
+                    <p class="text-sm text-gray-600">{{ task.day }} - {{ task.get_status_display }}</p>
+                </div>
+                {% empty %}
+                <p class="text-gray-500">No tasks found for this work plan.</p>
+                {% endfor %}
+            </div>
+        {% empty %}
+            <p class="text-center text-gray-500 py-8">
+                You have not submitted a work plan for this week.
+            </p>
+        {% endfor %}
+    </div>
+</div>

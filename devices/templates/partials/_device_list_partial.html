@@ -1,0 +1,86 @@
+<div class="p-4 lg:p-6 h-full flex flex-col">
+    <div class="mb-4">
+        <input type="search" name="search"
+               class="w-full border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
+               placeholder="Search serial, hardware, assignee..."
+               value="{{ search_query|default:'' }}"
+               hx-get="{{ request.path }}?filter={{ request.GET.filter }}&value={{ request.GET.value }}"
+               hx-trigger="keyup changed delay:500ms, search"
+               hx-target="#drawer-content"
+               hx-swap="innerHTML"
+               hx-indicator="#drawer-spinner">
+    </div>
+
+    <div id="drawer-spinner" class="htmx-indicator text-center p-4">
+        <span class="text-gray-500">Loading results...</span>
+    </div>
+
+    <div class="flex-grow overflow-y-auto bg-white rounded-lg shadow-md border">
+        <table class="min-w-full">
+            <thead class="bg-gray-100 sticky top-0">
+                <tr>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Serial Number</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Hardware</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Centre</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Assignee</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for device in page_obj %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="py-3 px-4 text-sm font-medium text-primary">{{ device.serial_number|default:"N/A" }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-700">{{ device.hardware|default:"N/A" }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-700">{{ device.centre.name|default:"N/A" }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-700">
+                            {{ device.assignee_first_name|default:"" }} {{ device.assignee_last_name|default:"" }}
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="inline-block px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">
+                                {{ device.status|default:"N/A" }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <a href="{% url 'device_history' device.id %}" target="_blank" class="bg-accent text-white px-3 py-1 rounded-lg hover:bg-blue-700 text-xs">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-gray-500">
+                            No devices found matching your criteria.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if is_paginated %}
+        <nav class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 mt-4 rounded-b-lg">
+            <div class="text-sm text-gray-700">
+                Page <span class="font-medium">{{ page_obj.number }}</span> of <span class="font-medium">{{ paginator.num_pages }}</span>
+            </div>
+            <div class="flex-1 flex justify-end space-x-2">
+                {% if page_obj.has_previous %}
+                    <a href="{{ request.path }}?page={{ page_obj.previous_page_number }}&{{ query_params }}"
+                       hx-get="{{ request.path }}?page={{ page_obj.previous_page_number }}&{{ query_params }}"
+                       hx-target="#drawer-content" hx-swap="innerHTML" hx-indicator="#drawer-spinner"
+                       class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Previous
+                    </a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                    <a href="{{ request.path }}?page={{ page_obj.next_page_number }}&{{ query_params }}"
+                       hx-get="{{ request.path }}?page={{ page_obj.next_page_number }}&{{ query_params }}"
+                       hx-target="#drawer-content" hx-swap="innerHTML" hx-indicator="#drawer-spinner"
+                       class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Next
+                    </a>
+                {% endif %}
+            </div>
+        </nav>
+    {% endif %}
+</div>

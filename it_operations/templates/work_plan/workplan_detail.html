@@ -1,0 +1,457 @@
+{% extends 'dashboard.html' %}
+{% block title %}Plan Details{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 lg:p-6 animate-fade-in">
+    
+    <!-- Server Messages -->
+    {% if messages %}
+    <div class="mb-6 space-y-2">
+        {% for message in messages %}
+        <div class="p-4 rounded-lg shadow-sm flex items-center gap-3
+            {% if message.tags == 'success' %}bg-green-100 text-green-800 border border-green-200
+            {% elif message.tags == 'error' %}bg-red-100 text-red-800 border border-red-200
+            {% elif message.tags == 'info' %}bg-blue-100 text-blue-800 border border-blue-200
+            {% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-800 border border-yellow-200
+            {% else %}bg-gray-100 text-gray-800 border border-gray-200{% endif %}">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {% if message.tags == 'success' %}
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                {% elif message.tags == 'error' %}
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                {% elif message.tags == 'warning' %}
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                {% else %}
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                {% endif %}
+            </svg>
+            <span class="font-medium">{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-primary">
+                Plan: <span class="text-accent">{{ work_plan.week_start_date|date:"M d" }}</span> - {{ work_plan.week_end_date|date:"M d" }}
+            </h1>
+            <div class="flex items-center gap-2 mt-1">
+                <span class="px-2 py-1 bg-gray-100 text-xs font-bold rounded text-gray-600 uppercase">Owner</span>
+                <p class="text-gray-700 font-medium">{{ work_plan.user.get_full_name }}</p>
+            </div>
+        </div>
+        
+        <div class="flex flex-wrap gap-3">
+            <a href="{% url 'download_workplan_pdf' work_plan.id %}" class="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-bold shadow transition">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Export PDF
+            </a>
+            <a href="{% url 'work_plan_list' %}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-bold transition">Back to List</a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        
+        <div class="xl:col-span-1">
+            {% if can_add_tasks %}
+                <div class="bg-white rounded-2xl shadow-md p-6 border-t-4 border-accent sticky top-24">
+                    <h3 class="text-xl font-bold text-primary mb-5 flex items-center">
+                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        Add New Task
+                    </h3>
+                    
+                    <form method="post" id="addTaskForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="add_task" value="1">
+                        
+                        <div class="mb-5 p-3 bg-yellow-50 rounded-lg border border-yellow-100 flex items-center gap-3">
+                            <input type="checkbox" name="is_leave" id="is_leave_checkbox" onchange="toggleLeaveMode()" class="w-5 h-5 text-yellow-600 rounded focus:ring-yellow-500 cursor-pointer">
+                            <label for="is_leave_checkbox" class="text-sm font-bold text-yellow-800 cursor-pointer">Mark as "On Leave"</label>
+                        </div>
+
+                        <div class="space-y-4 normal-fields transition-opacity duration-200">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Date</label>
+                                <select name="date" required id="date_select" class="w-full rounded-lg border-gray-300 bg-gray-50 px-3 py-2.5 text-sm focus:ring-2 focus:ring-accent outline-none">
+                                    {% for day in week_days %}
+                                        {% with day_str=day|date:"Y-m-d" %}
+                                            {% if day_str in leave_dates %}
+                                                <option value="{{ day_str }}" disabled class="text-yellow-700 font-medium bg-yellow-50">
+                                                    {{ day|date:"l, M d" }} — On Leave (Blocked)
+                                                </option>
+                                            {% else %}
+                                                <option value="{{ day_str }}">
+                                                    {{ day|date:"l, M d" }}
+                                                </option>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% endfor %}
+                                </select>
+                                <p class="text-xs text-gray-500 mt-2">
+                                    <span class="font-bold text-yellow-700">Note:</span> Check "On Leave" to block the day. Existing tasks will be moved automatically.
+                                </p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Task Name</label>
+                                <input type="text" name="task_name" id="task_name_input" required placeholder="e.g., Configure new firewall" class="w-full rounded-lg border-gray-300 bg-gray-50 px-3 py-2.5 text-sm focus:ring-2 focus:ring-accent outline-none">
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Centre</label>
+                                    <select name="centre" class="w-full rounded-lg border-gray-300 bg-gray-50 px-3 py-2.5 text-sm">
+                                        <option value="">- None -</option>
+                                        {% for centre in centres %}
+                                        <option value="{{ centre.id }}">{{ centre.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Department</label>
+                                    <select name="department" class="w-full rounded-lg border-gray-300 bg-gray-50 px-3 py-2.5 text-sm">
+                                        <option value="">- None -</option>
+                                        {% for dept in departments %}
+                                        <option value="{{ dept.id }}">{{ dept.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Collaborators</label>
+                                <select name="collaborators" multiple class="w-full rounded-lg border-gray-300 bg-gray-50 px-3 py-2 text-sm h-24 custom-scrollbar">
+                                    {% for user in potential_collaborators %}
+                                    <option value="{{ user.id }}">{{ user.get_full_name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <p class="text-[10px] text-gray-400 mt-1">Hold Ctrl/Cmd to select multiple.</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Resources & Outcome</label>
+                                <textarea name="resources_needed" rows="2" placeholder="Resources needed..." class="w-full rounded-lg border-gray-300 bg-gray-50 px-3 py-2 text-sm mb-2 focus:ring-2 focus:ring-accent outline-none"></textarea>
+                                <textarea name="target" rows="2" placeholder="Target outcome..." class="w-full rounded-lg border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:ring-2 focus:ring-accent outline-none"></textarea>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="w-full mt-4 py-3 bg-primary text-white rounded-xl font-bold shadow-lg hover:bg-opacity-90 hover:shadow-xl transition transform hover:-translate-y-1">
+                            Add Task to Plan
+                        </button>
+                    </form>
+                </div>
+            {% else %}
+                <div class="bg-white rounded-2xl shadow-md p-8 border-t-4 border-gray-300 sticky top-24 text-center">
+                    <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-400">
+                        {% if user == work_plan.user %}
+                            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                            </svg>
+                        {% else %}
+                            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                        {% endif %}
+                    </div>
+
+                    <h3 class="text-xl font-bold text-gray-700 mb-2">
+                        {% if user == work_plan.user %}
+                            Planning Locked
+                        {% else %}
+                            View Only Mode
+                        {% endif %}
+                    </h3>
+
+                    <p class="text-sm text-gray-500 leading-relaxed mb-4">
+                        {% if user == work_plan.user %}
+                            The deadline to add new tasks for this week (Monday 10:00 AM) has passed. You can still update the status of your existing tasks.
+                        {% else %}
+                            You are currently viewing <strong>{{ work_plan.user.first_name }}'s</strong> work plan. You cannot add new tasks here, but you can interact with tasks assigned to you.
+                        {% endif %}
+                    </p>
+
+                    <div class="inline-block px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold rounded-full uppercase tracking-wide">
+                        {% if user == work_plan.user %}
+                            Read Only
+                        {% else %}
+                            Collaborator / Manager Access
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="xl:col-span-2 space-y-8">
+            {% regroup tasks|dictsort:"date" by date as task_days %}
+            {% for day in task_days %}
+            
+            <div>
+                <h3 class="flex items-center text-lg font-bold text-gray-600 mb-4 px-1 border-b pb-2">
+                    <span class="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded mr-2 uppercase font-extrabold">{{ day.grouper|date:"D" }}</span>
+                    {{ day.grouper|date:"F d, Y" }}
+                    {% if day.grouper == today_date %}
+                    <span class="ml-2 text-xs font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Today</span>
+                    {% endif %}
+                </h3>
+                
+                <div class="space-y-4">
+                    {% for task in day.list %}
+                    <div class="relative flex flex-col md:flex-row bg-white rounded-xl shadow-sm border border-gray-100 p-5 transition transform hover:-translate-y-1 hover:shadow-xl duration-300 
+                        {% if task.is_leave %}border-l-4 border-l-yellow-400 bg-yellow-50/30
+                        {% elif task.status == 'Completed' %}border-l-4 border-l-green-500 bg-green-50/30
+                        {% elif task.status == 'Not Done' %}border-l-4 border-l-red-500 bg-red-50/30
+                        {% elif task.status == 'Rescheduled' %}border-l-4 border-l-orange-500 bg-orange-50/30
+                        {% else %}border-l-4 border-l-blue-500{% endif %}">
+                        
+                        <div class="flex-grow pr-0 md:pr-4">
+                            <div class="flex justify-between items-start">
+                                <h4 class="text-base font-bold text-gray-800 mb-1">
+                                    {% if task.is_leave %}<span class="text-yellow-600">[ON LEAVE]</span>{% endif %}
+                                    {{ task.task_name }}
+                                </h4>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold shadow-sm
+                                    {% if task.status == 'Completed' %}bg-green-100 text-green-800
+                                    {% elif task.status == 'Not Done' %}bg-red-100 text-red-800
+                                    {% elif task.status == 'Rescheduled' %}bg-orange-100 text-orange-800
+                                    {% else %}bg-blue-100 text-blue-800{% endif %}">
+                                    {{ task.status }}
+                                </span>
+                            </div>
+
+                            <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-600">
+                                {% if task.target %}
+                                <p><span class="font-bold text-gray-400 text-xs uppercase">Target:</span> {{ task.target }}</p>
+                                {% endif %}
+                                {% if task.resources_needed %}
+                                <p><span class="font-bold text-gray-400 text-xs uppercase">Resources:</span> {{ task.resources_needed }}</p>
+                                {% endif %}
+                                {% if task.other_parties %}
+                                <p><span class="font-bold text-gray-400 text-xs uppercase">External:</span> {{ task.other_parties }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Reschedule Reason Display -->
+                            {% if task.status == 'Rescheduled' and task.reschedule_reason %}
+                            <div class="mt-4 p-4 bg-orange-50 border-l-4 border-orange-500 rounded-r-lg">
+                                <p class="text-xs font-bold text-orange-700 uppercase mb-1">Reschedule Reason:</p>
+                                <p class="text-sm text-orange-900 leading-relaxed">{{ task.reschedule_reason }}</p>
+                            </div>
+                            {% endif %}
+
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                {% if task.centre %}
+                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                    </svg>
+                                    {{ task.centre.name }}
+                                </span>
+                                {% endif %}
+                                
+                                {% for col in task.collaborators.all %}
+                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-700">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21h3a2 2 0 002-2v-1a2 2 0 00-2-2H9a2 2 0 00-2 2v1a2 2 0 002 2h3m-6 0h6"></path>
+                                    </svg>
+                                    {{ col.first_name }}
+                                </span>
+                                {% endfor %}
+                            </div>
+
+                            {% if task.comments %}
+                            <div class="mt-3 pt-2 border-t border-dashed border-gray-200 text-xs text-gray-500 italic">
+                                <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                                </svg>
+                                {{ task.comments|linebreaksbr }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="flex flex-row md:flex-col gap-1 mt-4 md:mt-0 md:pl-4 md:border-l border-gray-100 justify-end md:justify-start">
+                            
+                            {% if task.can_comment %}
+                            <button onclick="openCommentModal('{{ task.id }}')" class="p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition" title="Add Comment">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+                                </svg>
+                            </button>
+                            {% endif %}
+
+                            {% if task.can_edit %}
+                            <button onclick="openEditModal('{{ task.id }}')" class="p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600 rounded-lg transition" title="Edit Details">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </button>
+                            {% endif %}
+
+                            {% if task.can_reschedule %}
+                            <button onclick="openRescheduleModal('{{ task.id }}')" class="p-1.5 text-gray-400 hover:bg-orange-50 hover:text-orange-600 rounded-lg transition" title="Reschedule">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                            </button>
+                            {% endif %}
+
+                            {% if task.can_change_status %}
+                                <form method="post" action="{% url 'work_plan_task_status_update' task.id %}">
+                                    {% csrf_token %}
+                                    {% if task.status != 'Completed' %}
+                                    <button type="submit" class="p-1.5 text-gray-400 hover:bg-green-100 hover:text-green-600 rounded-lg transition" title="Mark Done">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                    </button>
+                                    {% else %}
+                                    <button type="submit" class="p-1.5 text-green-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition" title="Revert to Pending">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                        </svg>
+                                    </button>
+                                    {% endif %}
+                                </form>
+                            {% endif %}
+
+                            {% if task.can_delete %}
+                            <form method="post" action="{% url 'work_plan_task_delete' task.id %}" onsubmit="return confirm('Are you sure you want to delete this task?');">
+                                {% csrf_token %}
+                                <button type="submit" class="p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition" title="Delete">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+            
+            {% if not tasks %}
+            <div class="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-300">
+                <p class="text-gray-400 mb-2">No tasks visible.</p>
+                <p class="text-sm text-gray-500">Tasks may be hidden or not created yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% include 'work_plan/modals.html' %}
+
+<script>
+// Toggle Leave Mode
+function toggleLeaveMode() {
+    const isChecked = document.getElementById('is_leave_checkbox').checked;
+    const container = document.querySelector('.normal-fields');
+    const inputs = container.querySelectorAll('input, select, textarea');
+    
+    if (isChecked) {
+        container.classList.add('opacity-50', 'pointer-events-none');
+        inputs.forEach(i => {
+            if (i.id !== 'date_select') i.disabled = true;
+            if (i.name === 'task_name') i.removeAttribute('required');
+        });
+    } else {
+        container.classList.remove('opacity-50', 'pointer-events-none');
+        inputs.forEach(i => {
+            i.disabled = false;
+            if (i.name === 'task_name') i.setAttribute('required', '');
+        });
+    }
+}
+
+// Prevent selecting blocked day
+document.getElementById('date_select')?.addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    if (selectedOption && selectedOption.disabled) {
+        alert("This day is marked as 'On Leave'. You cannot add regular tasks on leave days.");
+        this.selectedIndex = 0;
+    }
+});
+
+// Open Comment Modal
+function openCommentModal(id) {
+    document.getElementById('commentForm').action = `/it_operations/workplans/task/${id}/comment/`;
+    document.getElementById('commentModal').classList.remove('hidden');
+}
+
+// Open Reschedule Modal
+function openRescheduleModal(id) {
+    document.getElementById('rescheduleForm').action = `/it_operations/workplans/task/${id}/reschedule/`;
+    document.getElementById('rescheduleModal').classList.remove('hidden');
+    
+    // Set min date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('reschedule_date').setAttribute('min', today);
+}
+
+// Open Edit Modal
+function openEditModal(id) {
+    const modal = document.getElementById('editModal');
+    const loader = document.getElementById('editLoader');
+    
+    modal.classList.remove('hidden');
+    loader.classList.remove('hidden');
+    
+    document.getElementById('editForm').action = `/it_operations/workplans/task/${id}/edit/`;
+    
+    fetch("{% url 'get_task_details_json' 0 %}".replace('0', id))
+        .then(response => {
+            if (!response.ok) throw new Error('Failed');
+            return response.json();
+        })
+        .then(data => {
+            document.getElementById('edit_task_name').value = data.task_name;
+            document.getElementById('edit_target').value = data.target || '';
+            document.getElementById('edit_resources').value = data.resources_needed || '';
+            document.getElementById('edit_other_parties').value = data.other_parties || '';
+            document.getElementById('edit_is_leave').checked = data.is_leave;
+            document.getElementById('edit_centre').value = data.centre || '';
+            document.getElementById('edit_department').value = data.department || '';
+
+            const collabSelect = document.getElementById('edit_collaborators');
+            if (collabSelect) {
+                Array.from(collabSelect.options).forEach(option => {
+                    option.selected = data.collaborators.includes(parseInt(option.value));
+                });
+            }
+
+            toggleEditLeave();
+            loader.classList.add('hidden');
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Could not load task details.");
+            modal.classList.add('hidden');
+            loader.classList.add('hidden');
+        });
+}
+
+// Toggle fields in Edit Modal
+function toggleEditLeave() {
+    const isChecked = document.getElementById('edit_is_leave').checked;
+    const container = document.getElementById('edit_fields_container');
+    
+    if (isChecked) {
+        container.classList.add('opacity-50', 'pointer-events-none');
+    } else {
+        container.classList.remove('opacity-50', 'pointer-events-none');
+    }
+}
+
+// Run on load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleLeaveMode();
+});
+</script>
+{% endblock %}

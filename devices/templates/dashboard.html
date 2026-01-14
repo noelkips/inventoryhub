@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - MOHI IT</title>
     <script src="https://cdn.tailwindcss.com"></script>
+
     <style>
         .bg-primary { background-color: #143C50; }
         .bg-green { background-color: #22C55E; }
@@ -20,7 +21,6 @@
     </style>
 </head>
 <body class="flex flex-col min-h-screen bg-light text-primary">
-    <!-- Header -->
     <header class="bg-accent text-white shadow-md fixed w-full z-50">
         <div class="container mx-auto px-4 py-4 flex items-center justify-between">
             <div class="flex items-center">
@@ -49,30 +49,27 @@
         </div>
     </header>
 
-    <!-- Sidebar -->
     <aside id="sidebar"
            class="bg-primary text-white w-64 p-6 shadow-md fixed h-screen overflow-y-auto z-40 transition-transform duration-300 -translate-x-full md:translate-x-0">
         <nav>
             <ul class="space-y-4">
 
-                <!-- 1. HOME - FIRST ITEM -->
                 <li>
                     <a href="{% url 'dashboard' %}" class="flex items-center text-white hover:bg-green px-4 py-2 rounded transition">
                         <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                         </svg>
                         <span>Home</span>
                     </a>
                 </li>
 
-                <!-- 2. Device Management -->
                 <li>
                     <a href="#" class="flex items-center justify-between hover:bg-green px-4 py-2 rounded transition" id="manageDevicesToggle">
                         <span class="flex items-center">
                             <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                             </svg>
                             <span>Device Management</span>
                         </span>
@@ -108,14 +105,13 @@
                     </ul>
                 </li>
 
-                <!-- 3. IT Operations -->
                 {% if not user.is_trainer %}
                 <li>
                     <a href="#" class="flex items-center justify-between hover:bg-green px-4 py-2 rounded transition" id="itOperationsToggle">
                         <span class="flex items-center">
                             <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
                             <span>IT Operations</span>
                         </span>
@@ -142,38 +138,33 @@
                             </svg>
                             Incident Reports
                         </a></li>
-                        <li>
-                            <span class="flex items-center px-3 py-1.5 text-gray-400 coming-soon">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                Work Plans <span class="ml-1 text-xs">(Coming Soon)</span>
-                            </span>
-                        </li>
+                        <li><a href="{% url 'work_plan_list' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                            </svg>
+                            Work Plans
+                        </a></li>
                     </ul>
                 </li>
                 {% else %}
-                <!-- Trainer View -->
                 <li>
-                    <span class="flex items-center px-4 py-2 text-gray-400 coming-soon">
+                    <a href="{% url 'work_plan_list' %}" class="flex items-center hover:bg-green px-4 py-2 rounded transition">
                         <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
-                        My Work Plan <span class="ml-1 text-xs">(Coming Soon)</span>
-                    </span>
+                        <span>My Work Plan</span>
+                    </a>
                 </li>
                 {% endif %}
 
-                <!-- Superuser Only -->
                 {% if user.is_superuser %}
-                <!-- PPM Management -->
                 <li>
                     <a href="#" class="flex items-center justify-between hover:bg-green px-4 py-2 rounded transition" id="ppmManagementToggle">
                         <span class="flex items-center">
                             <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
                             </svg>
                             <span>PPM Management</span>
                         </span>
@@ -215,13 +206,12 @@
                     </ul>
                 </li>
 
-                <!-- User Management -->
                 <li>
                     <a href="#" class="flex items-center justify-between hover:bg-green px-4 py-2 rounded transition" id="manageUsersToggle">
                         <span class="flex items-center">
                             <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M12 4.354a4 4 0 110 5.292M15 21h3a2 2 0 002-2v-1a2 2 0 00-2-2H9a2 2 0 00-2 2v1a2 2 0 002 2h3m-6 0h6"></path>
+                                    d="M12 4.354a4 4 0 110 5.292M15 21h3a2 2 0 002-2v-1a2 2 0 00-2-2H9a2 2 0 00-2 2v1a2 2 0 002 2h3m-6 0h6"></path>
                             </svg>
                             <span>User Management</span>
                         </span>
@@ -252,12 +242,11 @@
                     </ul>
                 </li>
 
-                <!-- Admin Interface -->
                 <li>
                     <a href="/admin/" class="flex items-center hover:bg-green px-4 py-2 rounded transition">
                         <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         </svg>
                         <span>Admin Interface</span>
@@ -265,12 +254,11 @@
                 </li>
                 {% endif %}
 
-                <!-- Notifications -->
                 <li>
                     <a href="{% url 'notifications_view' %}" class="flex items-center hover:bg-green px-4 py-2 rounded relative transition">
                         <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                         </svg>
                         <span>Notifications</span>
                         {% if unread_count > 0 %}
@@ -284,53 +272,243 @@
         </nav>
     </aside>
 
-    <!-- Main Content -->
     <main class="flex-1 p-6 mt-16 md:ml-64">
         {% block content %}
         {% endblock %}
     </main>
 
-    <!-- Scripts -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const sidebar = document.getElementById('sidebar');
-            document.getElementById('mobileMenuToggle').addEventListener('click', () => {
+    <div id="inactivityModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+        <div class="relative p-5 border w-96 shadow-lg rounded-md bg-white transform transition-all scale-95 duration-200">
+            <div class="mt-3 text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                    <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mt-4">Session Timeout</h3>
+                <div class="mt-2 px-7 py-3">
+                    <p class="text-sm text-gray-500">
+                        Your session will expire in <span id="countdownTimer" class="font-bold text-red-600">60</span> seconds due to inactivity.
+                    </p>
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button id="stayLoggedInBtn" class="px-4 py-2 bg-green-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-300">
+                        Stay Logged In
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% block page_scripts %}
+<script>
+    // =============================================
+    // 1. NAVIGATION & UI INTERACTIONS
+    // =============================================
+    document.addEventListener('DOMContentLoaded', function () {
+        // Mobile Sidebar Toggle
+        const sidebar = document.getElementById('sidebar');
+        const mobileToggle = document.getElementById('mobileMenuToggle');
+        if (mobileToggle && sidebar) {
+            mobileToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('-translate-x-full');
             });
+        }
 
-            document.getElementById('accountDropdown').addEventListener('click', (e) => {
+        // Account Dropdown
+        const accountDropdown = document.getElementById('accountDropdown');
+        const accountMenu = document.getElementById('accountMenu');
+        if (accountDropdown && accountMenu) {
+            accountDropdown.addEventListener('click', (e) => {
                 e.preventDefault();
-                document.getElementById('accountMenu').classList.toggle('hidden');
+                e.stopPropagation();
+                accountMenu.classList.toggle('hidden');
             });
+        }
 
-            ['manageDevicesToggle', 'itOperationsToggle', 'ppmManagementToggle', 'manageUsersToggle'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        const dropdown = document.getElementById(id.replace('Toggle', 'Dropdown'));
-                        if (dropdown) dropdown.classList.toggle('hidden');
-                    });
+        // Secondary menu toggles (Device Mgmt, IT Ops, PPM, Users)
+        const toggleIds = [
+            'manageDevicesToggle',
+            'itOperationsToggle',
+            'ppmManagementToggle',
+            'manageUsersToggle'
+        ];
+
+        toggleIds.forEach(id => {
+            const toggle = document.getElementById(id);
+            if (toggle) {
+                toggle.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const dropdownId = id.replace('Toggle', 'Dropdown');
+                    const dropdown = document.getElementById(dropdownId);
+                    if (dropdown) {
+                        dropdown.classList.toggle('hidden');
+                    }
+                });
+            }
+        });
+
+        // Click outside → close all dropdowns
+        const allDropdowns = [
+            'accountMenu',
+            'manageDevicesDropdown',
+            'itOperationsDropdown',
+            'ppmManagementDropdown',
+            'manageUsersDropdown'
+        ];
+
+        document.addEventListener('click', (e) => {
+            let clickedInside = false;
+
+            allDropdowns.forEach(menuId => {
+                const menu = document.getElementById(menuId);
+                if (!menu) return;
+
+                let triggerId;
+                if (menuId === 'accountMenu') {
+                    triggerId = 'accountDropdown';
+                } else {
+                    triggerId = menuId.replace('Dropdown', 'Toggle');
+                }
+                const trigger = document.getElementById(triggerId);
+
+                if (trigger && (trigger.contains(e.target) || menu.contains(e.target))) {
+                    clickedInside = true;
                 }
             });
 
-            document.addEventListener('click', (e) => {
-                ['accountMenu', 'manageDevicesDropdown', 'itOperationsDropdown', 'ppmManagementDropdown', 'manageUsersDropdown'].forEach(id => {
-                    const menu = document.getElementById(id);
-                    const btn = document.getElementById(id.replace('Dropdown', 'Toggle')) || document.getElementById('accountDropdown');
-                    if (menu && btn && !btn.contains(e.target) && !menu.contains(e.target)) {
-                        menu.classList.add('hidden');
-                    }
+            if (!clickedInside) {
+                allDropdowns.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.add('hidden');
                 });
-            });
+            }
+        });
 
-            document.querySelectorAll('a[href*="notifications"]').forEach(link => {
-                link.addEventListener('click', () => {
-                    const badge = document.getElementById('notificationBadge');
-                    if (badge) badge.style.display = 'none';
-                });
+        // Hide notification badge when clicking the notifications link
+        document.querySelectorAll('a[href*="notifications"]').forEach(link => {
+            link.addEventListener('click', () => {
+                const badge = document.getElementById('notificationBadge');
+                if (badge) badge.style.display = 'none';
             });
         });
-    </script>
+    });
+
+
+    // =============================================
+    // 2. REAL INACTIVITY TIMEOUT - 2 HOURS
+    // =============================================
+    const INACTIVITY_TIMEOUT_MINUTES = 120;
+    const INACTIVITY_TIMEOUT_SECONDS = INACTIVITY_TIMEOUT_MINUTES * 60;
+    const WARNING_SECONDS_BEFORE      = 60;
+
+    const inactivityModal    = document.getElementById('inactivityModal');
+    const countdownEl        = document.getElementById('countdownTimer');
+    const stayBtn            = document.getElementById('stayLoggedInBtn');
+
+    let inactivityTimer      = null;
+    let warningTimer         = null;
+    let countdownInterval    = null;
+    let remainingSeconds     = WARNING_SECONDS_BEFORE;
+    let lastPingTime         = 0;
+
+    function resetInactivityTimer() {
+        clearTimeout(inactivityTimer);
+        clearTimeout(warningTimer);
+        clearInterval(countdownInterval);
+
+        if (inactivityModal) {
+            inactivityModal.classList.add('hidden');
+        }
+
+        remainingSeconds = WARNING_SECONDS_BEFORE;
+
+        inactivityTimer = setTimeout(logoutUser, INACTIVITY_TIMEOUT_SECONDS * 1000);
+        warningTimer    = setTimeout(showWarningModal, (INACTIVITY_TIMEOUT_SECONDS - WARNING_SECONDS_BEFORE) * 1000);
+    }
+
+    function showWarningModal() {
+        if (!inactivityModal) return;
+
+        inactivityModal.classList.remove('hidden');
+        const box = inactivityModal.querySelector('.transform');
+        if (box) {
+            box.classList.remove('scale-95');
+            box.classList.add('scale-100');
+        }
+
+        remainingSeconds = WARNING_SECONDS_BEFORE;
+        if (countdownEl) countdownEl.textContent = remainingSeconds;
+
+        countdownInterval = setInterval(() => {
+            remainingSeconds--;
+            if (countdownEl) countdownEl.textContent = remainingSeconds;
+            if (remainingSeconds <= 0) {
+                clearInterval(countdownInterval);
+                logoutUser();
+            }
+        }, 1000);
+    }
+
+    function logoutUser() {
+        window.location.href = "{% url 'logout' %}?next={% url 'login' %}&session_expired=1";
+    }
+
+    function keepSessionAndReset() {
+        const now = Date.now();
+        if (now - lastPingTime < 30000) {  // throttle to ~every 30s
+            resetInactivityTimer();
+            return;
+        }
+
+        lastPingTime = now;
+
+        fetch("{% url 'session_ping' %}", {
+            method: 'GET',
+            credentials: 'include',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => {
+            if (!r.ok) throw new Error('ping failed');
+            return r.json();
+        })
+        .then(() => resetInactivityTimer())
+        .catch(err => {
+            console.warn('Session ping failed:', err);
+            resetInactivityTimer();  // still give benefit of doubt
+        });
+    }
+
+    // Activity events that reset timer
+    const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+    activityEvents.forEach(ev => {
+        document.addEventListener(ev, () => {
+            if (inactivityModal && !inactivityModal.classList.contains('hidden')) {
+                keepSessionAndReset();
+            } else {
+                resetInactivityTimer();
+            }
+        }, { passive: true });
+    });
+
+    // Stay logged in button
+    if (stayBtn) {
+        stayBtn.addEventListener('click', keepSessionAndReset);
+    }
+
+    // Initialize on page load
+    function startInactivityTracking() {
+        resetInactivityTimer();
+        keepSessionAndReset();  // initial ping
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startInactivityTracking);
+    } else {
+        startInactivityTracking();
+    }
+</script>
+{% endblock page_scripts %}
 </body>
 </html>

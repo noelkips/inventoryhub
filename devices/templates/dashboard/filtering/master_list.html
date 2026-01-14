@@ -1,0 +1,737 @@
+{% extends 'dashboard.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mx-auto p-4 lg:p-6 min-h-screen">
+    
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
+        <div>
+            <a href="{% url 'dashboard' %}" class="text-accent hover:underline text-sm mb-2 inline-block">&larr; Back to Dashboard</a>
+            <h1 class="text-3xl font-bold text-primary">{{ page_title }}</h1>
+        </div>
+    </div>
+
+    <!-- Responsive Layout: Filters (Sidebar) + Results (Main) -->
+    <div class="flex flex-col lg:flex-row gap-6">
+        
+        <!-- ======================= -->
+        <!--    FILTER SIDEBAR     -->
+        <!-- ======================= -->
+        <aside class="w-full lg:w-1/4 xl:w-1/5">
+            <div class="bg-white p-6 rounded-2xl shadow-lg sticky top-6">
+                <h3 class="text-xl font-bold text-primary mb-5 border-b pb-3 flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 12.414V17a1 1 0 01-1.447.894l-2-1A1 1 0 018 16v-3.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd"></path></svg>
+                    Filters
+                </h3>
+                
+                <form method="GET" action="">
+                    <!-- Device Filters -->
+                    {% if list_type == 'devices' %}
+                    <div class="space-y-4">
+                        <div>
+                            <label for="centre_id" class="block text-sm font-medium text-gray-700 mb-1">Centre</label>
+                            <select name="centre_id" id="centre_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-accent focus:ring-accent">
+                                <option value="">All Centres</option>
+                                {% for centre in all_centres %}
+                                <option value="{{ centre.id }}" {% if filters.centre_id == centre.id|stringformat:"s" %}selected{% endif %}>{{ centre.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="department_id" class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                            <select name="department_id" id="department_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-accent focus:ring-accent">
+                                <option value="">All Departments</option>
+                                {% for dept in all_departments %}
+                                <option value="{{ dept.id }}" {% if filters.department_id == dept.id|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- NEW: Category Filter (replaces old hardware) -->
+                        <div>
+                            <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                            <select name="category" id="category" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-accent focus:ring-accent">
+                                <option value="">All Categories</option>
+                                {% for value, label in category_choices %}
+                                <option value="{{ value }}" {% if filters.category == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                            <select name="status" id="status" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-accent focus:ring-accent">
+                                <option value="">All Statuses</option>
+                                {% for item in all_status %}
+                                <option value="{{ item }}" {% if filters.status == item %}selected{% endif %}>{{ item }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="device_condition" class="block text-sm font-medium text-gray-700 mb-1">Condition</label>
+                            <select name="device_condition" id="device_condition" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-accent focus:ring-accent">
+                                <option value="">All Conditions</option>
+                                {% for item in all_conditions %}
+                                <option value="{{ item }}" {% if filters.device_condition == item %}selected{% endif %}>{{ item }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" name="is_disposed" id="is_disposed" value="true" {% if filters.is_disposed %}checked{% endif %} class="rounded border-gray-300 text-accent focus:ring-accent">
+                            <label for="is_disposed" class="ml-2 text-sm text-gray-700">Show Disposed</label>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- PPM Filters -->
+                    {% if list_type == 'ppm' %}
+                    <div class="space-y-4">
+                        <div>
+                            <label for="centre_id" class="block text-sm font-medium text-gray-700 mb-1">Centre</label>
+                            <select name="centre_id" id="centre_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-accent focus:ring-accent">
+                                <option value="">All Centres</option>
+                                {% for centre in all_centres %}
+                                <option value="{{ centre.id }}" {% if filters.centre_id == centre.id|stringformat:"s" %}selected{% endif %}>{{ centre.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="period_id" class="block text-sm font-medium text-gray-700 mb-1">Period</label>
+                            <select name="period_id" id="period_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-accent focus:ring-accent">
+                                <option value="">All Periods</option>
+                                {% for period in all_periods %}
+                                <option value="{{ period.id }}" {% if filters.period_id == period.id|stringformat:"s" %}selected{% endif %}>{{ period.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="ppm_status" class="block text-sm font-medium text-gray-700 mb-1">PPM Status</label>
+                            <select name="ppm_status" id="ppm_status" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-accent focus:ring-accent">
+                                <option value="">All Statuses</option>
+                                <option value="done" {% if filters.ppm_status == 'done' %}selected{% endif %}>Completed</option>
+                                <option value="pending" {% if filters.ppm_status == 'pending' %}selected{% endif %}>Pending (Active)</option>
+                                <option value="overdue" {% if filters.ppm_status == 'overdue' %}selected{% endif %}>Overdue</option>
+                                <option value="due_soon" {% if filters.ppm_status == 'due_soon' %}selected{% endif %}>Due Soon</option>
+                            </select>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Asset Filters -->
+                    {% if list_type == 'assets' %}
+                    <div class="space-y-4">
+                        <div>
+                            <label for="department_id" class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                            <select name="department_id" id="department_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-accent focus:ring-accent">
+                                <option value="">All Departments</option>
+                                {% for dept in all_departments %}
+                                <option value="{{ dept.id }}" {% if filters.department_id == dept.id|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="criticality_level" class="block text-sm font-medium text-gray-700 mb-1">Criticality</label>
+                            <select name="criticality_level" id="criticality_level" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-accent focus:ring-accent">
+                                <option value="">All Levels</option>
+                                {% for level in all_criticality %}
+                                <option value="{{ level }}" {% if filters.criticality_level == level %}selected{% endif %}>{{ level }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Incident Filters -->
+                    {% if list_type == 'incidents' %}
+                    <div class="space-y-4">
+                        <div>
+                            <label for="incident_number" class="block text-sm font-medium text-gray-700 mb-1">Incident Number</label>
+                            <input type="text" name="incident_number" id="incident_number" value="{{ filters.incident_number }}" placeholder="Enter incident #" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-accent focus:ring-accent">
+                        </div>
+                        <div>
+                            <label for="incident_status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                            <select name="incident_status" id="incident_status" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-accent focus:ring-accent">
+                                <option value="">All Statuses</option>
+                                {% for status in all_statuses %}
+                                <option value="{{ status }}" {% if filters.incident_status == status %}selected{% endif %}>{{ status }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Workplan Filters -->
+                    {% if list_type == 'workplans' %}
+                    <div class="space-y-4">
+                        <div>
+                            <label for="user_id" class="block text-sm font-medium text-gray-700 mb-1">Staff Member</label>
+                            <select name="user_id" id="user_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-accent focus:ring-accent">
+                                <option value="">All Staff</option>
+                                {% for staff in all_staff %}
+                                <option value="{{ staff.id }}" {% if filters.user_id == staff.id|stringformat:"s" %}selected{% endif %}>{{ staff.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="week" class="block text-sm font-medium text-gray-700 mb-1">Week</label>
+                            <select name="week" id="week" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-accent focus:ring-accent">
+                                <option value="">All Weeks</option>
+                                <option value="current" {% if filters.week == 'current' %}selected{% endif %}>Current Week</option>
+                            </select>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-6 flex space-x-2">
+                        <button type="submit" class="w-2/3 bg-accent text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors">Apply</button>
+                        <a href="?clear=1" class="w-1/3 text-center bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">Clear</a>
+                    </div>
+                </form>
+            </div>
+        </aside>
+        
+        <!-- ======================= -->
+        <!--     MAIN CONTENT      -->
+        <!-- ======================= -->
+        <main class="w-full lg:w-3/4 xl:w-4/5">
+            
+            <!-- ======================= -->
+            <!--     STATS CARDS       -->
+            <!-- ======================= -->
+            <div class="mb-6">
+                {% if list_type == 'devices' %}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-blue-100 p-4 rounded-xl shadow">
+                        <p class="text-sm text-blue-800 font-medium">Total Found</p>
+                        <p class="text-3xl font-bold text-blue-900">{{ stats.total }}</p>
+                    </div>
+                    <div class="bg-green-100 p-4 rounded-xl shadow col-span-1 md:col-span-2">
+                        <p class="text-sm text-green-800 font-medium">By Status</p>
+                        <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                            {% for s in stats.by_status %}
+                            <span class="text-lg text-green-900 font-semibold">{{ s.status|default:'Unknown' }}: <strong class="font-bold">{{ s.count }}</strong></span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if list_type == 'ppm' %}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-blue-100 p-4 rounded-xl shadow">
+                        <p class="text-sm text-blue-800 font-medium">Total Tasks</p>
+                        <p class="text-3xl font-bold text-blue-900">{{ stats.total }}</p>
+                    </div>
+                    <div class="bg-green-100 p-4 rounded-xl shadow">
+                        <p class="text-sm text-green-800 font-medium">Completed</p>
+                        <p class="text-3xl font-bold text-green-900">{{ stats.completed }}</p>
+                    </div>
+                    <div class="bg-yellow-100 p-4 rounded-xl shadow">
+                        <p class="text-sm text-yellow-800 font-medium">Pending</p>
+                        <p class="text-3xl font-bold text-yellow-900">{{ stats.pending }}</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if list_type == 'assets' %}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-blue-100 p-4 rounded-xl shadow">
+                        <p class="text-sm text-blue-800 font-medium">Total Assets</p>
+                        <p class="text-3xl font-bold text-blue-900">{{ stats.total }}</p>
+                    </div>
+                    <div class="bg-purple-100 p-4 rounded-xl shadow">
+                        <p class="text-sm text-purple-800 font-medium">By Criticality</p>
+                        <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                            {% for c in stats.by_criticality %}
+                            <span class="text-sm text-purple-900 font-semibold">{{ c.criticality_level }}: <strong>{{ c.count }}</strong></span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if list_type == 'incidents' %}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-blue-100 p-4 rounded-xl shadow">
+                        <p class="text-sm text-blue-800 font-medium">Total Incidents</p>
+                        <p class="text-3xl font-bold text-blue-900">{{ stats.total }}</p>
+                    </div>
+                    <div class="bg-orange-100 p-4 rounded-xl shadow">
+                        <p class="text-sm text-orange-800 font-medium">By Status</p>
+                        <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                            {% for s in stats.by_status %}
+                            <span class="text-sm text-orange-900 font-semibold">{{ s.status }}: <strong>{{ s.count }}</strong></span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if list_type == 'workplans' %}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-blue-100 p-4 rounded-xl shadow">
+                        <p class="text-sm text-blue-800 font-medium">Total Plans</p>
+                        <p class="text-3xl font-bold text-blue-900">{{ stats.total }}</p>
+                    </div>
+                    <div class="bg-teal-100 p-4 rounded-xl shadow">
+                        <p class="text-sm text-teal-800 font-medium">Unique Users</p>
+                        <p class="text-3xl font-bold text-teal-900">{{ stats.users }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ======================= -->
+            <!--      RESULTS TABLE      -->
+            <!-- ======================= -->
+            <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-100">
+                            <!-- Device Headers -->
+                            {% if list_type == 'devices' %}
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Serial Number</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Category</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Centre</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Condition</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Assignee</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Actions</th>
+                            </tr>
+                            {% endif %}
+                            
+                            <!-- PPM Headers -->
+                            {% if list_type == 'ppm' %}
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Device SN</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Centre</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Period</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Actions</th>
+                            </tr>
+                            {% endif %}
+
+                            <!-- Asset Headers -->
+                            {% if list_type == 'assets' %}
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Asset Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Department</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Criticality</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Owner</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Actions</th>
+                            </tr>
+                            {% endif %}
+
+                            <!-- Incident Headers -->
+                            {% if list_type == 'incidents' %}
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Incident #</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Description</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Actions</th>
+                            </tr>
+                            {% endif %}
+
+                            <!-- Workplan Headers -->
+                            {% if list_type == 'workplans' %}
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">User</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Week Start</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Week End</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Actions</th>
+                            </tr>
+                            {% endif %}
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            
+                            <!-- Device Rows -->
+                            {% if list_type == 'devices' %}
+                                {% for item in page_obj %}
+                                <tr class="hover:bg-blue-50 transition-colors">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        <a href="{% url 'device_history' item.id %}" class="text-accent hover:underline">{{ item.serial_number }}</a>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.get_category_display|default:'-' }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.centre.name|default:'-' }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.status|default:'-' }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.device_condition|default:'-' }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.assignee_first_name|default:'' }} {{ item.assignee_last_name|default:'' }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <button onclick="openModal(this)"
+                                            data-type="device"
+                                            data-serial="{{ item.serial_number }}"
+                                            data-category="{{ item.get_category_display|default:'N/A' }}"
+                                            data-centre="{{ item.centre.name|default:'N/A' }}"
+                                            data-department="{{ item.department.name|default:'N/A' }}"
+                                            data-status="{{ item.status|default:'N/A' }}"
+                                            data-condition="{{ item.device_condition|default:'N/A' }}"
+                                            data-assignee="{{ item.assignee_first_name|default:'' }} {{ item.assignee_last_name|default:'' }}"
+                                            data-email="{{ item.assignee_email_address|default:'N/A' }}"
+                                            class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold hover:bg-blue-200 transition-colors">
+                                            View
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% endif %}
+                            
+                            <!-- PPM Rows -->
+                            {% if list_type == 'ppm' %}
+                                {% for item in page_obj %}
+                                <tr class="hover:bg-blue-50 transition-colors">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        <a href="{% url 'device_history' item.device.id %}" class="text-accent hover:underline">{{ item.device.serial_number }}</a>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.device.centre.name }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.period.name }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        {% if item.completed_date %}
+                                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-semibold">Completed</span>
+                                        {% elif item.period.end_date < today %}
+                                            <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-semibold">Overdue</span>
+                                        {% else %}
+                                            <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-semibold">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <button onclick="openModal(this)"
+                                            data-type="ppm"
+                                            data-serial="{{ item.device.serial_number }}"
+                                            data-centre="{{ item.device.centre.name }}"
+                                            data-period="{{ item.period.name }}"
+                                            data-completed="{{ item.completed_date|date:'M d, Y'|default:'Not yet' }}"
+                                            data-remarks="{{ item.remarks|default:'-' }}"
+                                            data-activities="{% for act in item.activities.all %}{{ act.name }}{% if not forloop.last %}, {% endif %}{% endfor %}"
+                                            class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold hover:bg-blue-200 transition-colors">
+                                            View
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% endif %}
+
+                            <!-- Asset Rows -->
+                            {% if list_type == 'assets' %}
+                                {% for item in page_obj %}
+                                <tr class="hover:bg-blue-50 transition-colors">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.name }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.department.name|default:'-' }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        {% if item.criticality_level == 1 %}
+                                        <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-semibold">Critical (1)</span>
+                                        {% elif item.criticality_level == 2 %}
+                                        <span class="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-semibold">High (2)</span>
+                                        {% elif item.criticality_level == 3 %}
+                                        <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-semibold">Medium (3)</span>
+                                        {% else %}
+                                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-semibold">Low ({{ item.criticality_level }})</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.owner|default:'-' }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <button onclick="openModal(this)"
+                                            data-type="asset"
+                                            data-name="{{ item.name }}"
+                                            data-department="{{ item.department.name|default:'N/A' }}"
+                                            data-criticality="{{ item.criticality_level }}"
+                                            data-owner="{{ item.owner|default:'N/A' }}"
+                                            data-description="{{ item.description|default:'N/A' }}"
+                                            data-location="{{ item.location|default:'N/A' }}"
+                                            class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold hover:bg-blue-200 transition-colors">
+                                            View
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% endif %}
+
+                            <!-- Incident Rows -->
+                            {% if list_type == 'incidents' %}
+                                {% for item in page_obj %}
+                                <tr class="hover:bg-blue-50 transition-colors">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.incident_number }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.date_of_report|date:"M d, Y" }}</td>
+                                    <td class="px-6 py-4 text-sm text-gray-700">{{ item.description|truncatewords:10 }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        {% if item.status == 'Open' %}
+                                        <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-semibold">Open</span>
+                                        {% elif item.status == 'In Progress' %}
+                                        <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-semibold">In Progress</span>
+                                        {% elif item.status == 'Resolved' %}
+                                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-semibold">Resolved</span>
+                                        {% else %}
+                                        <span class="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-semibold">{{ item.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <button onclick="openModal(this)"
+                                            data-type="incident"
+                                            data-number="{{ item.incident_number }}"
+                                            data-date="{{ item.date_of_report|date:'M d, Y' }}"
+                                            data-description="{{ item.description }}"
+                                            data-status="{{ item.status }}"
+                                            data-reported-by="{{ item.reported_by.username }}"
+                                            data-resolution="{{ item.resolution|default:'Pending' }}"
+                                            class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold hover:bg-blue-200 transition-colors">
+                                            View
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% endif %}
+
+                            <!-- Workplan Rows -->
+                            {% if list_type == 'workplans' %}
+                                {% for item in page_obj %}
+                                <tr class="hover:bg-blue-50 transition-colors">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.user.username }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.week_start_date|date:"M d, Y" }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.week_end_date|date:"M d, Y" }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <button onclick="openModal(this)"
+                                            data-type="workplan"
+                                            data-user="{{ item.user.username }}"
+                                            data-start="{{ item.week_start_date|date:'M d, Y' }}"
+                                            data-end="{{ item.week_end_date|date:'M d, Y' }}"
+                                            data-activities="{{ item.planned_activities|default:'N/A' }}"
+                                            data-objectives="{{ item.objectives|default:'N/A' }}"
+                                            class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold hover:bg-blue-200 transition-colors">
+                                            View
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% endif %}
+
+                            <!-- Empty State -->
+                            {% if not page_obj %}
+                            <tr>
+                                <td colspan="10" class="text-center py-16 text-gray-500">
+                                    <svg class="w-16 h-16 mx-auto text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path d="M9 9a2 2 0 114 0 2 2 0 01-4 0z"></path><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a.002.002 0 00-.001.002v5.004a.001.001 0 00.002.001h.002a.001.001 0 00.001-.002V5.002A.002.002 0 0011 5zm-1 8a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"></path></svg>
+                                    <h3 class="mt-2 text-xl font-semibold">No items found</h3>
+                                    <p class="mt-1 text-sm">Try adjusting your filters or <a href="?clear=1" class="text-accent font-medium hover:underline">clear all filters</a>.</p>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- ======================= -->
+            <!--      PAGINATION       -->
+            <!-- ======================= -->
+            {% if is_paginated %}
+            <nav class="bg-white px-6 py-4 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 mt-6 rounded-b-2xl shadow-lg gap-4">
+                <div class="text-sm text-gray-700 order-2 sm:order-1">
+                    Showing <span class="font-medium">{{ page_obj.start_index }}</span>
+                    to <span class="font-medium">{{ page_obj.end_index }}</span>
+                    of <span class="font-medium">{{ total_results }}</span> results
+                </div>
+                <div class="flex justify-center order-1 sm:order-2">
+                    <div class="flex rounded-md shadow-sm -space-x-px">
+                        {% if page_obj.has_previous %}
+                        <a href="?page=1&{{ params }}" class="relative inline-flex items-center px-3 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            First
+                        </a>
+                        <a href="?page={{ page_obj.previous_page_number }}&{{ params }}" class="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Previous
+                        </a>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                            <span class="relative inline-flex items-center px-4 py-2 border border-accent bg-accent text-sm font-medium text-white">{{ num }}</span>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <a href="?page={{ num }}&{{ params }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">{{ num }}</a>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}&{{ params }}" class="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Next
+                        </a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}&{{ params }}" class="relative inline-flex items-center px-3 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Last
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </nav>
+            {% endif %}
+
+        </main>
+    </div>
+</div>
+
+<!-- ======================= -->
+<!--     DETAILS MODAL       -->
+<!-- ======================= -->
+<div id="itemModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm hidden" onclick="closeModal()">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl m-4 transform transition-all" onclick="event.stopPropagation()">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b">
+            <h3 class="text-2xl font-bold text-primary" id="modalTitle">Item Details</h3>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+            </button>
+        </div>
+
+        <!-- Modal Content (Dynamic) -->
+        <div class="p-6 max-h-[70vh] overflow-y-auto">
+            
+            <!-- Device Details Template -->
+            <div id="modalDeviceContent" class="hidden space-y-4">
+                <h4 class="text-xl font-semibold text-accent mb-4" id="modalDeviceSerial"></h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                    <div><strong class="text-gray-600">Category:</strong> <span id="modalDeviceCategory" class="text-gray-900"></span></div>
+                    <div><strong class="text-gray-600">Centre:</strong> <span id="modalDeviceCentre" class="text-gray-900"></span></div>
+                    <div><strong class="text-gray-600">Department:</strong> <span id="modalDeviceDepartment" class="text-gray-900"></span></div>
+                    <div><strong class="text-gray-600">Status:</strong> <span id="modalDeviceStatus" class="text-gray-900"></span></div>
+                    <div><strong class="text-gray-600">Condition:</strong> <span id="modalDeviceCondition" class="text-gray-900"></span></div>
+                    <div class="md:col-span-2"><strong class="text-gray-600">Assignee:</strong> <span id="modalDeviceAssignee" class="text-gray-900"></span></div>
+                    <div class="md:col-span-2"><strong class="text-gray-600">Email:</strong> <span id="modalDeviceEmail" class="text-gray-900"></span></div>
+                </div>
+            </div>
+            
+            <!-- PPM Details Template -->
+            <div id="modalPpmContent" class="hidden space-y-4">
+                <h4 class="text-xl font-semibold text-accent mb-4" id="modalPpmSerial"></h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                    <div><strong class="text-gray-600">Centre:</strong> <span id="modalPpmCentre" class="text-gray-900"></span></div>
+                    <div><strong class="text-gray-600">Period:</strong> <span id="modalPpmPeriod" class="text-gray-900"></span></div>
+                    <div class="md:col-span-2"><strong class="text-gray-600">Completed:</strong> <span id="modalPpmCompleted" class="text-gray-900"></span></div>
+                    <div class="md:col-span-2"><strong class="text-gray-600">Activities:</strong> <span id="modalPpmActivities" class="text-gray-900"></span></div>
+                    <div class="md:col-span-2"><strong class="text-gray-600">Remarks:</strong> <span id="modalPpmRemarks" class="text-gray-900"></span></div>
+                </div>
+            </div>
+
+            <!-- Asset Details Template -->
+            <div id="modalAssetContent" class="hidden space-y-4">
+                <h4 class="text-xl font-semibold text-accent mb-4" id="modalAssetName"></h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                    <div><strong class="text-gray-600">Department:</strong> <span id="modalAssetDepartment" class="text-gray-900"></span></div>
+                    <div><strong class="text-gray-600">Criticality Level:</strong> <span id="modalAssetCriticality" class="text-gray-900"></span></div>
+                    <div><strong class="text-gray-600">Owner:</strong> <span id="modalAssetOwner" class="text-gray-900"></span></div>
+                    <div><strong class="text-gray-600">Location:</strong> <span id="modalAssetLocation" class="text-gray-900"></span></div>
+                    <div class="md:col-span-2"><strong class="text-gray-600">Description:</strong> <span id="modalAssetDescription" class="text-gray-900"></span></div>
+                </div>
+            </div>
+
+            <!-- Incident Details Template -->
+            <div id="modalIncidentContent" class="hidden space-y-4">
+                <h4 class="text-xl font-semibold text-accent mb-4" id="modalIncidentNumber"></h4>
+                <div class="space-y-3">
+                    <div><strong class="text-gray-600">Date:</strong> <span id="modalIncidentDate" class="text-gray-900"></span></div>
+                    <div><strong class="text-gray-600">Status:</strong> <span id="modalIncidentStatus" class="text-gray-900"></span></div>
+                    <div><strong class="text-gray-600">Reported By:</strong> <span id="modalIncidentReportedBy" class="text-gray-900"></span></div>
+                    <div><strong class="text-gray-600">Description:</strong> <p id="modalIncidentDescription" class="text-gray-900 mt-1"></p></div>
+                    <div><strong class="text-gray-600">Resolution:</strong> <p id="modalIncidentResolution" class="text-gray-900 mt-1"></p></div>
+                </div>
+            </div>
+
+            <!-- Workplan Details Template -->
+            <div id="modalWorkplanContent" class="hidden space-y-4">
+                <h4 class="text-xl font-semibold text-accent mb-4" id="modalWorkplanUser"></h4>
+                <div class="space-y-3">
+                    <div><strong class="text-gray-600">Week Start:</strong> <span id="modalWorkplanStart" class="text-gray-900"></span></div>
+                    <div><strong class="text-gray-600">Week End:</strong> <span id="modalWorkplanEnd" class="text-gray-900"></span></div>
+                    <div><strong class="text-gray-600">Objectives:</strong> <p id="modalWorkplanObjectives" class="text-gray-900 mt-1 whitespace-pre-wrap"></p></div>
+                    <div><strong class="text-gray-600">Planned Activities:</strong> <p id="modalWorkplanActivities" class="text-gray-900 mt-1 whitespace-pre-wrap"></p></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    const modal = document.getElementById('itemModal');
+
+    // Hide all content blocks
+    function hideModalContent() {
+        document.getElementById('modalDeviceContent').classList.add('hidden');
+        document.getElementById('modalPpmContent').classList.add('hidden');
+        document.getElementById('modalAssetContent').classList.add('hidden');
+        document.getElementById('modalIncidentContent').classList.add('hidden');
+        document.getElementById('modalWorkplanContent').classList.add('hidden');
+    }
+
+    function openModal(button) {
+        hideModalContent();
+        const type = button.dataset.type;
+        
+        if (type === 'device') {
+            document.getElementById('modalTitle').innerText = 'Device Details';
+            document.getElementById('modalDeviceSerial').innerText = button.dataset.serial;
+            document.getElementById('modalDeviceCategory').innerText = button.dataset.category;
+            document.getElementById('modalDeviceCentre').innerText = button.dataset.centre;
+            document.getElementById('modalDeviceDepartment').innerText = button.dataset.department;
+            document.getElementById('modalDeviceStatus').innerText = button.dataset.status;
+            document.getElementById('modalDeviceCondition').innerText = button.dataset.condition;
+            document.getElementById('modalDeviceAssignee').innerText = button.dataset.assignee;
+            document.getElementById('modalDeviceEmail').innerText = button.dataset.email;
+            document.getElementById('modalDeviceContent').classList.remove('hidden');
+        } 
+        
+        else if (type === 'ppm') {
+            document.getElementById('modalTitle').innerText = 'PPM Task Details';
+            document.getElementById('modalPpmSerial').innerText = "Device: " + button.dataset.serial;
+            document.getElementById('modalPpmCentre').innerText = button.dataset.centre;
+            document.getElementById('modalPpmPeriod').innerText = button.dataset.period;
+            document.getElementById('modalPpmCompleted').innerText = button.dataset.completed;
+            document.getElementById('modalPpmRemarks').innerText = button.dataset.remarks;
+            document.getElementById('modalPpmActivities').innerText = button.dataset.activities;
+            document.getElementById('modalPpmContent').classList.remove('hidden');
+        }
+
+        else if (type === 'asset') {
+            document.getElementById('modalTitle').innerText = 'Asset Details';
+            document.getElementById('modalAssetName').innerText = button.dataset.name;
+            document.getElementById('modalAssetDepartment').innerText = button.dataset.department;
+            document.getElementById('modalAssetCriticality').innerText = 'Level ' + button.dataset.criticality;
+            document.getElementById('modalAssetOwner').innerText = button.dataset.owner;
+            document.getElementById('modalAssetLocation').innerText = button.dataset.location;
+            document.getElementById('modalAssetDescription').innerText = button.dataset.description;
+            document.getElementById('modalAssetContent').classList.remove('hidden');
+        }
+
+        else if (type === 'incident') {
+            document.getElementById('modalTitle').innerText = 'Incident Report';
+            document.getElementById('modalIncidentNumber').innerText = 'Incident #' + button.dataset.number;
+            document.getElementById('modalIncidentDate').innerText = button.dataset.date;
+            document.getElementById('modalIncidentStatus').innerText = button.dataset.status;
+            document.getElementById('modalIncidentReportedBy').innerText = button.dataset.reportedBy;
+            document.getElementById('modalIncidentDescription').innerText = button.dataset.description;
+            document.getElementById('modalIncidentResolution').innerText = button.dataset.resolution;
+            document.getElementById('modalIncidentContent').classList.remove('hidden');
+        }
+
+        else if (type === 'workplan') {
+            document.getElementById('modalTitle').innerText = 'Work Plan';
+            document.getElementById('modalWorkplanUser').innerText = button.dataset.user + "'s Work Plan";
+            document.getElementById('modalWorkplanStart').innerText = button.dataset.start;
+            document.getElementById('modalWorkplanEnd').innerText = button.dataset.end;
+            document.getElementById('modalWorkplanObjectives').innerText = button.dataset.objectives;
+            document.getElementById('modalWorkplanActivities').innerText = button.dataset.activities;
+            document.getElementById('modalWorkplanContent').classList.remove('hidden');
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+    }
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeModal();
+        }
+    });
+</script>
+{% endblock %}

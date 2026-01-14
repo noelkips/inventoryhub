@@ -5,9 +5,23 @@ urlpatterns = [
     # Authentication and User Management
     path('', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
+     path('accounts/password_reset/', 
+         views.password_reset_request, 
+         name='password_reset_request'),
+         
+    path('accounts/password_reset/sent/', 
+         views.password_reset_sent, 
+         name='password_reset_sent'),
+         
+    path('accounts/reset/<str:uidb64>/<str:token>/', 
+         views.password_reset_confirm, 
+         name='password_reset_confirm'),
+     path('session-ping/', views.session_ping, name='session_ping'),
+     
     path('profile/', views.profile, name='profile'),
     path('change-password/', views.change_password, name='change_password'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
+    path('dashboard/filter/<str:list_type>/', views.filtered_list_view, name='filtered_list'),
     path('manage-users/', views.manage_users, name='manage_users'),
     path('user/add/', views.user_add, name='user_add'),
     path('user/update/<int:pk>/', views.user_update, name='user_update'),
@@ -23,13 +37,14 @@ urlpatterns = [
     path('import/approve/<int:pk>/', views.import_approve, name='import_approve'),
     path('import/reject/<int:pk>/', views.import_reject, name='import_reject'),  # New: Added reject URL
     path('import/approve_all/', views.import_approve_all, name='import_approve_all'),
-    path('upload/', views.upload_csv, name='upload_csv'),
-    # path('imports/add/', views.imports_add, name='imports_add'),  # Alias for upload_csv
-    # path('imports/view/', views.imports_view, name='imports_view'),  # Alias for display_approved_imports
+    path('import/download-template/', views.download_csv_template, name='download_csv_template'),
     path('devices/<int:device_id>/clear/', views.clear_user, name='clear_user'),
     path('devices/<int:device_id>/download_clearance/', views.download_clearance_form, name='download_clearance_form'),
     path('dispose/<int:device_id>/', views.dispose_device, name='dispose_device'),
     path('import/history/<int:pk>/', views.device_history, name='device_history'),
+
+    path('dispose/add/', views.dispose_add, name='dispose_add'),
+    path('dispose/template/', views.download_dispose_template, name='download_dispose_template'),
 
     # Reporting and Display
     path('displaycsv/', views.display_approved_imports, name='display_csv'),  # Legacy URL, consider deprecating
@@ -39,7 +54,7 @@ urlpatterns = [
     path('exportpdf/', views.export_to_pdf, name='export_to_pdf'),
     path('exportexcel/', views.export_to_excel, name='export_to_excel'),
 
-    path('devices/filtered/', views.filtered_devices_view, name='filtered_devices'),
+  
 
     # Notifications
     path('notifications/', views.notifications_view, name='notifications_view'),

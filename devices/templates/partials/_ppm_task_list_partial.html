@@ -1,0 +1,50 @@
+<div class="p-4 lg:p-6 h-full flex flex-col">
+    <div class="mb-4">
+        <input type="search" name="search"
+               class="w-full border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
+               placeholder="Search by device serial number..."
+               value="{{ search_query|default:'' }}"
+               hx-get="{{ request.path }}?filter={{ request.GET.filter }}&value={{ request.GET.value }}"
+               hx-trigger="keyup changed delay:500ms, search"
+               hx-target="#drawer-content"
+               hx-swap="innerHTML"
+               hx-indicator="#drawer-spinner">
+    </div>
+    <div id="drawer-spinner" class="htmx-indicator text-center p-4">...</div>
+
+    <div class="flex-grow overflow-y-auto bg-white rounded-lg shadow-md border">
+        <table class="min-w-full">
+            <thead class="bg-gray-100 sticky top-0">
+                <tr>
+                    <th class="py-3 px-4 text-left ...">Device Serial</th>
+                    <th class="py-3 px-4 text-left ...">Hardware</th>
+                    <th class="py-3 px-4 text-left ...">Period</th>
+                    <th class="py-3 px-4 text-left ...">Status</th>
+                    <th class="py-3 px-4 text-left ...">Completed By</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for task in page_obj %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="py-3 px-4 text-sm font-medium text-primary">{{ task.device.serial_number|default:"N/A" }}</td>
+                        <td class="py-3 px-4 text-sm">{{ task.device.hardware|default:"N/A" }}</td>
+                        <td class="py-3 px-4 text-sm">{{ task.period.name|default:"N/A" }}</td>
+                        <td class="py-3 px-4 text-sm">
+                            {% if task.completed_date %}
+                                <span class="bg-green-100 text-green-800 ...">Completed</span>
+                            {% elif task.period.end_date < today %}
+                                <span class="bg-red-100 text-red-800 ...">Overdue</span>
+                            {% else %}
+                                <span class="bg-yellow-100 text-yellow-800 ...">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4 text-sm">{{ task.completed_by.username|default:"-" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5" class="py-8 text-center ...">No PPM tasks found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if is_paginated %} ... {% endif %}
+</div>

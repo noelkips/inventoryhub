@@ -16,9 +16,6 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# ... rest of your settings ...
-
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -30,9 +27,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-=7ap+(zql*g##=bjqpdk9sgtd76k%ayih&k&qz(2y(t0^!7u^x'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ["*"]
+if DEBUG:
+    ALLOWED_HOSTS = []
+else:
+    # ALLOWED_HOSTS = ['test.mohiit.org', 'www.test.mohiit.org', 'pld109.truehost.cloud']
+    ALLOWED_HOSTS = ['mohiit.org', 'www.mohiit.org', 'pld109.truehost.cloud']
+
 
 
 # Application definition
@@ -54,6 +56,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -61,6 +64,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
+   
 ]
 
 ROOT_URLCONF = 'itinventory.urls'
@@ -84,14 +88,19 @@ TEMPLATES = [
 ]
 
 
-
-
 WSGI_APPLICATION = 'itinventory.wsgi.application'
 
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+import pymysql
+pymysql.install_as_MySQLdb()
 if DEBUG:
     DATABASES = {
         'default': {
@@ -100,13 +109,20 @@ if DEBUG:
         }
 }
 else:
-      DATABASES = {
+    DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db_live.sqlite3',
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '3306'),
+            'OPTIONS': {
+                'charset': 'utf8mb4',
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES';",
+            },
         }
-}
-
+    }
 
 
 # Password validation
@@ -144,10 +160,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static/'),
-]
-# STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = 'static'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -158,15 +171,134 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "/media/"
 
-
 AUTH_USER_MODEL = 'devices.CustomUser'
-LOGIN_URL = '/admin/login/'
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'dashboard'
+LOGOUT_REDIRECT_URL = 'login'
 
 
+# ============================================================================
+# ⭐ SESSION SECURITY CONFIGURATION (2 HOURS AUTO-LOGOUT)
+# ============================================================================
+
+SESSION_COOKIE_AGE = 7200  
+
+# Session expires when browser is closed
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# Save session on every request (updates last activity time)
+SESSION_SAVE_EVERY_REQUEST = True
+
+# Use database-backed sessions (more secure and allows cleanup)
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
+# Session cookie settings for security
+SESSION_COOKIE_SECURE = True  # Only send cookie over HTTPS
+SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie
+SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
+SESSION_COOKIE_NAME = 'mohi_sessionid'  # Custom session cookie name
+
+# ============================================================================
+# ⭐ CACHE CONFIGURATION (DISABLE CACHING FOR FRESH CONTENT)
+# ============================================================================
+
+# Disable browser caching - forces users to get fresh content after deployment
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+    }
+}
+
+# Cache middleware seconds (0 = no caching)
+CACHE_MIDDLEWARE_SECONDS = 0
+
+# ============================================================================
+# ⭐ BROWSER CACHE CONTROL HEADERS
+# ============================================================================
+
+# Prevent browser from caching pages
+# These headers will be added by the middleware
+CACHE_CONTROL_MAX_AGE = 0
+CACHE_CONTROL_NO_CACHE = True
+CACHE_CONTROL_NO_STORE = True
+CACHE_CONTROL_MUST_REVALIDATE = True
+
+# ============================================================================
+# EXISTING SECURITY SETTINGS
+# ============================================================================
+
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+SECURE_SSL_REDIRECT = True
+
+# ============================================================================
+# ⭐ ADDITIONAL SECURITY HEADERS
+# ============================================================================
+
+# Prevent caching of sensitive pages
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# Additional security settings
+X_FRAME_OPTIONS = 'DENY'
+SECURE_HSTS_SECONDS = 31536000  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
+
+# At the top, ensure you have DEBUG defined (usually already there)
+DEBUG = True  # or False in production
+
+# ============================================================================
+# ⭐ DEVELOPMENT-ONLY SECURITY RELAXATION
+# ============================================================================
+
+if DEBUG:
+    # Allow session cookies over HTTP during development
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+
+    # Disable automatic redirect to HTTPS in development
+    SECURE_SSL_REDIRECT = False
+
+    # Optional: Allow CSRF over HTTP (useful if testing forms locally)
+    # CSRF_COOKIE_HTTPONLY = False  # Usually not needed, but available if required
+
+    # Relax HSTS in development (prevents browser from forcing HTTPS)
+    SECURE_HSTS_SECONDS = 0
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+    SECURE_HSTS_PRELOAD = False
+
+    # Allow iframe embedding during development (useful for testing)
+    X_FRAME_OPTIONS = 'ALLOWALL'  # or 'SAMEORIGIN' if you prefer slightly safer
+
+    print("DEVELOPMENT MODE: Security restrictions relaxed (HTTP allowed, no redirects)")
+else:
+    print("PRODUCTION MODE: Full security settings enforced")
+
+
+# ============================================================================
+# Email CONFIGURATION
+# ============================================================================
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+EMAIL_HOST = 'mohiit.org'          # Outgoing server (SMTP)
+EMAIL_PORT = 465                   # SSL SMTP port
+EMAIL_USE_SSL = True               # Required for port 465
+# EMAIL_USE_TLS = False            # Do NOT use TLS with port 465
+
+EMAIL_HOST_USER = 'nonreply@mohiit.org'
+EMAIL_HOST_PASSWORD = 'Norex@99!'
+
+DEFAULT_FROM_EMAIL = 'nonreply@mohiit.org'
+
+# ============================================================================
+# LOGGING CONFIGURATION
+# ============================================================================
 
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False,  # Keep Django's default loggers
+    'disable_existing_loggers': False,  
     
     # Define the format of the log message
     'formatters': {
@@ -204,11 +336,12 @@ LOGGING = {
             'level': 'ERROR',          # Only process ERROR messages
             'propagate': True,
         },
-        # You can add this logger to get all-level logs for debugging
-        # 'your_app_name': {
-        #     'handlers': ['debug_file'],
-        #     'level': 'DEBUG',
-        #     'propagate': True,
-        # },
+       
     },
 }
+
+
+
+
+
+

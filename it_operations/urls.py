@@ -15,16 +15,28 @@ urlpatterns = [
     path('backup-registry/<int:pk>/edit/', views.backup_registry_update, name='backup_registry_update'),
     path('backup-registry/<int:pk>/delete/', views.backup_registry_delete, name='backup_registry_delete'),
     
-    #Work plan
-    path('calendar/', views.work_plan_calendar, name='calendar'),
-    path('calendar/<int:year>/<int:month>/', views.work_plan_calendar, name='calendar_month'),
-    path('<int:pk>/', views.work_plan_detail, name='work_plan_detail'),
-    path('list/', views.work_plan_list, name='work_plan_list'),
+    # Work plan Core
+    path('workplans/', views.work_plan_list, name='work_plan_list'),
+    path('workplans/create/', views.work_plan_create, name='work_plan_create'),
+    path('workplans/<int:pk>/', views.work_plan_detail, name='work_plan_detail'),
     
-    path('<int:pk>/add-task/', views.add_task, name='add_task'),
-    path('task/<int:pk>/status/', views.update_task_status, name='update_task_status'),
-    path('task/<int:pk>/delete/', views.delete_task, name='delete_task'),
+    # Task Actions (POST)
+    path('workplans/task/<int:pk>/delete/', views.work_plan_task_delete, name='work_plan_task_delete'),
+    path('workplans/task/<int:pk>/status/', views.work_plan_task_status_update, name='work_plan_task_status_update'),
+    path('workplans/task/<int:pk>/edit/', views.work_plan_task_edit, name='work_plan_task_edit'),
+    path('workplans/task/<int:pk>/comment/', views.work_plan_task_add_comment, name='work_plan_task_add_comment'),
+    
+    # Reschedule URL
+    path('workplans/task/<int:pk>/reschedule/', views.work_plan_task_reschedule, name='work_plan_task_reschedule'),
 
+    # API for Calendar Modal (NEW)
+    path('workplans/api/task/<int:pk>/', views.get_task_details_json, name='get_task_details_json'),
+    # Reporting & Calendar
+    path('workplans/calendar/', views.work_plan_calendar, name='work_plan_calendar'),
+    path('workplans/create_from_calendar/', views.work_plan_create_task_from_calendar, name='work_plan_create_task_from_calendar'),
+    path('workplans/<int:pk>/pdf/', views.download_workplan_pdf, name='download_workplan_pdf'),
+    path('workplans/export/excel/', views.download_bulk_excel_report, name='download_bulk_excel_report'),
+    path('workplans/bulk-pdf/', views.download_bulk_pdf_report, name='download_bulk_pdf_report'),
 
     path('incident-reports/', views.incident_report_list, name='incident_report_list'),
     path('incident-reports/create/', views.incident_report_create, name='incident_report_create'),
@@ -33,3 +45,4 @@ urlpatterns = [
     path('incident-reports/<int:pk>/delete/', views.incident_report_delete, name='incident_report_delete'),
     path('incident-reports/<int:pk>/download-pdf/', views.download_incident_report_pdf, name='download_incident_report_pdf'),
 ]
+

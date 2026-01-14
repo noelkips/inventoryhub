@@ -38,6 +38,35 @@ class CustomUser(AbstractUser):
         return self.username
     
 class Import(models.Model):
+    CATEGORY_CHOICES = [
+    ('laptop', 'Laptop'),
+    ('system_unit', 'System Unit'),
+    ('monitor', 'Monitor'),
+    ('tv', 'Television'),
+
+    # NEW MERGED CATEGORY
+    ('networking_devices', 'Networking Devices'),
+
+    ('printer', 'Printer'),
+    ('n_computing', 'N Computing'),
+    ('projector', 'projector'),
+
+    # GADGET CATEGORY (phones, iPads, tablets, etc.)
+    ('gadget', 'Gadget'),
+     ('access_point', 'Access Point'),
+
+    # NEW CATEGORY
+   ('power_backup_equipment', 'Power & Backup Equipment'),
+
+    ('other', 'Other'),
+]
+
+    category = models.CharField(
+        max_length=200,
+        choices=CATEGORY_CHOICES,
+        default='other',
+        help_text='Device category/type'
+    )
     centre = models.ForeignKey(Centre, on_delete=models.SET_NULL, null=True, blank=True)
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
     hardware = models.CharField(max_length=100, blank=True, null=True)
@@ -50,7 +79,7 @@ class Import(models.Model):
     assignee_last_name = models.CharField(max_length=50, blank=True, null=True)
     assignee_email_address = models.EmailField(blank=True, null=True)
     device_condition = models.CharField(max_length=100, blank=True, null=True)
-    status = models.CharField(max_length=50, blank=True, null=True)
+    status = models.CharField(max_length=255, blank=True, null=True)
     date = models.DateField(auto_now_add=True)
     added_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='imports_added')
     approved_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='imports_approved')

@@ -1,0 +1,27 @@
+<div class="p-4 lg:p-6 h-full flex flex-col">
+    <div class="flex-grow overflow-y-auto bg-white rounded-lg shadow-md border">
+        <table class="min-w-full">
+            <thead class="bg-gray-100 sticky top-0">
+                <tr>
+                    <th class="py-3 px-4 text-left ...">System</th>
+                    <th class="py-3 px-4 text-left ...">Centre</th>
+                    <th class="py-3 px-4 text-left ...">Date</th>
+                    <th class="py-3 px-4 text-left ...">Done By</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for backup in page_obj %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="py-3 px-4 text-sm font-medium">{{ backup.get_system_display }}</td>
+                        <td class="py-3 px-4 text-sm">{{ backup.centre.name }}</td>
+                        <td class="py-3 px-4 text-sm">{{ backup.date|date:"M d, Y" }}</td>
+                        <td class="py-3 px-4 text-sm">{{ backup.done_by.username }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4" class="py-8 text-center ...">No backup logs found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if is_paginated %} ... {% endif %}
+</div>

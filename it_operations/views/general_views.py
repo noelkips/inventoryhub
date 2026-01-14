@@ -8,8 +8,7 @@ from django.utils import timezone
 from datetime import datetime, timedelta, date
 from django.db.models import Q, Count
 from devices.models import Centre, Department
-from ..models import (MissionCriticalAsset, BackupRegistry, WorkPlan, WorkPlanTask, 
-                     WorkPlanTaskComment, WorkPlanActivity, WorkPlanComment)
+from ..models import (MissionCriticalAsset, BackupRegistry)
 from django.contrib.auth import get_user_model
 import calendar
 
