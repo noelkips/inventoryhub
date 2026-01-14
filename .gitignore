@@ -37,7 +37,7 @@ venv.bak/
 
 logs/
 db.sqlite3
-db_test.sqlite3
+# db_test.sqlite3
 db.sqlite3-journal
 media/
 
