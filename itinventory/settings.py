@@ -12,7 +12,10 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
+import pymysql
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -27,7 +30,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-=7ap+(zql*g##=bjqpdk9sgtd76k%ayih&k&qz(2y(t0^!7u^x'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 if DEBUG:
     ALLOWED_HOSTS = []
@@ -95,11 +98,7 @@ WSGI_APPLICATION = 'itinventory.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 
-from dotenv import load_dotenv
 
-load_dotenv()
-
-import pymysql
 pymysql.install_as_MySQLdb()
 if DEBUG:
     DATABASES = {
@@ -291,6 +290,10 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_PORT = 465                   # SSL SMTP port
 EMAIL_USE_SSL = True  
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
+
+#BACKUP PASSWORD
+BACKUP_PASSWORD = os.getenv('BACKUP_PASSWORD')
+
 
 # ============================================================================
 # LOGGING CONFIGURATION
