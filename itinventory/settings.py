@@ -292,7 +292,7 @@ EMAIL_USE_SSL = True
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
 
 #BACKUP PASSWORD
-BACKUP_PASSWORD = os.getenv('BACKUP_PASSWORD')
+DB_BACKUP_ENCRYPTION_PASSWORD = os.getenv('BACKUP_PASSWORD')
 
 
 # ============================================================================
