@@ -3,7 +3,6 @@ import os
 import gzip
 from datetime import datetime
 from django.core.management.base import BaseCommand
-from django.conf import settings
 from devices.utils import send_custom_email
 from cryptography.fernet import Fernet
 import base64
@@ -49,6 +48,7 @@ class Command(BaseCommand):
             # ==============================
             # 3. ENCRYPT (AES-256)
             # ==============================
+            from itinventory import settings
             password = settings.DB_BACKUP_ENCRYPTION_PASSWORD  # store in env
             key = hashlib.sha256(password.encode()).digest()
             key = base64.urlsafe_b64encode(key)
