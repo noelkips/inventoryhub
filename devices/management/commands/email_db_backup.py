@@ -1,41 +1,24 @@
 import subprocess
 import os
-import tempfile
-import sys
+import gzip
+from datetime import datetime
 from django.core.management.base import BaseCommand
 from devices.utils import send_custom_email
-from datetime import datetime
-from cryptography.fernet import Fernet
-import base64
-import hashlib
-from itinventory.settings import BACKUP_PASSWORD
+
 
 class Command(BaseCommand):
-    help = "Dumps database, encrypts it with password, and emails it"
-
-    # 🔴 CHANGE THIS PASSWORD
-    BACKUP_PASSWORD = BACKUP_PASSWORD
-
-    def derive_key(self, password: str) -> bytes:
-        """
-        Derive a Fernet key from a password using SHA-256
-        """
-        digest = hashlib.sha256(password.encode()).digest()
-        return base64.urlsafe_b64encode(digest)
+    help = "Dump database, compress, encrypt and email it"
 
     def handle(self, *args, **options):
         try:
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            filename = f"inventoryhub_backup_{timestamp}.json"
-            encrypted_filename = f"{filename}.enc"
+            base_filename = f"inventoryhub_backup_{timestamp}.json"
+            json_path = f"/tmp/{base_filename}"
+            gz_path = f"{json_path}.gz"
 
-            # Create temp file
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as temp_file:
-                filepath = temp_file.name
-
-            # Dump command
-            dump_command = [
-                sys.executable,
+            # 1. Dump database to JSON (UTF-8 safe)
+            dump_cmd = [
+                "python",
                 "-X", "utf8",
                 "manage.py",
                 "dumpdata",
@@ -43,51 +26,37 @@ class Command(BaseCommand):
                 "--exclude", "contenttypes",
                 "--natural-foreign",
                 "--natural-primary",
-                "--indent", "2"
             ]
 
-            # Run dump
-            with open(filepath, "w", encoding="utf-8") as f:
-                subprocess.run(dump_command, stdout=f, stderr=subprocess.PIPE, check=True)
+            with open(json_path, "w", encoding="utf-8") as f:
+                subprocess.check_call(dump_cmd, stdout=f)
 
-            # Read raw data
-            with open(filepath, "rb") as f:
-                raw_data = f.read()
+            # 2. Compress using gzip
+            with open(json_path, "rb") as f_in:
+                with gzip.open(gz_path, "wb", compresslevel=9) as f_out:
+                    f_out.write(f_in.read())
 
-            # 🔐 Encrypt
-            key = self.derive_key(self.BACKUP_PASSWORD)
-            fernet = Fernet(key)
-            encrypted_data = fernet.encrypt(raw_data)
+            # 3. Read compressed file
+            with open(gz_path, "rb") as f:
+                compressed_bytes = f.read()
 
-            subject = "🔐 Encrypted InventoryHub Database Backup"
-            message = (
-                "Hello,\n\n"
-                "Attached is the encrypted backup of the InventoryHub database.\n\n"
-                "To decrypt, use the agreed password.\n\n"
-                "Regards,\nInventoryHub System"
-            )
-
-            recipients = [
-                "itinventory@mohiafrica.org",
-                "noel.langat@mohiafrica.org",
-                "santana.macharia@mohiafrica.org"
-            ]
-
-            # Send email with encrypted attachment
+            # 4. Send email
             send_custom_email(
-                subject=subject,
-                message=message,
-                recipient_list=recipients,
-                attachment=(encrypted_filename, encrypted_data, "application/octet-stream")
+                subject="Encrypted & Compressed InventoryHub Database Backup",
+                message="Attached is the compressed database backup (.json.gz). Store it securely.",
+                recipient_list=[
+                    "itinventory@mohiafrica.org",
+                    "noel.langat@mohiafrica.org",
+                    "santana.macharia@mohiafrica.org"
+                ],
+                attachment=(os.path.basename(gz_path), compressed_bytes, "application/gzip")
             )
 
-            # Cleanup
-            os.remove(filepath)
+            # 5. Cleanup
+            os.remove(json_path)
+            os.remove(gz_path)
 
-            self.stdout.write(self.style.SUCCESS("Encrypted database backup dumped and emailed successfully."))
+            self.stdout.write(self.style.SUCCESS("Compressed database backup dumped and emailed successfully."))
 
-        except subprocess.CalledProcessError as e:
-            self.stderr.write(self.style.ERROR(f"Dumpdata failed: {e.stderr.decode(errors='ignore')}"))
         except Exception as e:
-            import traceback
-            self.stderr.write(self.style.ERROR("Backup failed:\n" + traceback.format_exc()))
+            self.stderr.write(self.style.ERROR(f"Backup failed: {e}"))
