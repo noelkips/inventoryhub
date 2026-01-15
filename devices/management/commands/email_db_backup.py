@@ -3,6 +3,7 @@ import os
 import gzip
 from datetime import datetime
 from django.core.management.base import BaseCommand
+from django.conf import settings
 from devices.utils import send_custom_email
 from cryptography.fernet import Fernet
 import base64
@@ -39,17 +40,16 @@ class Command(BaseCommand):
                 subprocess.check_call(dump_cmd, stdout=f)
 
             # ==============================
-            # 2. COMPRESS (GZIP)
+            # 2. COMPRESS
             # ==============================
             with open(json_path, "rb") as f_in:
                 with gzip.open(gz_path, "wb", compresslevel=9) as f_out:
                     f_out.write(f_in.read())
 
             # ==============================
-            # 3. ENCRYPT (AES-256)
+            # 3. ENCRYPT
             # ==============================
-            from itinventory import settings
-            password = settings.DB_BACKUP_ENCRYPTION_PASSWORD  # store in env
+            password = settings.DB_BACKUP_ENCRYPTION_PASSWORD
             key = hashlib.sha256(password.encode()).digest()
             key = base64.urlsafe_b64encode(key)
             cipher = Fernet(key)
@@ -61,22 +61,37 @@ class Command(BaseCommand):
                 f.write(encrypted_data)
 
             # ==============================
-            # 4. EMAIL
+            # 4. EMAIL WITH STEPS
             # ==============================
             with open(enc_path, "rb") as f:
                 enc_bytes = f.read()
 
+            email_body = f"""
+Encrypted & Compressed InventoryHub Database Backup
+
+File: {os.path.basename(enc_path)}
+
+RESTORE STEPS (VERY IMPORTANT):
+
+1. Save the attached file to your project directory.
+
+2. Run:
+   python manage.py restore_backup {os.path.basename(enc_path)}
+
+3. Enter the password when prompted (typing is hidden).
+
+4. Wait for:
+   "Database restored successfully."
+
+NOTES:
+- Do NOT rename the file.
+- Do NOT unzip manually.
+- Keep this file and password secure.
+"""
+
             send_custom_email(
-                subject="Encrypted & Compressed InventoryHub Database Backup",
-                message=(
-                    "Attached is the encrypted & compressed database backup.\n\n"
-                    "Format: .json.gz.enc\n"
-                    "Steps to restore:\n"
-                    "1. Decrypt using password\n"
-                    "2. Gunzip to get .json\n"
-                    "3. loaddata in Django\n\n"
-                    "Store securely."
-                ),
+                subject="Encrypted InventoryHub Database Backup (Auto)",
+                message=email_body,
                 recipient_list=[
                     "itinventory@mohiafrica.org",
                     "noel.langat@mohiafrica.org",

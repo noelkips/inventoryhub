@@ -19,7 +19,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        backup_file = options["backup_file"]
+        backup_file = os.path.abspath(options["backup_file"])
 
         if not os.path.exists(backup_file):
             raise CommandError(f"File not found: {backup_file}")
@@ -62,10 +62,10 @@ class Command(BaseCommand):
                     f_out.write(f_in.read())
 
             # ==============================
-            # 4. LOAD DATA
+            # 4. LOAD DATA (ABSOLUTE PATH FIX)
             # ==============================
             self.stdout.write("🗄️  Restoring database...")
-            call_command("loaddata", json_path)
+            call_command("loaddata", json_path, verbosity=1)
 
             # ==============================
             # 5. CLEANUP
