@@ -22,6 +22,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+#DB NAME FOR TEST TEMPLATE CONFIXIGURATION
+DB_NAME_CONFIG=os.getenv('DB_NAME')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -35,8 +37,10 @@ DEBUG = False
 if DEBUG:
     ALLOWED_HOSTS = []
 else:
-    # ALLOWED_HOSTS = ['test.mohiit.org', 'www.test.mohiit.org', 'pld109.truehost.cloud']
-    ALLOWED_HOSTS = ['mohiit.org', 'www.mohiit.org', 'pld109.truehost.cloud']
+    if DB_NAME_CONFIG == 'ufdxwals_it_test_db':
+        ALLOWED_HOSTS = ['test.mohiit.org', 'www.test.mohiit.org', 'pld109.truehost.cloud']
+    else:
+        ALLOWED_HOSTS = ['mohiit.org', 'www.mohiit.org', 'pld109.truehost.cloud']
 
 
 
@@ -84,6 +88,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'devices.context_processors.notification_count',
+                'devices.context_processors.global_settings',
             ],
 
         },
@@ -122,6 +127,7 @@ else:
             },
         }
     }
+
 
 
 # Password validation

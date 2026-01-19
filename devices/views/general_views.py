@@ -2445,8 +2445,13 @@ def dashboard_view(request):
         'asset_criticality_breakdown': asset_criticality_breakdown,
         'recent_backups': recent_backups,
     }
+    # from itinventory import settings
+    # if settings.DB_NAME_CONFIG == 'ufdxwals_it_test_db':
+    #     template_name = 'index_test.html'
+    # else:
+    template_name = 'index.html'
 
-    return render(request, 'index.html', context)
+    return render(request, template_name, context)
 
 
 @login_required
