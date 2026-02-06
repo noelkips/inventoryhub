@@ -19,7 +19,8 @@ import os
 from django.contrib.auth.admin import UserAdmin
 from django.core.exceptions import PermissionDenied
 from django.utils.translation import gettext_lazy as _
-
+from django.db.models import Count
+from django.utils.html import format_html
 
 # ----------------------------------------------------------------------
 # 1. FORM – password + trainer-centre validation
@@ -218,19 +219,51 @@ class CustomUserAdmin(UserAdmin):
 
 
 
+
+
+class DeviceCountFilter(admin.SimpleListFilter):
+    title = '# Devices'
+    parameter_name = 'device_count'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('0', '0 devices (Unassigned)'),
+            ('1', 'Exactly 1 device'),
+            ('2-5', '2–5 devices'),
+            ('6+', '6 or more devices'),
+        )
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value == '0':
+            return queryset.annotate(num_devices=Count('assigned_devices')).filter(num_devices=0)
+        elif value == '1':
+            return queryset.annotate(num_devices=Count('assigned_devices')).filter(num_devices=1)
+        elif value == '2-5':
+            return queryset.annotate(num_devices=Count('assigned_devices')).filter(num_devices__gte=2, num_devices__lte=5)
+        elif value == '6+':
+            return queryset.annotate(num_devices=Count('assigned_devices')).filter(num_devices__gte=6)
+        return queryset
+
+
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
     list_display = (
         'full_name',
         'staff_number',
+        'device_count_link',  # Moved to 3rd column
         'email',
         'department',
         'centre',
         'is_active',
-        'device_count',
         'created_at',
     )
-    list_filter = ('is_active', 'department', 'centre')
+    list_filter = (
+        'is_active',
+        'department',
+        'centre',
+        DeviceCountFilter,  # Custom filter by device count ranges
+    )
     search_fields = ('first_name', 'last_name', 'email', 'staff_number')
     readonly_fields = ('created_at', 'updated_at')
     ordering = ('last_name', 'first_name')
@@ -250,13 +283,34 @@ class EmployeeAdmin(admin.ModelAdmin):
         }),
     )
 
+    def get_queryset(self, request):
+        """Annotate queryset for sorting and filtering by device count"""
+        qs = super().get_queryset(request)
+        qs = qs.annotate(num_devices=Count('assigned_devices'))
+        return qs
+
     def full_name(self, obj):
         return obj.full_name
     full_name.short_description = "Full Name"
 
     def device_count(self, obj):
-        return obj.assigned_devices.count()
+        """Base count method (used internally)"""
+        return obj.num_devices if hasattr(obj, 'num_devices') else obj.assigned_devices.count()
     device_count.short_description = "# Devices"
+    device_count.admin_order_field = 'num_devices'  # Makes column sortable
+
+    def device_count_link(self, obj):
+        """Display count as clickable link to filtered device list"""
+        count = self.device_count(obj)
+        if count == 0:
+            return "0"
+        url = (
+            reverse('admin:devices_import_changelist')
+            + f'?assignee__id__exact={obj.id}'
+        )
+        return format_html('<a href="{}">{}</a>', url, count)
+    device_count_link.short_description = "# Devices"
+    device_count_link.admin_order_field = 'num_devices'  # Sortable
 
 
 @admin.register(Import)
