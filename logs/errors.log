@@ -3288,3 +3288,276 @@ Traceback (most recent call last):
     raise new from exc
 django.template.exceptions.TemplateDoesNotExist: base.html
 ERROR 2026-02-05 15:08:44,141 basehttp 1572 15488 "GET /employees/ HTTP/1.1" 500 171256
+ERROR 2026-02-06 09:24:09,378 log 1636 18052 Internal Server Error: /devices/1886/
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 890, in _resolve_lookup
+    raise TypeError
+TypeError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 901, in _resolve_lookup
+    current = getattr(current, bit)
+AttributeError: 'NoneType' object has no attribute 'username'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 907, in _resolve_lookup
+    current = current[int(bit)]
+ValueError: invalid literal for int() with base 10: 'username'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\noel.langat\Desktop\devs\inventory_test\devices\views\device_management_views.py", line 158, in device_detail
+    return render(request, 'import/device_detail.html', context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\loader.py", line 62, in render_to_string
+    return template.render(context, request)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\backends\django.py", line 107, in render
+    return self.template.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1016, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1016, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 977, in render_annotated
+    return self.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1016, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1016, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 977, in render_annotated
+    return self.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1016, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1016, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 977, in render_annotated
+    return self.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1075, in render
+    output = self.filter_expression.resolve(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 743, in resolve
+    arg_vals.append(arg.resolve(context))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 854, in resolve
+    value = self._resolve_lookup(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 914, in _resolve_lookup
+    raise VariableDoesNotExist(
+django.template.base.VariableDoesNotExist: Failed lookup for key [username] in None
+ERROR 2026-02-06 09:24:09,384 basehttp 1636 18052 "GET /devices/1886/ HTTP/1.1" 500 206957
+ERROR 2026-02-06 09:27:29,220 log 14820 10408 Internal Server Error: /devices/1886/
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 890, in _resolve_lookup
+    raise TypeError
+TypeError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 901, in _resolve_lookup
+    current = getattr(current, bit)
+AttributeError: 'NoneType' object has no attribute 'username'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 907, in _resolve_lookup
+    current = current[int(bit)]
+ValueError: invalid literal for int() with base 10: 'username'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\noel.langat\Desktop\devs\inventory_test\devices\views\device_management_views.py", line 158, in device_detail
+    return render(request, 'import/device_detail.html', context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\loader.py", line 62, in render_to_string
+    return template.render(context, request)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\backends\django.py", line 107, in render
+    return self.template.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1016, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1016, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 977, in render_annotated
+    return self.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1016, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1016, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 977, in render_annotated
+    return self.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1016, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1016, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 977, in render_annotated
+    return self.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1075, in render
+    output = self.filter_expression.resolve(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 743, in resolve
+    arg_vals.append(arg.resolve(context))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 854, in resolve
+    value = self._resolve_lookup(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 914, in _resolve_lookup
+    raise VariableDoesNotExist(
+django.template.base.VariableDoesNotExist: Failed lookup for key [username] in None
+ERROR 2026-02-06 09:27:29,220 basehttp 14820 10408 "GET /devices/1886/ HTTP/1.1" 500 207094
+ERROR 2026-02-06 09:27:30,255 log 14820 10408 Internal Server Error: /devices/1886/
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 890, in _resolve_lookup
+    raise TypeError
+TypeError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 901, in _resolve_lookup
+    current = getattr(current, bit)
+AttributeError: 'NoneType' object has no attribute 'username'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 907, in _resolve_lookup
+    current = current[int(bit)]
+ValueError: invalid literal for int() with base 10: 'username'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\noel.langat\Desktop\devs\inventory_test\devices\views\device_management_views.py", line 158, in device_detail
+    return render(request, 'import/device_detail.html', context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\loader.py", line 62, in render_to_string
+    return template.render(context, request)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\backends\django.py", line 107, in render
+    return self.template.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1016, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1016, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 977, in render_annotated
+    return self.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1016, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1016, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 977, in render_annotated
+    return self.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1016, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1016, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 977, in render_annotated
+    return self.render(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 1075, in render
+    output = self.filter_expression.resolve(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 743, in resolve
+    arg_vals.append(arg.resolve(context))
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 854, in resolve
+    value = self._resolve_lookup(context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\base.py", line 914, in _resolve_lookup
+    raise VariableDoesNotExist(
+django.template.base.VariableDoesNotExist: Failed lookup for key [username] in None
+ERROR 2026-02-06 09:27:30,255 basehttp 14820 10408 "GET /devices/1886/ HTTP/1.1" 500 207094
+ERROR 2026-02-06 15:44:43,802 log 18140 18200 Internal Server Error: /it_operations/workplans/33/
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\noel.langat\Desktop\devs\inventory_test\it_operations\views\work_plan_views.py", line 375, in work_plan_detail
+    t.can_edit = is_owned_task or (t.is_collaborative_task and t.date >= today)
+NameError: name 'is_owned_task' is not defined
+ERROR 2026-02-06 15:44:43,819 basehttp 18140 18200 "GET /it_operations/workplans/33/ HTTP/1.1" 500 79511
+ERROR 2026-02-06 15:47:55,638 log 21196 9276 Internal Server Error: /it_operations/workplans/33/
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\noel.langat\Desktop\devs\inventory_test\it_operations\views\work_plan_views.py", line 206, in work_plan_detail
+    t.can_edit = is_owned_task or (t.is_collaborative_task and t.date >= today)
+NameError: name 'is_owned_task' is not defined
+ERROR 2026-02-06 15:47:55,638 basehttp 21196 9276 "GET /it_operations/workplans/33/ HTTP/1.1" 500 79511
+ERROR 2026-02-06 15:49:00,444 log 22568 17412 Internal Server Error: /it_operations/workplans/33/
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\noel.langat\Desktop\devs\inventory_test\it_operations\views\work_plan_views.py", line 198, in work_plan_detail
+    all_tasks = list(chain(owned_tasks, collaborative_tasks))
+NameError: name 'chain' is not defined
+ERROR 2026-02-06 15:49:00,452 basehttp 22568 17412 "GET /it_operations/workplans/33/ HTTP/1.1" 500 77657
+ERROR 2026-02-06 15:49:02,221 log 22568 17412 Internal Server Error: /it_operations/workplans/33/
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\noel.langat\Desktop\devs\inventory_test\it_operations\views\work_plan_views.py", line 198, in work_plan_detail
+    all_tasks = list(chain(owned_tasks, collaborative_tasks))
+NameError: name 'chain' is not defined
+ERROR 2026-02-06 15:49:02,233 basehttp 22568 17412 "GET /it_operations/workplans/33/ HTTP/1.1" 500 77657

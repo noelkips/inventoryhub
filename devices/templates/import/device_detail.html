@@ -192,11 +192,23 @@
                 <dl class="space-y-3 text-sm">
                     <div class="flex justify-between">
                         <dt class="font-medium text-gray-700">Added By</dt>
-                        <dd>{{ device.added_by.get_full_name|default:device.added_by.username|default:"N/A" }}</dd>
+                        <dd>
+                            {% if device.added_by %}
+                                {{ device.added_by.get_full_name|default:device.added_by.username }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </dd>
                     </div>
                     <div class="flex justify-between">
                         <dt class="font-medium text-gray-700">Approved By</dt>
-                        <dd>{{ device.approved_by.get_full_name|default:device.approved_by.username|default:"N/A" }}</dd>
+                        <dd>
+                            {% if device.approved_by %}
+                                {{ device.approved_by.get_full_name|default:device.approved_by.username }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </dd>
                     </div>
                     <div class="flex justify-between">
                         <dt class="font-medium text-gray-700">Approved</dt>
