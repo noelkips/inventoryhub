@@ -1,70 +1,56 @@
 # devices/management/commands/rename_hardware_to_device_name.py
-"""
-One-time command to rename 'hardware' column to 'device_name' across relevant tables.
-
-Run with:
-    python manage.py rename_hardware_to_device_name
-
-This is safe to run multiple times — it checks if the column exists first.
-"""
 
 from django.core.management.base import BaseCommand
-from django.db import connection, migrations
-from django.db.utils import OperationalError, ProgrammingError
-
+from django.db import connection
 
 class Command(BaseCommand):
-    help = "Renames the 'hardware' column to 'device_name' in Import, HistoricalImport, and PendingUpdate tables."
+    help = "Rename 'hardware' → 'device_name' in main and historical tables safely"
 
-    def handle(self, *args, **options):
-        tables = [
-            'devices_import',           # main table
-            'devices_historicalimport', # history table (simple_history)
-            'devices_pendingupdate',    # pending updates if you have that model
-        ]
+    TABLES = [
+        "devices_import",
+        "devices_pendingupdate",
+        "devices_historicalimport",  # <-- historical table
+    ]
 
-        with connection.cursor() as cursor:
-            for table in tables:
-                try:
-                    # Check if 'hardware' column still exists
-                    cursor.execute(f"""
-                        SELECT 1 FROM pragma_table_info('{table}')
-                        WHERE name = 'hardware'
-                    """) if connection.vendor == 'sqlite' else \
-                    cursor.execute(f"""
-                        SELECT 1 FROM information_schema.columns
-                        WHERE table_name = '{table}' AND column_name = 'hardware'
-                    """)
+    OLD_COLUMN = "hardware"
+    NEW_COLUMN = "device_name"
 
-                    if cursor.fetchone():
-                        # Column exists → rename it
-                        if connection.vendor == 'sqlite':
-                            cursor.execute(f"""
-                                ALTER TABLE {table}
-                                RENAME COLUMN hardware TO device_name
-                            """)
-                        elif connection.vendor in ('postgresql', 'mysql'):
-                            cursor.execute(f"""
-                                ALTER TABLE {table}
-                                RENAME COLUMN hardware TO device_name
-                            """)
-                        else:
-                            self.stderr.write(self.style.ERROR(
-                                f"Unsupported database: {connection.vendor}. Manual rename required."
-                            ))
-                            return
+    def handle(self, *args, **kwargs):
+        vendor = connection.vendor
+        for table in self.TABLES:
+            # Check if the old column exists
+            if vendor == "sqlite":
+                connection.cursor().execute(
+                    f"SELECT 1 FROM pragma_table_info('{table}') WHERE name='{self.OLD_COLUMN}'"
+                )
+                exists = connection.cursor().fetchone() is not None
+            elif vendor in ("postgresql", "mysql"):
+                connection.cursor().execute(
+                    f"""
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_name='{table}' AND column_name='{self.OLD_COLUMN}'
+                    """
+                )
+                exists = connection.cursor().fetchone() is not None
+            else:
+                self.stdout.write(self.style.ERROR(f"Unsupported DB vendor: {vendor}"))
+                return
 
-                        self.stdout.write(self.style.SUCCESS(
-                            f"Successfully renamed 'hardware' → 'device_name' in table '{table}'"
-                        ))
-                    else:
-                        self.stdout.write(self.style.WARNING(
-                            f"Column 'hardware' does not exist in '{table}' — skipping."
-                        ))
+            if exists:
+                self.stdout.write(self.style.SUCCESS(f"Renaming column in {table}..."))
+                if vendor == "sqlite":
+                    # SQLite supports simple RENAME COLUMN
+                    connection.cursor().execute(
+                        f"ALTER TABLE {table} RENAME COLUMN {self.OLD_COLUMN} TO {self.NEW_COLUMN}"
+                    )
+                else:
+                    # PostgreSQL / MySQL
+                    connection.cursor().execute(
+                        f"ALTER TABLE {table} RENAME COLUMN {self.OLD_COLUMN} TO {self.NEW_COLUMN}"
+                    )
+                self.stdout.write(self.style.SUCCESS(f"✅ {table}: {self.OLD_COLUMN} → {self.NEW_COLUMN}"))
+            else:
+                self.stdout.write(self.style.WARNING(f"Skipped {table}: column '{self.OLD_COLUMN}' does not exist"))
 
-                except (OperationalError, ProgrammingError) as e:
-                    self.stdout.write(self.style.WARNING(
-                        f"Error processing '{table}': {str(e)} — likely already renamed or table missing."
-                    ))
-
-        self.stdout.write(self.style.SUCCESS("\nRename operation completed."))
+        self.stdout.write(self.style.SUCCESS("\nAll tables processed."))

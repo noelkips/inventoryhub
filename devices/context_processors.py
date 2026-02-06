@@ -12,6 +12,6 @@ def global_settings(request):
     from itinventory import settings
     
     return {
-        'DB_NAME_CONFIG': settings.DATABASES['default']['NAME'],
+        'DB_NAME_CONFIG': settings.DB_NAME_CONFIG,
        
     }

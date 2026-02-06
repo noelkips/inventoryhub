@@ -1,0 +1,380 @@
+{% extends 'dashboard.html' %}
+{% load static %}
+
+{% block title %}Employee Management{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 max-w-7xl">
+
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">
+        Manage Employees
+    </h1>
+
+    <form method="get" class="mb-6 p-4 bg-white rounded-lg shadow-md border">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                <input type="text" name="search" value="{{ search_query|default:'' }}"
+                       placeholder="Name, email, staff ID..."
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Centre</label>
+                <select name="centre" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Centres</option>
+                    {% for c in centres %}
+                        <option value="{{ c.id }}" {% if centre_filter == c.id|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                <select name="department" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Departments</option>
+                    {% for d in departments %}
+                        <option value="{{ d.id }}" {% if department_filter == d.id|stringformat:'s' %}selected{% endif %}>{{ d.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Per Page</label>
+                <select name="items_per_page" onchange="this.form.submit()"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    {% for opt in items_per_page_options %}
+                        <option value="{{ opt }}" {% if items_per_page == opt %}selected{% endif %}>{{ opt }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-200 font-medium">
+                    Apply Filters
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <div class="mb-4">
+        <button onclick="openModal('addModal')"
+                class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition duration-200 font-medium">
+            Add New Employee
+        </button>
+    </div>
+
+    {% if messages %}
+        <div class="mb-4">
+            {% for message in messages %}
+                <div class="bg-{% if message.tags == 'error' %}red{% else %}green{% endif %}-100 border border-{% if message.tags == 'error' %}red{% else %}green{% endif %}-400 text-{% if message.tags == 'error' %}red{% else %}green{% endif %}-700 px-4 py-3 rounded relative animate__animated animate__fadeIn" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="overflow-x-auto bg-white rounded-lg shadow-md border">
+        <table class="min-w-full">
+            <thead>
+                <tr class="bg-gray-200 text-gray-700 text-left text-sm font-semibold">
+                    <th class="py-3 px-4 border-b">Full Name</th>
+                    <th class="py-3 px-4 border-b">Staff ID</th>
+                    <th class="py-3 px-4 border-b">Email</th>
+                    <th class="py-3 px-4 border-b">Designation</th>
+                    <th class="py-3 px-4 border-b">Location</th>
+                    <th class="py-3 px-4 border-b">Active</th>
+                    <th class="py-3 px-4 border-b">Current Devices</th>
+                    <th class="py-3 px-4 border-b">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="text-sm">
+                {% for employee in page_obj %}
+                <tr class="hover:bg-gray-50 transition duration-150 border-b">
+                    <td class="py-3 px-4 font-medium">{{ employee.full_name }}</td>
+                    <td class="py-3 px-4">{{ employee.staff_number|default:"N/A" }}</td>
+                    <td class="py-3 px-4">{{ employee.email|default:"N/A" }}</td>
+                    <td class="py-3 px-4">{{ employee.designation|default:"N/A" }}</td>
+                    <td class="py-3 px-4">
+                        <div class="flex flex-col">
+                            <span class="font-medium">{{ employee.centre.name|default:"No Centre" }}</span>
+                            <span class="text-xs text-gray-600">{{ employee.department.name|default:"No Department" }}</span>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4">
+                        {% if employee.is_active %}
+                            <span class="text-green-600 font-medium">Yes</span>
+                        {% else %}
+                            <span class="text-red-600 font-medium">No</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3 px-4">{{ employee.num_devices }}</td>
+                    <td class="py-3 px-4">
+                        <div class="flex flex-wrap gap-2 text-xs">
+                            <button onclick="openModal('detailsModal{{ employee.id }}')"
+                                    class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition">
+                                View Details
+                            </button>
+
+                            {% if can_edit_employee %}
+                            <button onclick="openModal('editModal{{ employee.id }}')"
+                                    class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded transition">
+                                Edit
+                            </button>
+
+                            {% if employee.num_devices == 0 %}
+                                <button onclick="openModal('deleteModal{{ employee.id }}')"
+                                        class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded transition">
+                                    Delete
+                                </button>
+                            {% else %}
+                                <span class="text-red-600 text-xs font-medium">Cannot delete (assigned)</span>
+                            {% endif %}
+                            {% else %}
+                                <span class="text-gray-500 text-xs">No permission</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+
+                <!-- Details Modal (always shown) -->
+                <div id="detailsModal{{ employee.id }}" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+                    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg animate__animated animate__zoomIn">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800">Employee Details</h3>
+                        <dl class="space-y-3 text-sm">
+                            <div class="flex justify-between"><dt class="font-medium text-gray-600">Full Name:</dt><dd>{{ employee.full_name }}</dd></div>
+                            <div class="flex justify-between"><dt class="font-medium text-gray-600">Staff ID:</dt><dd>{{ employee.staff_number|default:"N/A" }}</dd></div>
+                            <div class="flex justify-between"><dt class="font-medium text-gray-600">Email:</dt><dd>{{ employee.email|default:"N/A" }}</dd></div>
+                            <div class="flex justify-between"><dt class="font-medium text-gray-600">Designation:</dt><dd>{{ employee.designation|default:"N/A" }}</dd></div>
+                            <div class="flex justify-between"><dt class="font-medium text-gray-600">Centre:</dt><dd>{{ employee.centre.name|default:"N/A" }}</dd></div>
+                            <div class="flex justify-between"><dt class="font-medium text-gray-600">Department:</dt><dd>{{ employee.department.name|default:"N/A" }}</dd></div>
+                            <div class="flex justify-between"><dt class="font-medium text-gray-600">Active:</dt><dd>{% if employee.is_active %}Yes{% else %}No{% endif %}</dd></div>
+                            <div class="flex justify-between"><dt class="font-medium text-gray-600">Current Devices Assigned:</dt><dd>{{ employee.num_devices }}</dd></div>
+                            <div class="flex justify-between"><dt class="font-medium text-gray-600">Created:</dt><dd>{{ employee.created_at|date:"d M Y" }}</dd></div>
+                        </dl>
+                        <div class="mt-6 text-right">
+                            <button type="button" onclick="closeModal('detailsModal{{ employee.id }}')"
+                                    class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Modal (only if allowed) -->
+                {% if can_edit_employee %}
+                <div id="editModal{{ employee.id }}" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+                    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg animate__animated animate__zoomIn">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800">Edit Employee</h3>
+                        <form action="{% url 'employee_update' employee.id %}?{{ request.GET.urlencode }}" method="POST">
+                            {% csrf_token %}
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">First Name <span class="text-red-500">*</span></label>
+                                    <input type="text" name="first_name" value="{{ employee.first_name }}" required
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Last Name <span class="text-red-500">*</span></label>
+                                    <input type="text" name="last_name" value="{{ employee.last_name }}" required
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                    <input type="email" name="email" value="{{ employee.email|default:'' }}"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Staff ID</label>
+                                    <input type="text" name="staff_number" value="{{ employee.staff_number|default:'' }}"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Designation</label>
+                                    <input type="text" name="designation" value="{{ employee.designation|default:'' }}"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Centre</label>
+                                    <select name="centre" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            {% if user.is_trainer %}disabled{% endif %}>
+                                        <option value="">No Centre</option>
+                                        {% for c in centres %}
+                                            <option value="{{ c.id }}" {% if employee.centre and employee.centre.id == c.id %}selected{% endif %}
+                                                    {% if user.is_trainer and c.id != user.centre.id %}disabled{% endif %}>{{ c.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                                    <select name="department" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="">No Department</option>
+                                        {% for d in departments %}
+                                            <option value="{{ d.id }}" {% if employee.department and employee.department.id == d.id %}selected{% endif %}>{{ d.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="flex items-center col-span-2">
+                                    <input type="checkbox" name="is_active" id="is_active{{ employee.id }}" class="mr-2 h-5 w-5"
+                                           {% if employee.is_active %}checked{% endif %}>
+                                    <label for="is_active{{ employee.id }}" class="text-sm font-medium text-gray-700">Active</label>
+                                </div>
+                            </div>
+                            <div class="flex space-x-3 mt-4">
+                                <button type="submit" class="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 transition">
+                                    Update Employee
+                                </button>
+                                <button type="button" onclick="closeModal('editModal{{ employee.id }}')"
+                                        class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition">
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Delete Modal (only if deletable and allowed) -->
+                {% if employee.num_devices == 0 %}
+                <div id="deleteModal{{ employee.id }}" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+                    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md animate__animated animate__zoomIn">
+                        <h3 class="text-xl font-bold text-red-600 mb-4">Confirm Delete</h3>
+                        <p class="text-gray-700 mb-4">
+                            Are you sure you want to <strong>permanently delete</strong> this employee?
+                        </p>
+                        <p class="text-sm text-gray-600 mb-6"><strong>Name:</strong> {{ employee.full_name }}</p>
+                        <form action="{% url 'employee_delete' employee.id %}?{{ request.GET.urlencode }}" method="POST">
+                            {% csrf_token %}
+                            <div class="flex space-x-3">
+                                <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 font-medium">
+                                    Delete Employee
+                                </button>
+                                <button type="button" onclick="closeModal('deleteModal{{ employee.id }}')"
+                                        class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 font-medium">
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
+
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-8 text-gray-500">No employees found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination (unchanged) -->
+    {% if page_obj.has_other_pages %}
+    <div class="mt-6 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+        <div class="text-gray-600 text-sm">
+            Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }} employees
+        </div>
+        <div class="flex space-x-1">
+            {% if page_obj.has_previous %}
+                <a href="?page=1{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}&items_per_page={{ items_per_page }}"
+                   class="px-3 py-1 border rounded hover:bg-gray-200 text-sm">First</a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}&items_per_page={{ items_per_page }}"
+                   class="px-3 py-1 border rounded hover:bg-gray-200 text-sm">Prev</a>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if num >= page_obj.number|add:-2 and num <= page_obj.number|add:2 %}
+                    <a href="?page={{ num }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}&items_per_page={{ items_per_page }}"
+                       class="px-3 py-1 border rounded text-sm {% if num == page_obj.number %}bg-blue-600 text-white{% else %}hover:bg-gray-200{% endif %}">
+                        {{ num }}
+                    </a>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}&items_per_page={{ items_per_page }}"
+                   class="px-3 py-1 border rounded hover:bg-gray-200 text-sm">Next</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}&items_per_page={{ items_per_page }}"
+                   class="px-3 py-1 border rounded hover:bg-gray-200 text-sm">Last</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Add Employee Modal -->
+    <div id="addModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg animate__animated animate__zoomIn">
+            <h3 class="text-xl font-bold mb-4 text-gray-800">Add New Employee</h3>
+            <form action="{% url 'employee_add' %}?{{ request.GET.urlencode }}" method="POST">
+                {% csrf_token %}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">First Name <span class="text-red-500">*</span></label>
+                        <input type="text" name="first_name" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Last Name <span class="text-red-500">*</span></label>
+                        <input type="text" name="last_name" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" name="email"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Staff ID</label>
+                        <input type="text" name="staff_number"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Designation</label>
+                        <input type="text" name="designation"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Centre</label>
+                        <select name="centre" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                {% if user.is_trainer %}disabled{% endif %}>
+                            <option value="">No Centre</option>
+                            {% for c in centres %}
+                                <option value="{{ c.id }}"
+                                        {% if user.is_trainer and c.id == user.centre.id %}selected{% endif %}
+                                        {% if user.is_trainer and c.id != user.centre.id %}disabled{% endif %}>{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                        <select name="department" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">No Department</option>
+                            {% for d in departments %}
+                                <option value="{{ d.id }}">{{ d.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="flex items-center col-span-2">
+                        <input type="checkbox" name="is_active" id="add_is_active" class="mr-2 h-5 w-5" checked>
+                        <label for="add_is_active" class="text-sm font-medium text-gray-700">Active</label>
+                    </div>
+                </div>
+                <div class="flex space-x-3 mt-4">
+                    <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
+                        Add Employee
+                    </button>
+                    <button type="button" onclick="closeModal('addModal')"
+                            class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+</script>
+{% endblock %}

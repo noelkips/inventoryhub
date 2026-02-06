@@ -24,7 +24,7 @@ urlpatterns = [
     path('workplans/task/<int:pk>/delete/', views.work_plan_task_delete, name='work_plan_task_delete'),
     path('workplans/task/<int:pk>/status/', views.work_plan_task_status_update, name='work_plan_task_status_update'),
     path('workplans/task/<int:pk>/edit/', views.work_plan_task_edit, name='work_plan_task_edit'),
-    path('workplans/task/<int:pk>/comment/', views.work_plan_task_add_comment, name='work_plan_task_add_comment'),
+    path('workplans/task/<int:pk>/comment/', views.work_plan_task_comment_add, name='work_plan_task_add_comment'),
     
     # Reschedule URL
     path('workplans/task/<int:pk>/reschedule/', views.work_plan_task_reschedule, name='work_plan_task_reschedule'),

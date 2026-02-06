@@ -37,29 +37,52 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.username
     
+class Employee(models.Model):
+    """
+    Lightweight person record — used for device assignees.
+    Can later be replaced/extended with CustomUser if needed.
+    """
+    first_name     = models.CharField(max_length=100)
+    last_name      = models.CharField(max_length=100)
+    email          = models.EmailField(unique=True, blank=True, null=True)
+    staff_number   = models.CharField(max_length=50, blank=True, null=True, unique=True)
+    designation    = models.CharField(max_length=100, blank=True, null=True, help_text="Employee's job title/position")
+    department     = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
+    centre         = models.ForeignKey(Centre, on_delete=models.SET_NULL, null=True, blank=True)
+    is_active      = models.BooleanField(default=True)
+    created_at     = models.DateTimeField(auto_now_add=True)
+    updated_at     = models.DateTimeField(auto_now=True)
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ['last_name', 'first_name']
+        unique_together = [['first_name', 'last_name', 'email']]  # optional soft protection
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}" + (f" ({self.email})" if self.email else "")
+
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}".strip()
+
+
+
+
 class Import(models.Model):
     CATEGORY_CHOICES = [
-    ('laptop', 'Laptop'),
-    ('system_unit', 'System Unit'),
-    ('monitor', 'Monitor'),
-    ('tv', 'Television'),
-
-    # NEW MERGED CATEGORY
-    ('networking_devices', 'Networking Devices'),
-
-    ('printer', 'Printer'),
-    ('n_computing', 'N Computing'),
-    ('projector', 'projector'),
-
-    # GADGET CATEGORY (phones, iPads, tablets, etc.)
-    ('gadget', 'Gadget'),
-     ('access_point', 'Access Point'),
-
-    # NEW CATEGORY
-   ('power_backup_equipment', 'Power & Backup Equipment'),
-
-    ('other', 'Other'),
-]
+        ('laptop', 'Laptop'),
+        ('system_unit', 'System Unit'),
+        ('monitor', 'Monitor'),
+        ('tv', 'Television'),
+        ('networking_devices', 'Networking Devices'),
+        ('printer', 'Printer'),
+        ('n_computing', 'N Computing'),
+        ('projector', 'projector'),
+        ('gadget', 'Gadget'),
+        ('access_point', 'Access Point'),
+        ('power_backup_equipment', 'Power & Backup Equipment'),
+        ('other', 'Other'),
+    ]
 
     category = models.CharField(
         max_length=200,
@@ -69,15 +92,35 @@ class Import(models.Model):
     )
     centre = models.ForeignKey(Centre, on_delete=models.SET_NULL, null=True, blank=True)
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
-    hardware = models.CharField(max_length=100, blank=True, null=True)
+    device_name = models.CharField(max_length=100, blank=True, null=True)
     system_model = models.CharField(max_length=100, blank=True, null=True)
     processor = models.CharField(max_length=100, blank=True, null=True)
     ram_gb = models.CharField(max_length=10, blank=True, null=True)
     hdd_gb = models.CharField(max_length=10, blank=True, null=True)
     serial_number = models.CharField(max_length=100, blank=True, null=True)
+    uaf_signed = models.BooleanField(default=False, help_text="Has UAF been signed for this device")
+
+
+    # === Old fields (keep for migration phase) ===
     assignee_first_name = models.CharField(max_length=50, blank=True, null=True)
     assignee_last_name = models.CharField(max_length=50, blank=True, null=True)
     assignee_email_address = models.EmailField(blank=True, null=True)
+
+    # === New fields ===
+    assignee = models.ForeignKey(
+        'Employee',  # assumes Employee model is in the same app
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_devices'
+    )
+    assignee_cache = models.CharField(
+        max_length=255,
+        blank=True,
+        editable=False,
+        help_text='Cached full name / staff number for search & reports'
+    )
+
     device_condition = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=255, blank=True, null=True)
     date = models.DateField(auto_now_add=True)
@@ -85,28 +128,74 @@ class Import(models.Model):
     approved_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='imports_approved')
     is_approved = models.BooleanField(default=False)
     reason_for_update = models.TextField(blank=True, null=True)
-    is_disposed = models.BooleanField(default=False)  
-    disposal_reason = models.TextField(blank=True, null=True) 
+    is_disposed = models.BooleanField(default=False)
+    disposal_reason = models.TextField(blank=True, null=True)
     history = HistoricalRecords()
 
     def save(self, *args, **kwargs):
-        # Pass the user from kwargs to HistoricalRecords
+        # Optional: auto-update cache when saving (only if assignee is set)
+        if self.assignee:
+            self.assignee_cache = str(self.assignee)
+        else:
+            # fallback to old fields during transition
+            parts = [self.assignee_first_name or '', self.assignee_last_name or '']
+            name = ' '.join(filter(None, parts)).strip()
+            self.assignee_cache = name if name else ''
+
         user = kwargs.pop('user', None)
-        if user and not hasattr(self, '_history_user'):  # Avoid overriding if already set by HistoricalRecords
+        if user and not hasattr(self, '_history_user'):
             kwargs['update_fields'] = kwargs.get('update_fields', [])
         super().save(*args, **kwargs)
-    
+
     def __str__(self):
         return f"{self.serial_number} ({self.centre.name if self.centre else 'No Centre'})"
 
+
+# Add these fields to your DeviceAgreement model
+
+class DeviceAgreement(models.Model):
+    device = models.ForeignKey("Import", on_delete=models.CASCADE, related_name='agreements')
+    employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, related_name='device_agreements')
+
+    # ========== ISSUANCE SECTION ==========
+    # Issuance signatures (both as base64 PNG from canvas)
+    issuance_user_signature_png = models.TextField(blank=True, help_text="Employee's drawn signature for issuance")
+    issuance_it_signature_png = models.TextField(blank=True, help_text="IT staff's drawn signature for issuance")
+    issuance_date = models.DateTimeField(null=True, blank=True)
+    issuance_it_user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='issuance_agreements')
+    user_signed_issuance = models.BooleanField(default=False)
+    it_approved_issuance = models.BooleanField(default=False)
+
+    # ========== CLEARANCE SECTION ==========
+    # Clearance signatures (both as base64 PNG from canvas)
+    clearance_user_signature_png = models.TextField(blank=True, help_text="Employee's drawn signature for clearance")
+    clearance_it_signature_png = models.TextField(blank=True, help_text="IT staff's drawn signature for clearance")
+    clearance_date = models.DateTimeField(null=True, blank=True)
+    clearance_it_user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='clearance_agreements')
+    clearance_remarks = models.TextField(blank=True, help_text="Optional remarks about device condition on return")
+    user_signed_clearance = models.BooleanField(default=False)
+    it_approved_clearance = models.BooleanField(default=False)
+
+    is_archived = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"UAF for {self.device.serial_number} - {self.employee}"
+
+    class Meta:
+        ordering = ['-issuance_date']
+
 class DeviceUserHistory(models.Model):
     device = models.ForeignKey(Import, on_delete=models.CASCADE, related_name='user_history')
+    # Keep old fields for now – consider switching to assignee FK later
     assignee_first_name = models.CharField(max_length=50, blank=True, null=True)
     assignee_last_name = models.CharField(max_length=50, blank=True, null=True)
     assignee_email_address = models.EmailField(blank=True, null=True)
     assigned_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='assignments_made')
     assigned_date = models.DateTimeField(auto_now_add=True)
     cleared_date = models.DateTimeField(null=True, blank=True)
+
+    # Optional future improvement: add FK here too
+    # assignee = models.ForeignKey('Employee', on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return f"{self.assignee_first_name} {self.assignee_last_name} on {self.device.serial_number}"
@@ -137,7 +226,7 @@ class PendingUpdate(models.Model):
     import_record = models.ForeignKey(Import, on_delete=models.CASCADE, related_name='pending_updates')
     centre = models.ForeignKey(Centre, on_delete=models.SET_NULL, null=True, blank=True)
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, default=1)
-    hardware = models.CharField(max_length=100, blank=True, null=True)
+    device_name = models.CharField(max_length=100, blank=True, null=True)
     system_model = models.CharField(max_length=100, blank=True, null=True)
     processor = models.CharField(max_length=100, blank=True, null=True)
     ram_gb = models.CharField(max_length=10, blank=True, null=True)

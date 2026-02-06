@@ -5,6 +5,8 @@ __pycache__/
 .git/
 .git
 .sqlite3
+db_test.sqlite3
+
 
 
 

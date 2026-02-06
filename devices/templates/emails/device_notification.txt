@@ -1,0 +1,17 @@
+Dear {{ assignee.full_name }},
+
+This is to notify you that the following device has been {{ action }} to you:
+
+Device:         {{ device_name }} ({{ category }})
+Serial Number:  {{ serial }}
+Centre:         {{ centre.name|default:"N/A" }}
+Department:     {{ department.name|default:"N/A" }}
+
+Action performed by: {{ issued_by.get_full_name|default:issued_by.username }} ({{ issued_by.email|default:"N/A" }})
+Date/Time:          {{ issued_at|date:"Y-m-d H:i" }}
+
+Please acknowledge receipt and take good care of the device.
+
+Best regards,
+{{ issued_by.get_full_name|default:issued_by.username }}
+MoHI Africa IT Team

@@ -27,6 +27,11 @@ from ..models import PublicHoliday, WorkPlan, WorkPlanTask
 from devices.models import Centre, Department, CustomUser
 from ..utils import get_kenyan_holidays, notify_collaborator
 
+# Excel exports
+import openpyxl
+from openpyxl.styles import PatternFill, Font, Alignment
+from openpyxl.styles.borders import Border, Side
+
 User = get_user_model()
 
 # ============ PERMISSION HELPERS ============
@@ -514,24 +519,37 @@ def work_plan_task_reschedule(request, pk):
     return redirect(request.META.get('HTTP_REFERER'))
 
 
+# UPDATE FOR work_plan_views.py
+# Replace the work_plan_task_comment_add function
+
 @login_required
 @require_POST
-def work_plan_task_add_comment(request, pk):
+def work_plan_task_comment_add(request, pk):
+    """
+    UPDATED: Now sends notifications to owner and all collaborators
+    """
     task = get_object_or_404(WorkPlanTask, pk=pk)
-    # Anyone with visibility access (checked via detail view logic generally) can comment
-    # For safety, basic check:
-    if not (request.user == task.work_plan.user or is_manager_of(request.user, task.work_plan.user) or request.user in task.collaborators.all()):
-         messages.error(request, "Permission denied.")
-         return redirect('work_plan_list')
+    
+    # Permission check
+    if not (request.user == task.work_plan.user or 
+            is_manager_of(request.user, task.work_plan.user) or 
+            request.user in task.collaborators.all()):
+        messages.error(request, "Permission denied.")
+        return redirect('work_plan_list')
 
     new_comment = request.POST.get('new_comment')
     if new_comment:
         formatted = f"\n[{request.user.first_name}]: {new_comment}"
         task.comments = (task.comments or "") + formatted
         task.save()
-        messages.success(request, "Comment added.")
+        
+        # NEW: Send notifications to owner and collaborators
+        from ..utils import notify_comment_added
+        notify_comment_added(task, new_comment, request.user)
+        
+        messages.success(request, "Comment added and notifications sent.")
+    
     return redirect('work_plan_detail', pk=task.work_plan.pk)
-
 
 @login_required
 @require_POST
@@ -787,8 +805,15 @@ def work_plan_create_task_from_calendar(request):
     return redirect('work_plan_calendar')
 
 
+# ============================================
+# 1. download_excel_report function
+# ============================================
+
 @login_required
-def download_bulk_excel_report(request):
+def download_excel_report(request):
+    """
+    NOW INCLUDES: Tasks where user is owner OR collaborator
+    """
     filter_id = request.GET.get('user_filter')
     year = int(request.GET.get('year', timezone.now().year))
     month = int(request.GET.get('month', timezone.now().month))
@@ -802,8 +827,11 @@ def download_bulk_excel_report(request):
             target_user = User.objects.get(pk=filter_id)
         except:
             pass
-         
-    base_qs = WorkPlanTask.objects.filter(Q(work_plan__user=target_user) | Q(collaborators=target_user))
+    
+    # UPDATED: Include tasks where user is owner OR collaborator
+    base_qs = WorkPlanTask.objects.filter(
+        Q(work_plan__user=target_user) | Q(collaborators=target_user)
+    ).distinct()
 
     if report_type == 'monthly': 
         tasks = base_qs.filter(date__year=year, date__month=month).order_by('date')
@@ -822,11 +850,27 @@ def download_bulk_excel_report(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     writer = csv.writer(response)
     
-    # Updated headers
-    writer.writerow(['Date', 'Task', 'Centre', 'Dept', 'Collaborators', 'Other Parties', 'Status', 'Target', 'Resources', 'Comments (incl. Reschedule Reason)'])
+    # UPDATED: Added "Task Owner" and "Role" columns
+    writer.writerow([
+        'Date', 
+        'Task', 
+        'Task Owner',  # NEW
+        'Role',        # NEW: "Owner" or "Collaborator"
+        'Centre', 
+        'Dept', 
+        'Collaborators', 
+        'Other Parties', 
+        'Status', 
+        'Target', 
+        'Resources', 
+        'Comments (incl. Reschedule Reason)'
+    ])
     
     for t in tasks:
         collabs = ", ".join([u.first_name for u in t.collaborators.all()])
+        
+        # Determine role
+        role = "Owner" if t.work_plan.user == target_user else "Collaborator"
         
         # Combine comments + reschedule reason
         comments_parts = []
@@ -838,7 +882,9 @@ def download_bulk_excel_report(request):
         
         writer.writerow([
             t.date, 
-            t.task_name, 
+            t.task_name,
+            t.work_plan.user.get_full_name(),  # NEW
+            role,                               # NEW
             t.centre.name if t.centre else '', 
             t.department.name if t.department else '',
             collabs,
@@ -850,32 +896,15 @@ def download_bulk_excel_report(request):
         ])
     return response
 
-@login_required
-def download_workplan_pdf(request, pk):
-    work_plan = get_object_or_404(WorkPlan, pk=pk)
-    is_owner = (request.user == work_plan.user)
-    is_manager = is_manager_of(request.user, work_plan.user)
-    is_collab = work_plan.tasks.filter(collaborators=request.user).exists()
-    
-    if not (is_owner or is_manager or is_collab):
-        messages.error(request, "Access denied.")
-        return redirect('work_plan_list')
 
-    period_str = f"{work_plan.week_start_date.strftime('%d %B %Y')} - {work_plan.week_end_date.strftime('%d %B %Y')}"
+# ============================================
+# 2. _build_workplan_pdf function
+# ============================================
 
-    pdf = _build_workplan_pdf(
-        [work_plan],
-        request.user,
-        title=f"Work Plan: {work_plan.user.get_full_name()}",
-        report_type="weekly",
-        period_str=period_str
-    )
-    
-    response = HttpResponse(pdf, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="WorkPlan_{work_plan.week_start_date}.pdf"'
-    return response
-
-def _build_workplan_pdf(work_plan_qs, user, title="Work Plan Report", report_type="weekly", period_str=None):
+def _build_workplan_pdf(work_plan_qs, user, title="Work Plan Report", report_type="weekly", period_str=None, target_user=None):
+    """
+    UPDATED: Now includes collaboration tasks
+    """
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -895,7 +924,7 @@ def _build_workplan_pdf(work_plan_qs, user, title="Work Plan Report", report_typ
 
     story = []
 
-    # Header Image (kept as requested)
+    # Header Image
     header_img_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'document_title_1.png')
     if os.path.exists(header_img_path):
         header_img = Image(header_img_path, width=19.5*cm, height=1.4*cm)
@@ -909,18 +938,43 @@ def _build_workplan_pdf(work_plan_qs, user, title="Work Plan Report", report_typ
         story.append(Paragraph(period_str, styles['SubHeader']))
     story.append(Spacer(1, 0.3*cm))
 
-    # Table with adjusted column widths
-    headers = ['Date', 'Task / Activity', 'Centre / Dept', 'Collaborators', 'Other Parties', 'Comments', 'Target', 'Status']
+    # UPDATED: Headers include "Task Owner" and "Role"
+    headers = [
+        'Date', 
+        'Task / Activity', 
+        'Owner',        # NEW
+        'Role',         # NEW
+        'Centre / Dept', 
+        'Collaborators', 
+        'Other Parties', 
+        'Comments', 
+        'Target', 
+        'Status'
+    ]
     header_row = [Paragraph(h, styles['CellHeader']) for h in headers]
     data = [header_row]
 
-    tasks = WorkPlanTask.objects.filter(work_plan__in=work_plan_qs).order_by('date')
+    # UPDATED: Query includes collaboration tasks
+    if target_user:
+        tasks = WorkPlanTask.objects.filter(
+            Q(work_plan__in=work_plan_qs) | Q(collaborators=target_user, date__range=[
+                work_plan_qs[0].week_start_date if work_plan_qs else timezone.now().date(),
+                work_plan_qs[0].week_end_date if work_plan_qs else timezone.now().date()
+            ])
+        ).distinct().order_by('date')
+    else:
+        tasks = WorkPlanTask.objects.filter(work_plan__in=work_plan_qs).order_by('date')
 
     for t in tasks:
         c_name = t.centre.name if t.centre else "N/A"
         d_name = t.department.name if t.department else "N/A"
         loc_str = f"<b>{c_name}</b><br/><i>{d_name}</i>"
         collabs = ", ".join([u.first_name for u in t.collaborators.all()]) if t.collaborators.exists() else "-"
+        
+        # Determine role
+        role = "Owner" if (target_user and t.work_plan.user == target_user) else "Collaborator"
+        role_color = "blue" if role == "Owner" else "purple"
+        role_str = f"<font color='{role_color}'><b>{role}</b></font>"
         
         # Comments + Reschedule Reason
         comments_parts = []
@@ -941,6 +995,8 @@ def _build_workplan_pdf(work_plan_qs, user, title="Work Plan Report", report_typ
         row = [
             Paragraph(t.date.strftime('%d-%b'), styles['CellText']),
             Paragraph(task_name, styles['CellText']),
+            Paragraph(t.work_plan.user.first_name, styles['CellText']),  # NEW
+            Paragraph(role_str, styles['CellText']),                     # NEW
             Paragraph(loc_str, styles['CellText']),
             Paragraph(collabs, styles['CellText']),
             Paragraph(t.other_parties or '-', styles['CellText']),
@@ -950,8 +1006,8 @@ def _build_workplan_pdf(work_plan_qs, user, title="Work Plan Report", report_typ
         ]
         data.append(row)
 
-    # Adjusted column widths: reduced Collaborators & Other Parties, increased Comments
-    col_widths = [2*cm, 4.8*cm, 2.8*cm, 2.5*cm, 2.5*cm, 5*cm, 3*cm, 2*cm]
+    # UPDATED: Column widths adjusted for new columns
+    col_widths = [1.8*cm, 4.2*cm, 1.5*cm, 1.5*cm, 2.5*cm, 2.2*cm, 2.2*cm, 4.5*cm, 2.8*cm, 1.8*cm]
     table = Table(data, colWidths=col_widths, repeatRows=1)
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), DARK_BLUE),
@@ -962,26 +1018,18 @@ def _build_workplan_pdf(work_plan_qs, user, title="Work Plan Report", report_typ
     ]))
     story.append(table)
 
-
     def add_text_watermark(canvas_obj, doc):
         canvas_obj.saveState()
         canvas_obj.setFont('Helvetica', 28)
         canvas_obj.setFillColor(colors.HexColor('#143C50'))
         canvas_obj.setFillAlpha(0.05) 
         
-        # Grid spacing configuration
         x_step = 3 * inch
         y_step = 1.5 * inch
-        
-        # Define the 'Body' boundary. 
-        # On a landscape A4 (8.27 inches high), we stop drawing 
-        # if the Y coordinate is above ~6.5 inches to clear the header.
         header_cutoff = 6.5 * inch
 
-        for x in range(-2, 14, 4):  # Horizontal steps
-            for y in range(-2, 10, 3): # Vertical steps
-                
-                # Check if the current grid point is below the header area
+        for x in range(-2, 14, 4):
+            for y in range(-2, 10, 3):
                 current_y = y * inch
                 if current_y < header_cutoff:
                     canvas_obj.saveState()
@@ -989,18 +1037,22 @@ def _build_workplan_pdf(work_plan_qs, user, title="Work Plan Report", report_typ
                     canvas_obj.rotate(45)
                     canvas_obj.drawCentredString(0, 0, "MOHI IT")
                     canvas_obj.restoreState()
-                
+        
         canvas_obj.restoreState()
 
-    # Build the document
     doc.build(story, onFirstPage=add_text_watermark, onLaterPages=add_text_watermark)
     buffer.seek(0)
     return buffer.getvalue()
 
+
+# ============================================
+# 3. download_bulk_pdf_report function
+# ============================================
+
 @login_required
 def download_bulk_pdf_report(request):
     """
-    Generates PDF reports (Weekly, Monthly, Annual) similar to Excel version
+    UPDATED: Now includes collaboration tasks in reports
     """
     filter_id = request.GET.get('user_filter')
     year = int(request.GET.get('year', timezone.now().year))
@@ -1038,14 +1090,265 @@ def download_bulk_pdf_report(request):
         messages.error(request, "No data found for the selected period.")
         return redirect('work_plan_calendar')
 
+    # UPDATED: Pass target_user to include collaboration tasks
     pdf = _build_workplan_pdf(
         list(work_plans),
         request.user,
         title=f"Work Plan Report - {target_user.get_full_name()}",
         report_type=report_type,
-        period_str=period_str
+        period_str=period_str,
+        target_user=target_user  # NEW
     )
 
     response = HttpResponse(pdf, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+
+# ============================================
+# 4. download_workplan_pdf function
+# ============================================
+
+@login_required
+def download_workplan_pdf(request, pk):
+    """
+    UPDATED: Includes collaboration tasks for the work plan owner
+    """
+    work_plan = get_object_or_404(WorkPlan, pk=pk)
+    is_owner = (request.user == work_plan.user)
+    is_manager = is_manager_of(request.user, work_plan.user)
+    is_collab = work_plan.tasks.filter(collaborators=request.user).exists()
+    
+    if not (is_owner or is_manager or is_collab):
+        messages.error(request, "Access denied.")
+        return redirect('work_plan_list')
+
+    period_str = f"{work_plan.week_start_date.strftime('%d %B %Y')} - {work_plan.week_end_date.strftime('%d %B %Y')}"
+
+    # UPDATED: Pass work_plan.user as target_user
+    pdf = _build_workplan_pdf(
+        [work_plan],
+        request.user,
+        title=f"Work Plan: {work_plan.user.get_full_name()}",
+        report_type="weekly",
+        period_str=period_str,
+        target_user=work_plan.user  # NEW
+    )
+    
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="WorkPlan_{work_plan.week_start_date}.pdf"'
+    return response
+
+
+# ============================================
+# 5. download_bulk_excel_report function (NEW)
+# ============================================
+
+@login_required
+def download_bulk_excel_report(request):
+    """
+    NEW FUNCTION: Bulk Excel report similar to bulk PDF
+    Includes tasks where user is owner OR collaborator
+    """
+    filter_id = request.GET.get('user_filter')
+    year = int(request.GET.get('year', timezone.now().year))
+    month = int(request.GET.get('month', timezone.now().month))
+    report_type = request.GET.get('report_type', 'weekly')
+
+    target_user = request.user
+    if filter_id and (getattr(request.user, 'is_it_manager', False) or 
+                     getattr(request.user, 'is_senior_it_officer', False) or 
+                     request.user.is_superuser):
+        try:
+            target_user = User.objects.get(pk=filter_id)
+        except:
+            pass
+    
+    # UPDATED: Include tasks where user is owner OR collaborator
+    base_qs = WorkPlanTask.objects.filter(
+        Q(work_plan__user=target_user) | Q(collaborators=target_user)
+    ).distinct()
+
+    if report_type == 'monthly': 
+        tasks = base_qs.filter(date__year=year, date__month=month).order_by('date')
+        period_str = f"{calendar.month_name[month]} {year}"
+        filename = f"WorkPlan_{target_user.username}_{month}_{year}_Report.xlsx"
+    elif report_type == 'annual': 
+        tasks = base_qs.filter(date__year=year).order_by('date')
+        period_str = f"Annual Report {year}"
+        filename = f"WorkPlan_{target_user.username}_{year}_Annual_Report.xlsx"
+    else:  # weekly
+        today = timezone.now().date()
+        start = today - timedelta(days=today.weekday())
+        end = start + timedelta(days=6)
+        tasks = base_qs.filter(date__range=[start, end]).order_by('date')
+        period_str = f"Week {start.strftime('%d %b')} - {end.strftime('%d %b %Y')}"
+        filename = f"WorkPlan_{target_user.username}_Week_{start.strftime('%Y%m%d')}_Report.xlsx"
+
+    if not tasks.exists():
+        messages.error(request, "No data found for the selected period.")
+        return redirect('work_plan_calendar')
+
+    # Create Excel workbook
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet.title = "Work Plan Report"
+
+    # === STYLING ===
+    header_fill = PatternFill(start_color="143C50", end_color="143C50", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    
+    cell_alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+    border = Border(
+        left=Side(style='thin', color='E5E7EB'),
+        right=Side(style='thin', color='E5E7EB'),
+        top=Side(style='thin', color='E5E7EB'),
+        bottom=Side(style='thin', color='E5E7EB')
+    )
+
+    # === TITLE ===
+    worksheet.merge_cells('A1:L1')
+    title_cell = worksheet['A1']
+    title_cell.value = f"IT Department – Work Plan Report"
+    title_cell.font = Font(bold=True, size=16, color="143C50")
+    title_cell.alignment = Alignment(horizontal="center", vertical="center")
+    
+    # === PERIOD ===
+    worksheet.merge_cells('A2:L2')
+    period_cell = worksheet['A2']
+    period_cell.value = period_str
+    period_cell.font = Font(size=12, color="666666")
+    period_cell.alignment = Alignment(horizontal="center", vertical="center")
+    
+    # === USER INFO ===
+    worksheet.merge_cells('A3:L3')
+    user_cell = worksheet['A3']
+    user_cell.value = f"Report for: {target_user.get_full_name()}"
+    user_cell.font = Font(size=11, color="333333")
+    user_cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    # === HEADERS (Row 5) ===
+    headers = [
+        'Date', 
+        'Task / Activity', 
+        'Task Owner',
+        'Role',
+        'Centre', 
+        'Department',
+        'Collaborators', 
+        'Other Parties', 
+        'Status', 
+        'Target', 
+        'Resources', 
+        'Comments (incl. Reschedule Reason)'
+    ]
+    
+    for col_num, header in enumerate(headers, 1):
+        cell = worksheet.cell(row=5, column=col_num)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+        cell.border = border
+
+    # === DATA ROWS ===
+    row_num = 6
+    for task in tasks:
+        # Determine role
+        role = "Owner" if task.work_plan.user == target_user else "Collaborator"
+        
+        # Collaborators
+        collabs = ", ".join([u.get_full_name() for u in task.collaborators.all()]) if task.collaborators.exists() else "-"
+        
+        # Comments + Reschedule Reason
+        comments_parts = []
+        if task.comments:
+            comments_parts.append(task.comments.strip())
+        if task.status == 'Rescheduled' and task.reschedule_reason:
+            comments_parts.append(f"[Rescheduled Reason]: {task.reschedule_reason.strip()}")
+        comments_display = " | ".join(comments_parts) if comments_parts else ""
+        
+        # Task name (with leave indicator)
+        task_name = f"[ON LEAVE] {task.task_name}" if task.is_leave else task.task_name
+        
+        row_data = [
+            task.date.strftime('%d-%b-%Y'),
+            task_name,
+            task.work_plan.user.get_full_name(),
+            role,
+            task.centre.name if task.centre else 'N/A',
+            task.department.name if task.department else 'N/A',
+            collabs,
+            task.other_parties or '-',
+            task.status,
+            task.target or '-',
+            task.resources_needed or '-',
+            comments_display
+        ]
+        
+        for col_num, value in enumerate(row_data, 1):
+            cell = worksheet.cell(row=row_num, column=col_num)
+            cell.value = value
+            cell.alignment = cell_alignment
+            cell.border = border
+            
+            # Status color coding
+            if col_num == 9:  # Status column
+                if task.status == 'Completed':
+                    cell.font = Font(color="008000", bold=True)  # Green
+                elif task.status == 'Not Done':
+                    cell.font = Font(color="FF0000", bold=True)  # Red
+                elif task.status == 'Rescheduled':
+                    cell.font = Font(color="FF8C00", bold=True)  # Orange
+            
+            # Role color coding
+            if col_num == 4:  # Role column
+                if role == "Owner":
+                    cell.font = Font(color="0000FF", bold=True)  # Blue
+                else:
+                    cell.font = Font(color="800080", bold=True)  # Purple
+        
+        row_num += 1
+
+    # === COLUMN WIDTHS ===
+    column_widths = {
+        'A': 12,   # Date
+        'B': 30,   # Task
+        'C': 18,   # Task Owner
+        'D': 12,   # Role
+        'E': 18,   # Centre
+        'F': 18,   # Department
+        'G': 20,   # Collaborators
+        'H': 18,   # Other Parties
+        'I': 12,   # Status
+        'J': 15,   # Target
+        'K': 20,   # Resources
+        'L': 35    # Comments
+    }
+    
+    for col, width in column_widths.items():
+        worksheet.column_dimensions[col].width = width
+
+    # === ROW HEIGHTS ===
+    worksheet.row_dimensions[1].height = 25
+    worksheet.row_dimensions[2].height = 20
+    worksheet.row_dimensions[3].height = 18
+    worksheet.row_dimensions[5].height = 30
+
+    # === FREEZE PANES (Header row) ===
+    worksheet.freeze_panes = 'A6'
+
+    # === SAVE TO RESPONSE ===
+    output = io.BytesIO()
+    workbook.save(output)
+    output.seek(0)
+
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
     return response

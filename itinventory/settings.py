@@ -32,7 +32,7 @@ DB_NAME_CONFIG=os.getenv('DB_NAME')
 SECRET_KEY = 'django-insecure-=7ap+(zql*g##=bjqpdk9sgtd76k%ayih&k&qz(2y(t0^!7u^x'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 if DEBUG:
     ALLOWED_HOSTS = []
@@ -286,7 +286,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
         # Outgoing server (SMTP)
              # Required for port 465
-# EMAIL_USE_TLS = False            # Do NOT use TLS with port 465
+EMAIL_USE_TLS = False            # Do NOT use TLS with port 465
 
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
@@ -300,7 +300,12 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
 #BACKUP PASSWORD
 DB_BACKUP_ENCRYPTION_PASSWORD = os.getenv('BACKUP_PASSWORD')
 
-
+# ============================================================================
+# SITE URL CONFIGURATION
+if DATABASES['default']['NAME'] == 'ufdxwals_it_test_db':
+    SITE_URL = os.getenv('SITE_URL_TEST', 'http://localhost:8000')
+else:
+    SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000')
 # ============================================================================
 # LOGGING CONFIGURATION
 # ============================================================================

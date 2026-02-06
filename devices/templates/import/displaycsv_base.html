@@ -28,7 +28,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
                 <input type="text" name="search" value="{{ report_data.search_query|default:'' }}"
-                       placeholder="Serial, name, hardware..."
+                       placeholder="Serial, name, device_name..."
                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
 
@@ -113,8 +113,7 @@
             <thead>
                 <tr class="bg-gray-200 text-gray-700 text-left text-sm font-semibold">
                     <th class="py-3 px-4 border-b">Device Details</th>
-                    <th class="py-3 px-4 border-b">Centre</th>
-                    <th class="py-3 px-4 border-b">Department</th> 
+                    <th class="py-3 px-4 border-b">Centre/Department</th>
                     <th class="py-3 px-4 border-b">Assignee</th>
                     <th class="py-3 px-4 border-b">Status & Date</th>
                     <th class="py-3 px-4 border-b">Actions</th>
@@ -127,213 +126,77 @@
                         <tr class="hover:bg-gray-50 transition duration-150 border-b">
                             <td class="py-3 px-4">
                                 <div><strong>Serial:</strong> {{ item.serial_number|default:"N/A" }}</div>
-                                <div><strong>Hardware:</strong> {{ item.hardware|default:"N/A" }}</div>
+                                <div><strong>Device Name:</strong> {{ item.device_name|default:"N/A" }}</div>
                             </td>
-                            <td class="py-3 px-4">{{ item.centre.name|default:"N/A" }}</td>
-                            <td class="py-3 px-4">{{ item.department.name|default:"N/A" }}</td>
-                            <td class="py-3 px-4">
-                                {{ item.assignee_first_name|default:"" }} {{ item.assignee_last_name|default:"" }}
+                            <td class="py-3 px-4 whitespace-nowrap">
+                                <div class="flex flex-col text-sm">
+                                    <span class="font-medium text-gray-800">
+                                        {{ item.centre.name|default:"No Centre" }}
+                                    </span>
+                                    <span class="text-gray-600 text-xs mt-0.5">
+                                        {{ item.department.name|default:"No Department" }}
+                                    </span>
+                                </div>
                             </td>
                             <td class="py-3 px-4">
-                                <div>Date: {{ item.date|date:"M d, Y"|default:"N/A" }}</div>
-                                {% if item.status == 'Available' %}
-                                    <button onclick="openModal('editModal{{ item.id }}')"
-                                            class="mt-1 bg-yellow-600 text-white text-xs px-2 py-1 rounded hover:bg-yellow-700">
-                                        Reassign
-                                    </button>
+                                {% if item.assignee %}
+                                    {{ item.assignee.first_name|default:"-" }} {{ item.assignee.last_name|default:"" }}
                                 {% else %}
-                                    <div class="mt-1"><strong>Status:</strong> {{ item.status|default:"N/A" }}</div>
+                                    <span class="text-gray-500">Unassigned</span>
+                                    <a href="{% url 'import_update' item.id %}"
+                                       class="ml-3 bg-yellow-600 hover:bg-yellow-700 text-white text-xs px-3 py-1 rounded inline-flex items-center">
+                                        Assign
+                                    </a>
                                 {% endif %}
                             </td>
                             <td class="py-3 px-4">
-                                <div class="flex flex-wrap gap-1 text-xs">
-                                    <button onclick="openModal('viewModal{{ item.id }}')"
-                                            class="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">View</button>
+                                <div>Date: {{ item.date|date:"M d, Y"|default:"N/A" }}</div>
+                                <div class="mt-1"><strong>Status:</strong> {{ item.status|default:"N/A" }}</div>
+                            </td>
+                            <td class="py-3 px-4">
+                                <div class="flex flex-wrap gap-2 text-xs">
+                                    <!-- Link to dedicated details page (replaces old modal) -->
+                                    <a href="{% url 'device_detail' item.id %}"
+                                       class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition" target="_blank">
+                                        View Details
+                                    </a>
 
                                     {% if user.is_superuser or user.is_trainer %}
-                                        <button onclick="openModal('editModal{{ item.id }}')"
-                                                class="bg-yellow-600 text-white px-2 py-1 rounded hover:bg-yellow-700">Edit</button>
+                                        <a href="{% url 'import_update' item.id %}"
+                                           class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded transition" target="_blank">
+                                            Edit
+                                        </a>
                                     {% endif %}
 
                                     {% if user.is_superuser and not user.is_trainer and not item.is_disposed %}
                                         <button onclick="openModal('disposeModal{{ item.id }}')"
-                                                class="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Dispose</button>
+                                                class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded transition">
+                                            Dispose
+                                        </button>
                                     {% endif %}
 
                                     {% if user.is_it_manager or user.is_senior_it_officer %}
                                         <button onclick="openModal('deleteModal{{ item.id }}')"
-                                                class="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Delete</button>
+                                                class="bg-red-800 hover:bg-red-900 text-white px-3 py-1 rounded transition">
+                                            Delete
+                                        </button>
                                     {% endif %}
 
                                     {% if user.is_superuser and not user.is_trainer and not item.is_approved %}
                                         <button onclick="openModal('approveModal{{ item.id }}')"
-                                                class="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700">Approve</button>
+                                                class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded transition">
+                                            Approve
+                                        </button>
                                     {% endif %}
 
                                     <a href="{% url 'device_history' item.id %}"
-                                       class="text-blue-600 hover:underline">History</a>
+                                       class="text-blue-600 hover:underline px-2 py-1">
+                                        History
+                                    </a>
                                 </div>
 
-                                <div id="viewModal{{ item.id }}" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
-                                    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-screen overflow-y-auto animate__animated animate__zoomIn">
-                                        <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-t-lg flex justify-between items-center">
-                                            <h3 class="text-xl font-bold">Device Details</h3>
-                                            <button onclick="closeModal('viewModal{{ item.id }}')" class="text-white text-2xl">&times;</button>
-                                        </div>
-                                        <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-left">
-                                            <div>
-                                                <p><strong>Centre:</strong> {{ item.centre.name|default:"N/A" }}</p>
-                                                <p><strong>Department:</strong> {{ item.department.name|default:"N/A" }}</p>
-                                                <p><strong>Category:</strong> {{ item.get_category_display|default:"N/A" }}</p>
-                                                <p><strong>Hardware:</strong> {{ item.hardware|default:"N/A" }}</p>
-                                                <p><strong>Model:</strong> {{ item.system_model|default:"N/A" }}</p>
-                                                <p><strong>Processor:</strong> {{ item.processor|default:"N/A" }}</p>
-                                                <p><strong>RAM:</strong> {{ item.ram_gb|default:"N/A" }} GB</p>
-                                            </div>
-                                            <div>
-                                                <p><strong>HDD:</strong> {{ item.hdd_gb|default:"N/A" }} GB</p>
-                                                <p><strong>Serial:</strong> {{ item.serial_number|default:"N/A" }}</p>
-                                                <p><strong>Assignee:</strong> {{ item.assignee_first_name }} {{ item.assignee_last_name }}</p>
-                                                <p><strong>Email:</strong> {{ item.assignee_email_address|default:"N/A" }}</p>
-                                                <p><strong>Condition:</strong> {{ item.device_condition|default:"N/A" }}</p>
-                                            </div>
-                                            <div>
-                                                <p><strong>Status:</strong> {{ item.status|default:"N/A" }}</p>
-                                                <p><strong>Date:</strong> {{ item.date|date:"M d, Y"|default:"N/A" }}</p>
-                                                <p><strong>Added By:</strong> {{ item.added_by|default:"N/A" }}</p>
-                                                <p><strong>Approved By:</strong> {{ item.approved_by|default:"N/A" }}</p>
-                                                <p><strong>Approved:</strong> {{ item.is_approved|yesno:"Yes,No" }}</p>
-                                            </div>
-                                        </div>
-                                        <div class="p-4 border-t flex justify-end space-x-2">
-                                            <a href="{% url 'clear_user' item.id %}" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm">Clear User</a>
-                                            <a href="{% url 'download_clearance_form' item.id %}" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm">Clearance Form</a>
-                                            <button onclick="closeModal('viewModal{{ item.id }}')" class="bg-gray-600 text-white px-4 py-1 rounded hover:bg-gray-700 text-sm">Close</button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {% if user.is_superuser or user.is_trainer %}
-                                <div id="editModal{{ item.id }}" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 text-left">
-                                    <div class="bg-white rounded-lg shadow-xl w-full max-w-7xl mx-4 md:mx-6 max-h-[80vh] md:max-h-[90vh] overflow-y-auto relative animate__animated animate__zoomIn">
-                                        <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-t-lg flex justify-between items-center">
-                                            <h3 class="text-xl font-semibold">Edit Device</h3>
-                                            <button onclick="closeModal('editModal{{ item.id }}')" class="text-white hover:text-gray-200 text-2xl">&times;</button>
-                                        </div>
-                                        <div class="p-6">
-                                            <form action="{% url 'import_update' item.id %}" method="POST" onsubmit="return validateForm(this)">
-                                                {% csrf_token %}
-                                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                                    <div>
-                                                        <div class="mb-4">
-                                                            <label class="block text-gray-700 font-medium mb-1">Centre</label>
-                                                            <select name="centre" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" {% if user.is_trainer %}disabled{% endif %}>
-                                                                <option value="None">Select Centre</option>
-                                                                {% for centre in centres %}
-                                                                    <option value="{{ centre.id }}" {% if centre == item.centre %}selected{% endif %}>{{ centre.name }}</option>
-                                                                {% endfor %}
-                                                            </select>
-                                                            {% if user.is_trainer %}
-                                                                <input type="hidden" name="centre" value="{{ user.centre.id }}">
-                                                            {% endif %}
-                                                        </div>
-                                                        <div class="mb-4">
-                                                            <label class="block text-gray-700 font-medium mb-1">Department</label>
-                                                            <select name="department" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                                                                <option value="">Select Department</option>
-                                                                {% for dept in departments %}
-                                                                    <option value="{{ dept.id }}" {% if dept.id == item.department.id %}selected{% endif %}>{{ dept.name }} ({{ dept.department_code }})</option>
-                                                                {% endfor %}
-                                                            </select>
-                                                        </div>
-                                                        
-                                                        <div class="mb-4">
-                                                            <label class="block text-gray-700 font-medium mb-1">Category</label>
-                                                            <select name="category" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                                                                <option value="">Select Category</option>
-                                                                {% for value, label in category_choices %}
-                                                                    <option value="{{ value }}" {% if item.category == value %}selected{% endif %}>{{ label }}</option>
-                                                                {% endfor %}
-                                                            </select>
-                                                        </div>
-                                                        <div class="mb-4">
-                                                            <label class="block text-gray-700 font-medium mb-1">Hardware</label>
-                                                            <input type="text" name="hardware" value="{{ item.hardware|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                                        </div>
-                                                        <div class="mb-4">
-                                                            <label class="block text-gray-700 font-medium mb-1">System Model</label>
-                                                            <input type="text" name="system_model" value="{{ item.system_model|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                                        </div>
-                                                        <div class="mb-4">
-                                                            <label class="block text-gray-700 font-medium mb-1">Processor</label>
-                                                            <input type="text" name="processor" value="{{ item.processor|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <div class="mb-4">
-                                                            <label class="block text-gray-700 font-medium mb-1">RAM (GB)</label>
-                                                            <input type="text" name="ram_gb" value="{{ item.ram_gb|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                                        </div>
-                                                        <div class="mb-4">
-                                                            <label class="block text-gray-700 font-medium mb-1">HDD (GB)</label>
-                                                            <input type="text" name="hdd_gb" value="{{ item.hdd_gb|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                                        </div>
-                                                        <div class="mb-4">
-                                                            <label class="block text-gray-700 font-medium mb-1">Serial Number</label>
-                                                            <input type="text" name="serial_number" value="{{ item.serial_number|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                                                        </div>
-                                                        <div class="mb-4">
-                                                            <label class="block text-gray-700 font-medium mb-1">Assignee First Name</label>
-                                                            <input type="text" name="assignee_first_name" value="{{ item.assignee_first_name|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                                        </div>
-                                                        <div class="mb-4">
-                                                            <label class="block text-gray-700 font-medium mb-1">Assignee Last Name</label>
-                                                            <input type="text" name="assignee_last_name" value="{{ item.assignee_last_name|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <div class="mb-4">
-                                                            <label class="block text-gray-700 font-medium mb-1">Assignee Email</label>
-                                                            <input type="email" name="assignee_email_address" value="{{ item.assignee_email_address|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                                        </div>
-                                                        <div class="mb-4">
-                                                            <label class="block text-gray-700 font-medium mb-1">Device Condition</label>
-                                                            <input type="text" name="device_condition" value="{{ item.device_condition|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                                        </div>
-                                                        <div class="mb-4">
-                                                            <label class="block text-gray-700 font-medium mb-1">Status</label>
-                                                            <input type="text" name="status" value="{{ item.status|default_if_none:'' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                                        </div>
-                                                        <div class="mb-4">
-                                                            <label class="block text-gray-700 font-medium mb-1">Date</label>
-                                                            <input type="date" name="date" value="{{ item.date|date:'Y-m-d' }}" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                                        </div>
-                                                        {% if user.is_trainer %}
-                                                            <div class="mb-4">
-                                                                <label class="block text-gray-700 font-medium mb-1">Reason for Update</label>
-                                                                <textarea name="reason_for_update" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required>{{ item.reason_for_update|default_if_none:'' }}</textarea>
-                                                            </div>
-                                                        {% endif %}
-                                                        {% if user.is_superuser %}
-                                                            <div class="mb-4">
-                                                                <label class="block text-gray-700 font-medium mb-1">
-                                                                    <input type="checkbox" name="is_approved" {% if item.is_approved %}checked{% endif %} class="mr-2"> Approve
-                                                                </label>
-                                                            </div>
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
-                                                <div class="mt-6 flex justify-end space-x-3">
-                                                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200">Save</button>
-                                                    <button type="button" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200" onclick="closeModal('editModal{{ item.id }}')">Cancel</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endif %}
-
-                                {% if user.is_superuser and not user.is_trainer %}
+                                <!-- Dispose Modal -->
+                                {% if user.is_superuser and not user.is_trainer and not item.is_disposed %}
                                 <div id="disposeModal{{ item.id }}" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 text-left">
                                     <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md mx-4 animate__animated animate__zoomIn">
                                         <h3 class="text-lg font-bold mb-4 text-gray-800">Dispose Device</h3>
@@ -353,6 +216,7 @@
                                 </div>
                                 {% endif %}
 
+                                <!-- Delete Modal -->
                                 {% if user.is_it_manager or user.is_senior_it_officer %}
                                 <div id="deleteModal{{ item.id }}" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4 text-left">
                                     <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md animate__animated animate__zoomIn">
@@ -379,6 +243,7 @@
                                 </div>
                                 {% endif %}
 
+                                <!-- Approve Modal -->
                                 {% if user.is_superuser and not user.is_trainer and not item.is_approved %}
                                 <div id="approveModal{{ item.id }}" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 text-left">
                                     <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md mx-4 animate__animated animate__zoomIn">
@@ -408,7 +273,7 @@
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="6" class="text-center py-8 text-gray-500">No records found.</td>
+                        <td colspan="5" class="text-center py-8 text-gray-500">No records found.</td>
                     </tr>
                 {% endif %}
             </tbody>
@@ -493,21 +358,6 @@
     function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-    function validateForm(form) {
-        {% if user.is_trainer %}
-            const reason = form.querySelector('[name="reason_for_update"]').value;
-            if (!reason) { alert('Reason for update is required.'); return false; }
-        {% endif %}
-        
-        const serial = form.querySelector('[name="serial_number"]').value;
-        if (!serial) { alert('Serial number is required.'); return false; }
-        
-        const category = form.querySelector('[name="category"]').value;
-        if (!category) { alert('Category is required.'); return false; }
-
-        return true;
-    }
-
     function validateDisposalForm(form) {
         const reason = form.querySelector('[name="disposal_reason"]').value.trim();
         if (!reason) { alert('Reason for disposal is required.'); return false; }
@@ -523,16 +373,6 @@
             : `${base}?scope=page&page={{ data.number }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}&items_per_page={{ report_data.items_per_page }}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if show_duplicates == 'on' %}&show_duplicates=on{% endif %}${viewContext}`;
         
         window.location.href = url;
-    }
-
-    function getCurrentUrl() {
-        {% if view_name == 'display_approved_imports' %}
-            return "{% url 'display_approved_imports' %}";
-        {% elif view_name == 'display_unapproved_imports' %}
-            return "{% url 'display_unapproved_imports' %}";
-        {% else %}
-            return "{% url 'display_disposed_imports' %}";
-        {% endif %}
     }
 </script>
 

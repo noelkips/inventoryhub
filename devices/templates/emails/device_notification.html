@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Device {{ action|title }} Notification</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <h2 style="color: #143C50;">Device {{ action|title }} Notification</h2>
+    
+    <p>Dear <strong>{{ assignee.full_name }}</strong>,</p>
+    
+    <p>This is to notify you that the following device has been <strong>{{ action }}</strong> to you:</p>
+    
+    <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
+        <tr><th style="text-align:left; padding:8px; background:#f5f5f5;">Field</th><th style="text-align:left; padding:8px; background:#f5f5f5;">Details</th></tr>
+        <tr><td style="padding:8px; border-bottom:1px solid #ddd;">Device</td><td style="padding:8px; border-bottom:1px solid #ddd;">{{ device_name }} ({{ category }})</td></tr>
+        <tr><td style="padding:8px; border-bottom:1px solid #ddd;">Serial Number</td><td style="padding:8px; border-bottom:1px solid #ddd;">{{ serial }}</td></tr>
+        <tr><td style="padding:8px; border-bottom:1px solid #ddd;">Centre</td><td style="padding:8px; border-bottom:1px solid #ddd;">{{ centre.name|default:"N/A" }}</td></tr>
+        <tr><td style="padding:8px; border-bottom:1px solid #ddd;">Department</td><td style="padding:8px; border-bottom:1px solid #ddd;">{{ department.name|default:"N/A" }}</td></tr>
+    </table>
+
+    <p><strong>Action performed by:</strong> {{ issued_by.get_full_name|default:issued_by.username }} ({{ issued_by.email|default:"N/A" }})<br>
+       <strong>Date/Time:</strong> {{ issued_at|date:"Y-m-d H:i" }}</p>
+
+    <p>Please acknowledge receipt and take good care of the device.</p>
+
+    <p>Best regards,<br>
+       {{ issued_by.get_full_name|default:issued_by.username }}<br>
+       MoH IAfrica IT Team</p>
+</body>
+</html>

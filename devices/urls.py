@@ -45,14 +45,28 @@ urlpatterns = [
 
     path('dispose/add/', views.dispose_add, name='dispose_add'),
     path('dispose/template/', views.download_dispose_template, name='download_dispose_template'),
+    path('devices/<int:pk>/', views.device_detail, name='device_detail'),
+     # Issuance workflow
+    path('device/<int:pk>/sign-issuance/', views.sign_issuance, name='sign_issuance'),
+    path('device/<int:pk>/sign-clearance/', views.sign_clearance, name='sign_clearance'),
+    path('device/<int:pk>/download-uaf/', views.download_uaf_pdf, name='download_uaf_pdf'),
+    path('download-past-uaf/<int:agreement_id>/', views.download_past_uaf_pdf, name='download_past_uaf_pdf'),
+
 
     # Reporting and Display
     path('displaycsv/', views.display_approved_imports, name='display_csv'),  # Legacy URL, consider deprecating
     path('displayreport/approved/', views.display_approved_imports, name='display_approved_imports'),
     path('displayreport/unapproved/', views.display_unapproved_imports, name='display_unapproved_imports'),
     path('displayreport/disposed/', views.display_disposed_imports, name='display_disposed_imports'),
+    path('check-serial/', views.check_serial, name='check_serial'),
     path('exportpdf/', views.export_to_pdf, name='export_to_pdf'),
     path('exportexcel/', views.export_to_excel, name='export_to_excel'),
+
+    # Employee Management
+    path('employees/', views.employee_list, name='employee_list'),
+    path('employees/add/', views.employee_add, name='employee_add'),
+    path('employees/<int:pk>/update/', views.employee_update, name='employee_update'),
+    path('employees/<int:pk>/delete/', views.employee_delete, name='employee_delete'),
 
   
 

@@ -1,0 +1,229 @@
+{% extends "dashboard.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white shadow-xl rounded-xl overflow-hidden border border-gray-300">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-[#143C50] to-[#288CC8] text-white p-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold">Device Details</h1>
+                    <p class="mt-2 text-lg opacity-90">Serial: <strong>{{ device.serial_number|default:"N/A" }}</strong></p>
+                </div>
+                <a href="{% url 'display_approved_imports' %}" 
+                   class="bg-white text-[#143C50] px-6 py-2 rounded-lg hover:bg-gray-100 transition font-medium">
+                    Back to List
+                </a>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+        <div class="p-6 space-y-4">
+            {% for message in messages %}
+            <div class="p-4 rounded-lg border-l-4 {% if message.tags == 'error' %}bg-red-50 border-red-500 text-red-700{% elif message.tags == 'warning' %}bg-yellow-50 border-yellow-500 text-yellow-700{% else %}bg-green-50 border-green-500 text-green-700{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Main Content -->
+        <div class="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Device Info -->
+            <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                <h3 class="text-lg font-semibold text-[#143C50] mb-4">Device Information</h3>
+                <dl class="space-y-3 text-sm">
+                    <div class="flex justify-between">
+                        <dt class="font-medium text-gray-700">Category</dt>
+                        <dd>{{ device.get_category_display|default:"N/A" }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="font-medium text-gray-700">Device Name</dt>
+                        <dd>{{ device.device_name|default:"N/A" }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="font-medium text-gray-700">System Model</dt>
+                        <dd>{{ device.system_model|default:"N/A" }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="font-medium text-gray-700">Processor</dt>
+                        <dd>{{ device.processor|default:"N/A" }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="font-medium text-gray-700">RAM</dt>
+                        <dd>{{ device.ram_gb|default:"N/A" }} GB</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="font-medium text-gray-700">HDD/SSD</dt>
+                        <dd>{{ device.hdd_gb|default:"N/A" }} GB</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="font-medium text-gray-700">Serial Number</dt>
+                        <dd class="font-mono">{{ device.serial_number|default:"N/A" }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="font-medium text-gray-700">Condition</dt>
+                        <dd>{{ device.device_condition|default:"N/A" }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- Assignee & Status -->
+            <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                <h3 class="text-lg font-semibold text-[#143C50] mb-4">Assignee & Status</h3>
+                <dl class="space-y-3 text-sm">
+                    <div class="flex justify-between">
+                        <dt class="font-medium text-gray-700">Assignee</dt>
+                        <dd>
+                            {% if device.assignee %}
+                                {{ device.assignee.full_name }} 
+                                <span class="text-gray-500">({{ device.assignee.staff_number|default:"No ID" }})</span>
+                            {% else %}
+                                <span class="text-gray-600">Unassigned</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="font-medium text-gray-700">Status</dt>
+                        <dd class="{% if device.status == 'Available' %}text-green-600{% elif device.status == 'Disposed' %}text-red-600{% else %}text-blue-600{% endif %} font-medium">
+                            {{ device.status|default:"N/A" }}
+                        </dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="font-medium text-gray-700">Date Added</dt>
+                        <dd>{{ device.date|date:"d M Y"|default:"N/A" }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="font-medium text-gray-700">UAF Signed</dt>
+                        <dd class="{% if device.uaf_signed %}text-green-600 font-medium{% else %}text-red-600{% endif %}">
+                            {{ device.uaf_signed|yesno:"Yes,No" }}
+                        </dd>
+                    </div>
+                </dl>
+
+                <!-- UAF Actions -->
+                <div class="mt-6 space-y-3">
+                    {% if device.assignee %}
+                        <!-- Device has an assignee -->
+                        {% if not device.uaf_signed %}
+                            <!-- Sign Issuance UAF -->
+                            <a href="{% url 'sign_issuance' device.pk %}"
+                               class="block bg-green-600 hover:bg-green-700 text-white text-center py-3 rounded-lg transition font-medium shadow-md">
+                                <svg class="inline w-5 h-5 mr-2 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                                Sign Issuance UAF
+                            </a>
+                        {% else %}
+                            <!-- Download UAF and Clear Device Options -->
+                            <a href="{% url 'download_uaf_pdf' device.pk %}"
+                               class="block bg-blue-600 hover:bg-blue-700 text-white text-center py-3 rounded-lg transition font-medium shadow-md">
+                                <svg class="inline w-5 h-5 mr-2 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                Download Current UAF
+                            </a>
+
+                            <!-- Sign Clearance Form -->
+                            <a href="{% url 'sign_clearance' device.pk %}"
+                               class="block bg-orange-600 hover:bg-orange-700 text-white text-center py-3 rounded-lg transition font-medium shadow-md">
+                                <svg class="inline w-5 h-5 mr-2 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Clear Device (Return to IT)
+                            </a>
+                        {% endif %}
+                    {% else %}
+                        <!-- Device is UNASSIGNED (cleared or never assigned) -->
+                        <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-3">
+                            <div class="flex items-center mb-2">
+                                <svg class="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span class="text-sm font-semibold text-blue-900">Device Available</span>
+                            </div>
+                            <p class="text-xs text-blue-800">This device is not currently assigned to anyone. You can assign it to a new user.</p>
+                        </div>
+
+                        <!-- Assign to New User Button -->
+                        {% if can_edit %}
+                            <a href="{% url 'import_update' device.pk %}"
+                               class="block bg-green-600 hover:bg-green-700 text-white text-center py-3 rounded-lg transition font-medium shadow-md">
+                                <svg class="inline w-5 h-5 mr-2 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                                </svg>
+                                Assign to New User
+                            </a>
+                        {% endif %}
+
+                        <!-- View Past Agreements if they exist -->
+                        {% if past_agreements_exist %}
+                            <a href="{% url 'device_history' device.pk %}"
+                               class="block bg-purple-600 hover:bg-purple-700 text-white text-center py-3 rounded-lg transition font-medium shadow-md">
+                                <svg class="inline w-5 h-5 mr-2 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                View Past UAF Agreements
+                            </a>
+                        {% endif %}
+                    {% endif %}
+
+                    <!-- Edit Device - Always show for authorized users -->
+                    {% if can_edit %}
+                        {% if device.assignee %}
+                            <!-- Only show as separate button if device is assigned -->
+                            <a href="{% url 'import_update' device.pk %}"
+                               class="block bg-yellow-600 hover:bg-yellow-700 text-white text-center py-3 rounded-lg transition font-medium shadow-md">
+                                <svg class="inline w-5 h-5 mr-2 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                                Edit Device Details
+                            </a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Audit Info -->
+            <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                <h3 class="text-lg font-semibold text-[#143C50] mb-4">Audit Information</h3>
+                <dl class="space-y-3 text-sm">
+                    <div class="flex justify-between">
+                        <dt class="font-medium text-gray-700">Added By</dt>
+                        <dd>{{ device.added_by.get_full_name|default:device.added_by.username|default:"N/A" }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="font-medium text-gray-700">Approved By</dt>
+                        <dd>{{ device.approved_by.get_full_name|default:device.approved_by.username|default:"N/A" }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="font-medium text-gray-700">Approved</dt>
+                        <dd class="{% if device.is_approved %}text-green-600{% else %}text-red-600{% endif %} font-medium">
+                            {{ device.is_approved|yesno:"Yes,No" }}
+                        </dd>
+                    </div>
+                    {% if device.is_disposed %}
+                        <div class="flex justify-between">
+                            <dt class="font-medium text-gray-700">Disposed Reason</dt>
+                            <dd class="text-red-600">{{ device.disposal_reason|default:"N/A" }}</dd>
+                        </div>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+
+        <!-- History Link -->
+        <div class="p-6 border-t bg-gray-50">
+            <a href="{% url 'device_history' device.pk %}"
+               class="text-blue-600 hover:underline font-medium flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                View Full Change History & Past UAF Agreements
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

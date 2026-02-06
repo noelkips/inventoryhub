@@ -12,7 +12,7 @@ class ImportForm(forms.ModelForm):
     class Meta:
         model = Import
         fields = [
-            'file', 'centre', 'department', 'hardware', 'system_model', 'processor',
+            'file', 'centre', 'department', 'device_name', 'system_model', 'processor',
             'ram_gb', 'hdd_gb', 'serial_number', 'assignee_first_name',
             'assignee_last_name', 'assignee_email_address', 'device_condition',
             'status'

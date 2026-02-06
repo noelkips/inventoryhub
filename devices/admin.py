@@ -9,7 +9,7 @@ from django.contrib.auth.models import Group
 from django.utils.html import format_html
 from django.shortcuts import get_object_or_404
 from .views import handle_uploaded_file
-from .models import CustomUser, Department, Import, Centre, Report
+from .models import CustomUser, Department, Import, Centre, Report, Employee
 from .forms import ImportForm
 from django.core.files.uploadedfile import SimpleUploadedFile
 from io import BytesIO
@@ -216,44 +216,162 @@ class CustomUserAdmin(UserAdmin):
             )
         return super().change_view(request, object_id, form_url, extra_context)
 
-        
-class ImportAdmin(admin.ModelAdmin):
-    form = ImportForm
+
+
+@admin.register(Employee)
+class EmployeeAdmin(admin.ModelAdmin):
     list_display = (
-        'get_centre', 'department', 'hardware', 'system_model', 'processor', 'ram_gb',
-        'hdd_gb', 'serial_number', 'assignee_first_name', 'assignee_last_name',
-        'assignee_email_address', 'device_condition', 'status', 'get_added_by',
-        'get_approved_by', 'is_approved', 'reason_for_update'
+        'full_name',
+        'staff_number',
+        'email',
+        'department',
+        'centre',
+        'is_active',
+        'device_count',
+        'created_at',
     )
-    search_fields = (
-        'centre__name', 'department__name', 'hardware', 'system_model', 'processor',
-        'ram_gb', 'hdd_gb', 'serial_number', 'assignee_first_name', 'assignee_last_name',
-        'assignee_email_address', 'device_condition', 'status', 'added_by__username',
-        'approved_by__username', 'reason_for_update'
-    )
-    list_filter = (
-        ('centre', admin.RelatedOnlyFieldListFilter),
-        ('added_by', admin.RelatedOnlyFieldListFilter),
-        ('approved_by', admin.RelatedOnlyFieldListFilter),
-        'is_approved'
-    )
-    readonly_fields = ()
+    list_filter = ('is_active', 'department', 'centre')
+    search_fields = ('first_name', 'last_name', 'email', 'staff_number')
+    readonly_fields = ('created_at', 'updated_at')
+    ordering = ('last_name', 'first_name')
+
     fieldsets = (
         (None, {
             'fields': (
-                'file', 'centre', 'department', 'hardware', 'system_model', 'processor',
-                'ram_gb', 'hdd_gb', 'serial_number', 'assignee_first_name', 'assignee_last_name',
-                'assignee_email_address', 'device_condition', 'status', 'added_by',
-                'approved_by', 'is_approved', 'reason_for_update'
+                ('first_name', 'last_name'),
+                ('email', 'staff_number'),
+                ('department', 'centre'),
+                'is_active',
             )
+        }),
+        ('System', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
         }),
     )
 
+    def full_name(self, obj):
+        return obj.full_name
+    full_name.short_description = "Full Name"
+
+    def device_count(self, obj):
+        return obj.assigned_devices.count()
+    device_count.short_description = "# Devices"
+
+
+@admin.register(Import)
+class ImportAdmin(admin.ModelAdmin):
+    # form = ImportForm   # ← uncomment & update your form when ready
+
+    list_display = (
+        'get_centre',
+        'department',
+        'device_name',
+        'system_model',
+        'processor',
+        'ram_gb',
+        'hdd_gb',
+        'serial_number',
+        'current_assignee_display',
+        'device_condition',
+        'status',
+        'get_added_by',
+        'get_approved_by',
+        'is_approved',
+        'is_disposed',
+        'assignee_cache',
+    )
+
+    search_fields = (
+        'centre__name',
+        'department__name',
+        'device_name',
+        'system_model',
+        'processor',
+        'ram_gb',
+        'hdd_gb',
+        'serial_number',
+        'assignee__first_name',
+        'assignee__last_name',
+        'assignee__email',
+        'assignee__staff_number',
+        'assignee_cache',
+        'assignee_first_name',
+        'assignee_last_name',
+        'assignee_email_address',
+        'device_condition',
+        'status',
+        'added_by__username',
+        'approved_by__username',
+        'reason_for_update',
+    )
+
+    list_filter = (
+        ('centre', admin.RelatedOnlyFieldListFilter),
+        ('department', admin.RelatedOnlyFieldListFilter),
+        ('assignee__department', admin.RelatedOnlyFieldListFilter),
+        ('added_by', admin.RelatedOnlyFieldListFilter),
+        ('approved_by', admin.RelatedOnlyFieldListFilter),
+        'is_approved',
+        'is_disposed',
+        'category',
+    )
+
+    readonly_fields = ('date', 'added_by', 'approved_by', 'assignee_cache')
+
+    fieldsets = (
+        (None, {
+            'fields': (
+                'centre', 'department', 'category',
+                'device_name', 'system_model', 'processor', 'ram_gb', 'hdd_gb',
+                'serial_number', 'device_condition', 'status',
+                'is_disposed', 'disposal_reason',
+            )
+        }),
+        ('Current Assignee (recommended)', {
+            'fields': ('assignee', 'assignee_cache'),
+            'classes': ('grp-collapse grp-open',)
+        }),
+        ('Legacy Assignee Info (temporary)', {
+            'fields': ('assignee_first_name', 'assignee_last_name', 'assignee_email_address'),
+            'classes': ('grp-collapse grp-closed',)
+        }),
+        ('Audit & Approval', {
+            'fields': ('date', 'added_by', 'approved_by', 'is_approved', 'reason_for_update'),
+            'classes': ('grp-collapse grp-closed',)
+        }),
+    )
+
+    def current_assignee_display(self, obj):
+        if obj.assignee:
+            return str(obj.assignee)
+        if obj.assignee_cache:
+            return obj.assignee_cache
+        parts = [obj.assignee_first_name, obj.assignee_last_name]
+        name = " ".join(filter(None, parts)).strip()
+        return name or "—"
+    current_assignee_display.short_description = "Assignee"
+    current_assignee_display.admin_order_field = 'assignee_cache'
+
+    # Your existing helper methods
+    def get_centre(self, obj):
+        return obj.centre.centre_code if obj.centre else "N/A"
+    get_centre.short_description = 'Centre Code'
+
+    def get_added_by(self, obj):
+        return obj.added_by.username if obj.added_by else "—"
+    get_added_by.short_description = 'Added By'
+
+    def get_approved_by(self, obj):
+        return obj.approved_by.username if obj.approved_by else "—"
+    get_approved_by.short_description = 'Approved By'
+
+    # Keep your permission & queryset overrides
     def get_readonly_fields(self, request, obj=None):
-        readonly = []
+        base = ['date', 'added_by', 'approved_by', 'assignee_cache']
         if request.user.is_trainer:
-            readonly = ['is_approved', 'approved_by', 'centre', 'file']
-        return readonly
+            base += ['is_approved', 'approved_by', 'centre']
+        return base
 
     def has_add_permission(self, request):
         return not request.user.is_trainer
@@ -263,6 +381,12 @@ class ImportAdmin(admin.ModelAdmin):
         if request.user.is_trainer and not request.user.is_superuser:
             qs = qs.filter(centre=request.user.centre)
         return qs
+
+    def has_change_permission(self, request, obj=None):
+        if request.user.is_trainer and obj and obj.is_approved:
+            return False
+        return super().has_change_permission(request, obj)
+
 
     def save_model(self, request, obj, form, change):
         if not obj.added_by:
@@ -359,6 +483,8 @@ class ImportAdmin(admin.ModelAdmin):
     def get_approved_by(self, obj):
         return obj.approved_by.username if obj.approved_by else "N/A"
     get_approved_by.short_description = 'Approved By'
+
+    
 class ReportAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return False  # Remove the "Add" button for Report
@@ -373,5 +499,4 @@ class ReportAdmin(admin.ModelAdmin):
 
 admin.site.register(Centre)
 admin.site.register(Department)
-admin.site.register(Import, ImportAdmin)
 admin.site.register(Report, ReportAdmin)

@@ -2,245 +2,262 @@
 {% load static %}
 
 {% block content %}
-<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="container mx-auto px-4 py-8">
     <div class="bg-white shadow-lg rounded-lg overflow-hidden">
         <div class="bg-gradient-to-r from-[#143C50] to-[#288CC8] text-white p-6">
             <h2 class="text-2xl font-bold">Add New Device</h2>
-            <p class="mt-2">Add a single device or upload bulk via CSV</p>
+            <p class="mt-2">Single entry or bulk CSV upload</p>
         </div>
 
         <div class="p-6">
             {% if messages %}
-            <div class="mb-4">
+            <div class="mb-6 space-y-3">
                 {% for message in messages %}
-                <div class="bg-{% if message.tags == 'error' %}red{% else %}green{% endif %}-100 border-l-4 border-{% if message.tags == 'error' %}red{% else %}green{% endif %}-500 text-{% if message.tags == 'error' %}red{% else %}green{% endif %}-700 p-4 rounded animate-fadeIn" role="alert">
-                    <p>{{ message }}</p>
+                <div class="p-4 rounded border-l-4 {% if message.tags == 'error' %}bg-red-50 border-red-500 text-red-700{% elif message.tags == 'warning' %}bg-yellow-50 border-yellow-500 text-yellow-700{% else %}bg-green-50 border-green-500 text-green-700{% endif %}">
+                    {{ message }}
                 </div>
                 {% endfor %}
             </div>
             {% endif %}
 
-            <div class="mb-8 border-b pb-8">
-                <h3 class="text-xl font-bold text-[#143C50] mb-4">Bulk Upload via CSV</h3>
-                <form method="post" enctype="multipart/form-data" id="bulkUploadForm">
+            <!-- Bulk Upload -->
+            <div class="mb-12 pb-8 border-b">
+                <h3 class="text-xl font-bold text-[#143C50] mb-5">Bulk Upload (CSV)</h3>
+                <form method="post" enctype="multipart/form-data" class="space-y-6">
                     {% csrf_token %}
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                         {% if not user.is_trainer %}
                         <div>
-                            <label class="block text-[#143C50] font-semibold mb-2">Centre *</label>
-                            <select name="bulk_centre" id="bulk_centre" required class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8]">
-                                <option value="">Select Centre</option>
-                                {% for centre in centres %}
-                                <option value="{{ centre.id }}">{{ centre.name }}</option>
+                            <label class="block font-semibold text-[#143C50] mb-2">Centre *</label>
+                            <select name="bulk_centre" required class="w-full border border-gray-300 rounded p-2 focus:ring-2 focus:ring-[#288CC8]">
+                                <option value="">— Select Centre —</option>
+                                {% for c in centres %}
+                                <option value="{{ c.id }}">{{ c.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         {% else %}
                         <input type="hidden" name="bulk_centre" value="{{ user.centre.id }}">
                         <div>
-                            <label class="block text-[#143C50] font-semibold mb-2">Centre</label>
-                            <input type="text" value="{{ user.centre.name }}" disabled class="w-full p-2 border border-[#A0A0A0] rounded bg-gray-100">
+                            <label class="block font-semibold text-[#143C50] mb-2">Centre</label>
+                            <input type="text" value="{{ user.centre.name }}" disabled class="w-full p-2 bg-gray-100 border border-gray-300 rounded">
                         </div>
                         {% endif %}
 
                         <div>
-                            <label class="block text-[#143C50] font-semibold mb-2">Department *</label>
-                            <select name="bulk_department" id="bulk_department" required class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8]">
-                                <option value="">Select Department</option>
-                                {% for dept in departments %}
-                                <option value="{{ dept.id }}">{{ dept.name }} ({{ dept.department_code }})</option>
+                            <label class="block font-semibold text-[#143C50] mb-2">Department *</label>
+                            <select name="bulk_department" required class="w-full border border-gray-300 rounded p-2 focus:ring-2 focus:ring-[#288CC8]">
+                                <option value="">— Select Department —</option>
+                                {% for d in departments %}
+                                <option value="{{ d.id }}">{{ d.name }} ({{ d.department_code }})</option>
                                 {% endfor %}
                             </select>
                         </div>
 
                         <div>
-                            <label class="block text-[#143C50] font-semibold mb-2">Device Category *</label>
-                            <select name="bulk_category" id="bulk_category" required class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8]">
-                                <option value="">Select Category</option>
-                                {% for value, label in category_choices %}
-                                    <option value="{{ value }}">{{ label }}</option>
+                            <label class="block font-semibold text-[#143C50] mb-2">Category *</label>
+                            <select name="bulk_category" required class="w-full border border-gray-300 rounded p-2 focus:ring-2 focus:ring-[#288CC8]">
+                                <option value="">— Select Category —</option>
+                                {% for val, lbl in category_choices %}
+                                <option value="{{ val }}">{{ lbl }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                     </div>
 
-                    <div class="mb-4">
-                        <label class="block text-[#143C50] font-semibold mb-2">Upload CSV File *</label>
-                        <input type="file" name="file" accept=".csv" required class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8]">
-                        <p class="text-sm text-gray-600 mt-1">CSV should NOT include centre, department, or category columns</p>
+                    <div>
+                        <label class="block font-semibold text-[#143C50] mb-2">CSV File *</label>
+                        <input type="file" name="file" accept=".csv" required class="block w-full border border-gray-300 rounded p-2">
+                        <p class="text-sm text-gray-500 mt-1">Do <strong>not</strong> include centre/department/category in CSV</p>
                     </div>
 
                     <div class="flex flex-wrap gap-4">
-                        <button type="submit" class="bg-[#288CC8] text-white px-6 py-2 rounded hover:bg-[#143C50] transition-all duration-200">Upload CSV</button>
-                        <button type="button" onclick="showModal('uploadGuideModal')" class="bg-[#143C50] text-white px-6 py-2 rounded hover:bg-[#288CC8] transition-all duration-200">Upload Guide</button>
-                        
-                        <a href="{% url 'download_csv_template' %}" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition-all duration-200 text-center">
-                            Download Template
-                        </a>
+                        <button type="submit" class="bg-[#288CC8] text-white px-6 py-2.5 rounded hover:bg-[#143C50]">Upload CSV</button>
+                        <button type="button" onclick="showModal('uploadGuideModal')" class="bg-[#143C50] text-white px-6 py-2.5 rounded hover:bg-[#288CC8]">Guide</button>
+                        <a href="{% url 'download_csv_template' %}" class="bg-green-600 text-white px-6 py-2.5 rounded hover:bg-green-700 inline-block text-center">Template</a>
                     </div>
                 </form>
             </div>
 
-            <div>
-                <h3 class="text-xl font-bold text-[#143C50] mb-4">Add Single Device</h3>
-                <button onclick="showModal('addModal')" class="bg-[#288CC8] text-white px-6 py-2 rounded hover:bg-[#143C50] transition-all duration-200">Open Single Add Form</button>
-            </div>
+            <!-- Single Add Button -->
+            <h3 class="text-xl font-bold text-[#143C50] mb-5">Add Single Device</h3>
+            <button onclick="showModal('addModal')" class="bg-[#288CC8] text-white px-6 py-2.5 rounded hover:bg-[#143C50]">
+                Open Single Add Form
+            </button>
 
-            <div id="addModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center overflow-y-auto">
-                <div class="bg-white p-6 rounded-lg w-full max-w-5xl mx-4 transform transition-all duration-300 animate-slideIn" style="max-height: 90vh; overflow-y: auto;">
-                    <h3 class="text-xl font-bold text-[#143C50] mb-4">Add Single Device</h3>
-                    <form method="post" action="{% url 'import_add' %}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Single Add Modal -->
+            <div id="addModal" class="fixed inset-0 bg-black bg-opacity-60 hidden z-50 flex items-center justify-center overflow-y-auto">
+                <div class="bg-white rounded-xl p-7 w-full max-w-4xl mx-4 max-h-[92vh] overflow-y-auto shadow-2xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-2xl font-bold text-[#143C50]">Add Single Device</h3>
+                        <button onclick="closeModal('addModal')" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+                    </div>
+
+                    <form method="post" class="grid grid-cols-1 md:grid-cols-3 gap-5">
                         {% csrf_token %}
-                        
+
                         {% if not user.is_trainer %}
                         <div>
-                            <label class="block text-[#143C50] font-semibold mb-1">Centre *</label>
-                            <select name="centre" required class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8]">
-                                <option value="">Select Centre</option>
-                                {% for centre in centres %}
-                                <option value="{{ centre.id }}">{{ centre.name }}</option>
+                            <label class="block font-semibold text-[#143C50] mb-1.5">Centre *</label>
+                            <select name="centre" required class="w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-[#288CC8]">
+                                <option value="">— Select —</option>
+                                {% for c in centres %}
+                                <option value="{{ c.id }}">{{ c.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         {% else %}
                         <input type="hidden" name="centre" value="{{ user.centre.id }}">
                         <div>
-                            <label class="block text-[#143C50] font-semibold mb-1">Centre</label>
-                            <input type="text" value="{{ user.centre.name }}" disabled class="w-full p-2 border border-[#A0A0A0] rounded bg-gray-100">
+                            <label class="block font-semibold text-[#143C50] mb-1.5">Centre</label>
+                            <input type="text" value="{{ user.centre.name }}" disabled class="w-full p-2.5 bg-gray-100 border border-gray-300 rounded">
                         </div>
                         {% endif %}
 
                         <div>
-                            <label class="block text-[#143C50] font-semibold mb-1">Department *</label>
-                            <select name="department" required class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8]">
-                                <option value="">Select Department</option>
-                                {% for dept in departments %}
-                                <option value="{{ dept.id }}">{{ dept.name }} ({{ dept.department_code }})</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <!-- FOR SINGLE DEVICE ADD CATEGORY (inside modal) -->
-                        <div>
-                            <label class="block text-[#143C50] font-semibold mb-1">Device Category *</label>
-                            <select name="category" required class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8]">
-                                <option value="">Select Category</option>
-                                {% for value, label in category_choices %}
-                                    <option value="{{ value }}">{{ label }}</option>
+                            <label class="block font-semibold text-[#143C50] mb-1.5">Department *</label>
+                            <select name="department" required class="w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-[#288CC8]">
+                                <option value="">— Select —</option>
+                                {% for d in departments %}
+                                <option value="{{ d.id }}">{{ d.name }} ({{ d.department_code }})</option>
                                 {% endfor %}
                             </select>
                         </div>
 
                         <div>
-                            <label class="block text-[#143C50] font-semibold mb-1">Hardware</label>
-                            <input type="text" name="hardware" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8]">
+                            <label class="block font-semibold text-[#143C50] mb-1.5">Category *</label>
+                            <select name="category" required class="w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-[#288CC8]">
+                                <option value="">— Select —</option>
+                                {% for val, lbl in category_choices %}
+                                <option value="{{ val }}">{{ lbl }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
 
-                        <div>
-                            <label class="block text-[#143C50] font-semibold mb-1">System Model</label>
-                            <input type="text" name="system_model" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8]">
+                        <div class="md:col-span-3">
+                            <label class="block font-semibold text-[#143C50] mb-1.5">Serial Number *</label>
+                            <input type="text" name="serial_number" required class="w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-[#288CC8]">
                         </div>
 
-                        <div>
-                            <label class="block text-[#143C50] font-semibold mb-1">Processor</label>
-                            <input type="text" name="processor" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8]">
+                        <!-- Assignee Search + New Employee Modal Trigger -->
+                        <div class="md:col-span-3">
+                            <label class="block font-semibold text-[#143C50] mb-1.5">Assignee (optional)</label>
+                            <div class="relative">
+                                <input list="employee-list" name="assignee_search" id="assignee_search" placeholder="Search by name or email..." class="w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-[#288CC8]">
+                                <datalist id="employee-list">
+                                    {% for emp in employees %}
+                                    <option value="{{ emp.id }} - {{ emp.full_name }}{% if emp.email %} ({{ emp.email }}){% endif %}"></option>
+                                    {% endfor %}
+                                </datalist>
+                                <input type="hidden" name="assignee" id="assignee_id">
+                            </div>
+                            <p class="text-sm text-gray-500 mt-1">
+                                Start typing to search • <button type="button" onclick="showModal('newEmployeeModal')" class="text-[#288CC8] hover:underline">Add new person</button>
+                            </p>
                         </div>
 
-                        <div>
-                            <label class="block text-[#143C50] font-semibold mb-1">RAM (GB)</label>
-                            <input type="text" name="ram_gb" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8]">
-                        </div>
+                        <!-- Device fields -->
+                        <div><label class="block font-semibold text-[#143C50] mb-1.5">Device Name</label><input type="text" name="device_name" class="w-full border border-gray-300 rounded p-2.5"></div>
+                        <div><label class="block font-semibold text-[#143C50] mb-1.5">System Model</label><input type="text" name="system_model" class="w-full border border-gray-300 rounded p-2.5"></div>
+                        <div><label class="block font-semibold text-[#143C50] mb-1.5">Processor</label><input type="text" name="processor" class="w-full border border-gray-300 rounded p-2.5"></div>
+                        <div><label class="block font-semibold text-[#143C50] mb-1.5">RAM (GB)</label><input type="text" name="ram_gb" class="w-full border border-gray-300 rounded p-2.5"></div>
+                        <div><label class="block font-semibold text-[#143C50] mb-1.5">HDD/SSD (GB)</label><input type="text" name="hdd_gb" class="w-full border border-gray-300 rounded p-2.5"></div>
+                        <div><label class="block font-semibold text-[#143C50] mb-1.5">Condition</label><input type="text" name="device_condition" class="w-full border border-gray-300 rounded p-2.5"></div>
+                        <div class="md:col-span-3"><label class="block font-semibold text-[#143C50] mb-1.5">Status</label><input type="text" name="status" class="w-full border border-gray-300 rounded p-2.5"></div>
 
-                        <div>
-                            <label class="block text-[#143C50] font-semibold mb-1">HDD (GB)</label>
-                            <input type="text" name="hdd_gb" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8]">
-                        </div>
-
-                        <div>
-                            <label class="block text-[#143C50] font-semibold mb-1">Serial Number *</label>
-                            <input type="text" name="serial_number" required class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8]">
-                        </div>
-
-                        <div>
-                            <label class="block text-[#143C50] font-semibold mb-1">Assignee First Name</label>
-                            <input type="text" name="assignee_first_name" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8]">
-                        </div>
-
-                        <div>
-                            <label class="block text-[#143C50] font-semibold mb-1">Assignee Last Name</label>
-                            <input type="text" name="assignee_last_name" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8]">
-                        </div>
-
-                        <div>
-                            <label class="block text-[#143C50] font-semibold mb-1">Assignee Email</label>
-                            <input type="email" name="assignee_email_address" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8]">
-                        </div>
-
-                        <div>
-                            <label class="block text-[#143C50] font-semibold mb-1">Device Condition</label>
-                            <input type="text" name="device_condition" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8]">
-                        </div>
-
-                        <div>
-                            <label class="block text-[#143C50] font-semibold mb-1">Status</label>
-                            <input type="text" name="status" class="w-full p-2 border border-[#A0A0A0] rounded focus:outline-none focus:ring-2 focus:ring-[#288CC8]">
-                        </div>
-
-                        <div class="flex justify-end space-x-4 col-span-full md:col-span-3 mt-4">
-                            <button type="button" onclick="closeModal('addModal')" class="bg-[#A0A0A0] text-white px-6 py-2 rounded hover:bg-gray-600 transition-all duration-200">Cancel</button>
-                            <button type="submit" class="bg-[#288CC8] text-white px-6 py-2 rounded hover:bg-[#143C50] transition-all duration-200">Save Device</button>
+                        <div class="md:col-span-3 flex justify-end gap-4 mt-6">
+                            <button type="button" onclick="closeModal('addModal')" class="bg-gray-500 text-white px-6 py-2.5 rounded hover:bg-gray-600">Cancel</button>
+                            <button type="submit" class="bg-[#288CC8] text-white px-6 py-2.5 rounded hover:bg-[#143C50]">Save Device</button>
                         </div>
                     </form>
                 </div>
             </div>
 
-            <div id="uploadGuideModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center overflow-y-auto">
-                <div class="bg-white p-6 rounded-lg w-full max-w-3xl mx-4 transform transition-all duration-300 animate-slideIn" style="max-height: 90vh; overflow-y: auto;">
-                    <h3 class="text-xl font-bold text-[#143C50] mb-4">CSV Upload Guide</h3>
-                    <div class="text-[#143C50]">
-                        <p class="mb-4 font-semibold">Follow these steps to upload your CSV file:</p>
-                        
-                        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
-                            <p class="font-semibold text-yellow-800">Important: CSV Format</p>
-                            <p class="text-sm text-yellow-700">Your CSV should NOT include centre, department, or category columns. These will be selected in the form above.</p>
-                        </div>
-
-                        <ol class="list-decimal list-inside space-y-2 mb-4">
-                            <li><strong>Required columns in your CSV:</strong></li>
-                            <ul class="list-disc list-inside ml-6 mb-3 space-y-1">
-                                <li><code class="bg-gray-100 px-2 py-1 rounded">serial_number</code> (required)</li>
-                                <li><code class="bg-gray-100 px-2 py-1 rounded">hardware</code></li>
-                                <li><code class="bg-gray-100 px-2 py-1 rounded">system_model</code></li>
-                                <li><code class="bg-gray-100 px-2 py-1 rounded">processor</code></li>
-                                <li><code class="bg-gray-100 px-2 py-1 rounded">ram_gb</code></li>
-                                <li><code class="bg-gray-100 px-2 py-1 rounded">hdd_gb</code></li>
-                                <li><code class="bg-gray-100 px-2 py-1 rounded">assignee_first_name</code></li>
-                                <li><code class="bg-gray-100 px-2 py-1 rounded">assignee_last_name</code></li>
-                                <li><code class="bg-gray-100 px-2 py-1 rounded">assignee_email_address</code></li>
-                                <li><code class="bg-gray-100 px-2 py-1 rounded">device_condition</code></li>
-                                <li><code class="bg-gray-100 px-2 py-1 rounded">status</code></li>
-                                <li><code class="bg-gray-100 px-2 py-1 rounded">date</code> (Format: YYYY-MM-DD or MM/DD/YYYY)</li>
-                            </ul>
-                            
-                            <li><strong>Before uploading:</strong></li>
-                            <ul class="list-disc list-inside ml-6 mb-3 space-y-1">
-                                <li>Select the Centre (if applicable)</li>
-                                <li>Select the Department</li>
-                                <li>Select the Device Category</li>
-                            </ul>
-
-                            <li>Save your Excel file as <strong>CSV (Comma delimited)</strong> format</li>
-                            <li>Click "Upload CSV" button to import all devices</li>
-                        </ol>
-
-                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
-                            <p class="font-semibold text-blue-800">Note:</p>
-                            <p class="text-sm text-blue-700">All devices in the CSV will be assigned to the centre, department, and category you selected above.</p>
-                        </div>
+            <!-- New Employee Modal – FULL FIELDS -->
+            <div id="newEmployeeModal" class="fixed inset-0 bg-black bg-opacity-60 hidden z-50 flex items-center justify-center">
+                <div class="bg-white rounded-xl p-7 w-full max-w-lg mx-4 shadow-2xl">
+                    <div class="flex justify-between items-center mb-5">
+                        <h4 class="text-xl font-bold text-[#143C50]">Add New Person</h4>
+                        <button onclick="closeModal('newEmployeeModal')" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
                     </div>
-                    <div class="flex justify-end mt-6">
-                        <button type="button" onclick="closeModal('uploadGuideModal')" class="bg-[#288CC8] text-white px-6 py-2 rounded hover:bg-[#143C50] transition-all duration-200">Got it!</button>
+
+                    <form method="post" class="space-y-5">
+                        {% csrf_token %}
+                        <input type="hidden" name="new_employee_submit" value="1">
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block font-semibold text-[#143C50] mb-1.5">First Name *</label>
+                                <input type="text" name="new_first_name" required class="w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-[#288CC8]">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-[#143C50] mb-1.5">Last Name *</label>
+                                <input type="text" name="new_last_name" required class="w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-[#288CC8]">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block font-semibold text-[#143C50] mb-1.5">Email (optional – must be unique)</label>
+                            <input type="email" name="new_email" class="w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-[#288CC8]">
+                        </div>
+
+                        <div>
+                            <label class="block font-semibold text-[#143C50] mb-1.5">Staff Number (optional – PF/Employee ID)</label>
+                            <input type="text" name="new_staff_number" class="w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-[#288CC8]">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block font-semibold text-[#143C50] mb-1.5">Centre (optional)</label>
+                                <select name="new_centre" class="w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-[#288CC8]">
+                                    <option value="">— None —</option>
+                                    {% for c in centres %}
+                                    <option value="{{ c.id }}">{{ c.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-[#143C50] mb-1.5">Department (optional)</label>
+                                <select name="new_department" class="w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-[#288CC8]">
+                                    <option value="">— None —</option>
+                                    {% for d in departments %}
+                                    <option value="{{ d.id }}">{{ d.name }} ({{ d.department_code }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-4 mt-6">
+                            <button type="button" onclick="closeModal('newEmployeeModal')" class="bg-gray-500 text-white px-5 py-2 rounded hover:bg-gray-600">Cancel</button>
+                            <button type="submit" class="bg-[#288CC8] text-white px-5 py-2 rounded hover:bg-[#143C50]">Create Employee</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Upload Guide Modal -->
+            <div id="uploadGuideModal" class="fixed inset-0 bg-black bg-opacity-60 hidden z-50 flex items-center justify-center overflow-y-auto">
+                <div class="bg-white rounded-xl p-7 w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto shadow-2xl">
+                    <h3 class="text-2xl font-bold text-[#143C50] mb-6">CSV Upload Guide</h3>
+                    <div class="prose text-[#143C50]">
+                        <p class="font-semibold mb-4">Important notes:</p>
+                        <ul class="list-disc pl-5 space-y-2 mb-6">
+                            <li>Required column: <code>serial_number</code></li>
+                            <li>Optional: device_name, system_model, processor, ram_gb, hdd_gb, assignee_first_name, assignee_last_name, assignee_email_address, device_condition, status, date</li>
+                            <li><strong>Do NOT</strong> include centre, department, category in the CSV — they are selected above</li>
+                        </ul>
+
+                        <p class="font-semibold">Date formats accepted:</p>
+                        <ul class="list-disc pl-5 space-y-1 mb-6">
+                            <li>YYYY-MM-DD</li>
+                            <li>DD/MM/YYYY</li>
+                            <li>MM/DD/YYYY</li>
+                        </ul>
+                    </div>
+
+                    <div class="flex justify-end mt-8">
+                        <button onclick="closeModal('uploadGuideModal')" class="bg-[#288CC8] text-white px-6 py-2.5 rounded hover:bg-[#143C50]">Close</button>
                     </div>
                 </div>
             </div>
@@ -248,41 +265,34 @@
     </div>
 </div>
 
-<style>
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes slideIn {
-        from { opacity: 0; transform: scale(0.95); }
-        to { opacity: 1; transform: scale(1); }
-    }
-    .animate-fadeIn {
-        animation: fadeIn 0.5s ease-out forwards;
-    }
-    .animate-slideIn {
-        animation: slideIn 0.3s ease-out forwards;
-    }
-</style>
-
 <script>
-    function showModal(modalId) {
-        document.getElementById(modalId).classList.remove('hidden');
+    function showModal(id) {
+        document.getElementById(id).classList.remove('hidden');
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.add('hidden');
     }
 
-    function closeModal(modalId) {
-        document.getElementById(modalId).classList.add('hidden');
-    }
+    // Simple client-side search → hidden field
+    document.getElementById('assignee_search')?.addEventListener('input', function(e) {
+        const val = e.target.value.trim();
+        if (val.includes(' - ')) {
+            const idPart = val.split(' - ')[0];
+            document.getElementById('assignee_id').value = idPart;
+        } else {
+            document.getElementById('assignee_id').value = '';
+        }
+    });
 
-    // Close modal when clicking outside
-    document.addEventListener('click', function(event) {
-        const modals = ['addModal', 'uploadGuideModal'];
-        modals.forEach(modalId => {
-            const modal = document.getElementById(modalId);
-            if (event.target === modal) {
-                closeModal(modalId);
+    // Close modals when clicking outside content
+    document.addEventListener('click', function(e) {
+        ['addModal', 'newEmployeeModal', 'uploadGuideModal'].forEach(id => {
+            const modal = document.getElementById(id);
+            if (modal && !modal.querySelector('.rounded-xl').contains(e.target) && !e.target.closest('button[onclick*="showModal"]')) {
+                modal.classList.add('hidden');
             }
         });
     });
 </script>
+
 {% endblock %}
