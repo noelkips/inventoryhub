@@ -81,3 +81,306 @@ DEVELOPMENT MODE: Security restrictions relaxed (HTTP allowed, no redirects)
 [UID:1302][2534039] Child process with pid: 3194077 was killed by signal: 15, core dumped: no
 Failed login attempt for username: noel.langat
 DEVELOPMENT MODE: Security restrictions relaxed (HTTP allowed, no redirects)
+[UID:1302][523120] Child process with pid: 523399 was killed by signal: 15, core dumped: no
+OSError: LSAPI: File error
+Traceback (most recent call last):
+  File "/home/ufdxwals/inventoryhub/passenger_wsgi.py", line 8, in <module>
+    from itinventory.wsgi import application
+  File "/home/ufdxwals/inventoryhub/itinventory/wsgi.py", line 12, in <module>
+    from django.core.wsgi import get_wsgi_application
+ModuleNotFoundError: No module named 'django'
+Traceback (most recent call last):
+  File "/home/ufdxwals/inventoryhub/passenger_wsgi.py", line 8, in <module>
+    from itinventory.wsgi import application
+  File "/home/ufdxwals/inventoryhub/itinventory/wsgi.py", line 12, in <module>
+    from django.core.wsgi import get_wsgi_application
+ModuleNotFoundError: No module named 'django'
+[UID:1302][1176265] Child process with pid: 1177162 was killed by signal: 15, core dumped: no
+Traceback (most recent call last):
+  File "/home/ufdxwals/inventoryhub/passenger_wsgi.py", line 8, in <module>
+    from itinventory.wsgi import application
+  File "/home/ufdxwals/inventoryhub/itinventory/wsgi.py", line 16, in <module>
+    application = get_wsgi_application()
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/core/wsgi.py", line 12, in get_wsgi_application
+    django.setup(set_prefix=False)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/__init__.py", line 19, in setup
+    configure_logging(settings.LOGGING_CONFIG, settings.LOGGING)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/conf/__init__.py", line 81, in __getattr__
+    self._setup(name)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/conf/__init__.py", line 68, in _setup
+    self._wrapped = Settings(settings_module)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/conf/__init__.py", line 166, in __init__
+    mod = importlib.import_module(self.SETTINGS_MODULE)
+  File "/opt/alt/python310/lib64/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/home/ufdxwals/inventoryhub/itinventory/settings.py", line 15, in <module>
+    from dotenv import load_dotenv
+ModuleNotFoundError: No module named 'dotenv'
+Traceback (most recent call last):
+  File "/home/ufdxwals/inventoryhub/passenger_wsgi.py", line 8, in <module>
+    from itinventory.wsgi import application
+  File "/home/ufdxwals/inventoryhub/itinventory/wsgi.py", line 16, in <module>
+    application = get_wsgi_application()
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/core/wsgi.py", line 12, in get_wsgi_application
+    django.setup(set_prefix=False)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/__init__.py", line 19, in setup
+    configure_logging(settings.LOGGING_CONFIG, settings.LOGGING)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/conf/__init__.py", line 81, in __getattr__
+    self._setup(name)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/conf/__init__.py", line 68, in _setup
+    self._wrapped = Settings(settings_module)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/conf/__init__.py", line 166, in __init__
+    mod = importlib.import_module(self.SETTINGS_MODULE)
+  File "/opt/alt/python310/lib64/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/home/ufdxwals/inventoryhub/itinventory/settings.py", line 15, in <module>
+    from dotenv import load_dotenv
+ModuleNotFoundError: No module named 'dotenv'
+[UID:1302][1180746] Child process with pid: 1180768 was killed by signal: 15, core dumped: no
+Traceback (most recent call last):
+  File "/home/ufdxwals/inventoryhub/passenger_wsgi.py", line 8, in <module>
+    from itinventory.wsgi import application
+  File "/home/ufdxwals/inventoryhub/itinventory/wsgi.py", line 16, in <module>
+    application = get_wsgi_application()
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/core/wsgi.py", line 12, in get_wsgi_application
+    django.setup(set_prefix=False)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/__init__.py", line 19, in setup
+    configure_logging(settings.LOGGING_CONFIG, settings.LOGGING)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/conf/__init__.py", line 81, in __getattr__
+    self._setup(name)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/conf/__init__.py", line 68, in _setup
+    self._wrapped = Settings(settings_module)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/conf/__init__.py", line 166, in __init__
+    mod = importlib.import_module(self.SETTINGS_MODULE)
+  File "/opt/alt/python310/lib64/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/home/ufdxwals/inventoryhub/itinventory/settings.py", line 15, in <module>
+    from dotenv import load_dotenv
+ModuleNotFoundError: No module named 'dotenv'
+Traceback (most recent call last):
+  File "/home/ufdxwals/inventoryhub/passenger_wsgi.py", line 8, in <module>
+    from itinventory.wsgi import application
+  File "/home/ufdxwals/inventoryhub/itinventory/wsgi.py", line 16, in <module>
+    application = get_wsgi_application()
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/core/wsgi.py", line 12, in get_wsgi_application
+    django.setup(set_prefix=False)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/__init__.py", line 19, in setup
+    configure_logging(settings.LOGGING_CONFIG, settings.LOGGING)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/conf/__init__.py", line 81, in __getattr__
+    self._setup(name)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/conf/__init__.py", line 68, in _setup
+    self._wrapped = Settings(settings_module)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/conf/__init__.py", line 166, in __init__
+    mod = importlib.import_module(self.SETTINGS_MODULE)
+  File "/opt/alt/python310/lib64/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/home/ufdxwals/inventoryhub/itinventory/settings.py", line 15, in <module>
+    from dotenv import load_dotenv
+ModuleNotFoundError: No module named 'dotenv'
+[UID:1302][1181044] Child process with pid: 1181083 was killed by signal: 15, core dumped: no
+/home/ufdxwals/inventoryhub/ppm/views.py:274: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'ppm.models.PPMTask'> QuerySet.
+  paginator = Paginator(tasks, items_per_page)
+Email sent successfully to ['gerald.kamande@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['ezra.ndonga@mohiafrica.org']
+Email sent successfully to ['noel.langat@mohiafrica.org']
+Email sent successfully to ['noel.langat@mohiafrica.org']
+Email sent successfully to ['noel.langat@mohiafrica.org']
+Email sent successfully to ['sylvia.wanjiru@mohiafrica.org']
+Email sent successfully to ['phillip.ndolo@mohiafrica.org']
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+[UID:1302][3580718] Child process with pid: 3580758 was killed by signal: 15, core dumped: no
+Failed login attempt for username: samuel.kamande
+Failed login attempt for username: samuel.kamande
+Failed login attempt for username: samuel.kamande
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+OSError: LSAPI: File error
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+[UID:1302][2343986] Child process with pid: 2357773 was killed by signal: 15, core dumped: no
+[UID:1302][2571199] Child process with pid: 2615533 was killed by signal: 15, core dumped: no
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+Failed login attempt for username: Lavine.atieno
+[UID:1302][1025416] Child process with pid: 1031958 was killed by signal: 15, core dumped: no
+[UID:1302][1025416] Child process with pid: 1032044 was killed by signal: 15, core dumped: no
+[UID:1302][1691200] Child process with pid: 1708162 was killed by signal: 15, core dumped: no
+[UID:1302][1862788] Child process with pid: 1862837 was killed by signal: 15, core dumped: no
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+Email sent successfully to ['ezra.ndonga@mohiafrica.org']
+Email sent successfully to ['it@mohiafrica.org']
+Email sent successfully to ['ezra.ndonga@mohiafrica.org']
+Email sent successfully to ['it@mohiafrica.org']
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+Failed login attempt for username: newton.asha
+Failed login attempt for username: newton.asha
+[UID:1302][1344058] Child process with pid: 2578982 was killed by signal: 15, core dumped: no
+[UID:1302][3137259] Child process with pid: 3137905 was killed by signal: 15, core dumped: no
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 7, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 7, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 7, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 7, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2211439] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+WARNING:root:No history_user found for record ID 1972 on device 5CD7225KJQ at 2026-01-26 06:18:59.497066+00:00
+[UID:1302][3115208] Child process with pid: 3126286 was killed by signal: 15, core dumped: no
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+[UID:1302][5625] Child process with pid: 6199 was killed by signal: 15, core dumped: no
+/home/ufdxwals/inventoryhub/ppm/views.py:274: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'ppm.models.PPMTask'> QuerySet.
+  paginator = Paginator(tasks, items_per_page)
+/home/ufdxwals/inventoryhub/ppm/views.py:274: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'ppm.models.PPMTask'> QuerySet.
+  paginator = Paginator(tasks, items_per_page)
+Failed login attempt for username: newton.asha
+Failed login attempt for username: newton.asha
+Failed login attempt for username: newton.asha
+[UID:1302][1589269] Child process with pid: 1602957 was killed by signal: 15, core dumped: no
+[UID:1302][1589269] Child process with pid: 1603869 was killed by signal: 15, core dumped: no
+[UID:1302][3621625] Child process with pid: 3622301 was killed by signal: 15, core dumped: no
+[UID:1302][1863120] Child process with pid: 1977331 was killed by signal: 15, core dumped: no
+Failed login attempt for username: robert.odhiambo
+Failed login attempt for username: robert odhiambo
+Failed login attempt for username: robert.odhiambo
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+Failed login attempt for username: noel.langat
+Failed login attempt for username: noel.langat
+Failed login attempt for username: noel.langat
+Email sent successfully to ['john.mwangi@mohiafrica.org']
+Email sent successfully to ['john.mwangi@mohiafrica.org']
+Email sent successfully to ['gerald.kamande@mohiafrica.org']
+Email sent successfully to ['sylvia.wanjiru@mohiafrica.org']
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+[UID:1302][1521755] Child process with pid: 1521994 was killed by signal: 15, core dumped: no
+[UID:1302][1521755] Child process with pid: 1522946 was killed by signal: 15, core dumped: no
+Email sent successfully to ['ezra.ndonga@mohiafrica.org']
+Email sent successfully to ['glen.osano@mohiafrica.org']
+Email sent successfully to ['john.mwangi@mohiafrica.org']
+Email sent successfully to ['noel.langat@mohiafrica.org']
+Email sent successfully to ['samuel.kamande@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['sylvia.wanjiru@mohiafrica.org']
+Email sent successfully to ['ezra.ndonga@mohiafrica.org']
+Email sent successfully to ['glen.osano@mohiafrica.org']
+Email sent successfully to ['samuel.kamande@mohiafrica.org']
+Email sent successfully to ['samuel.kamande@mohiafrica.org']
+[UID:1302][3534552] Child process with pid: 3534582 was killed by signal: 15, core dumped: no
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['glen.osano@mohiafrica.org']
+Email sent successfully to ['ezra.ndonga@mohiafrica.org']
+Email sent successfully to ['samuel.kamande@mohiafrica.org']
+Email sent successfully to ['noel.langat@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['sylvia.wanjiru@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+WARNING:root:No history_user found for record ID 262 on device 5CG808172Y at 2026-02-02 07:20:27.912921+00:00
+WARNING:root:No history_user found for record ID 262 on device 5CG808172Y at 2026-02-02 07:27:56.753978+00:00
+/home/ufdxwals/inventoryhub/ppm/views.py:274: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'ppm.models.PPMTask'> QuerySet.
+  paginator = Paginator(tasks, items_per_page)
+[UID:1302][2288495] Child process with pid: 2288534 was killed by signal: 15, core dumped: no
+WARNING:root:No history_user found for record ID 262 on device 5CG808172Y at 2026-02-03 17:14:39.238889+00:00
+[UID:1302][3558877] Child process with pid: 3558956 was killed by signal: 15, core dumped: no
+[UID:1302][3954390] Child process with pid: 3988854 was killed by signal: 15, core dumped: no
+[UID:1302][3954390] Child process with pid: 4182474 was killed by signal: 15, core dumped: no
+[UID:1302][3954390] Child process with pid: 19090 was killed by signal: 15, core dumped: no
+[UID:1302][1833321] Child process with pid: 1834184 was killed by signal: 15, core dumped: no
+WARNING:root:No history_user found for record ID 17 on device F2M1S14 at 2026-02-05 12:28:34.624041+00:00
+[UID:1302][1833321] Child process with pid: 2483972 was killed by signal: 15, core dumped: no
+[UID:1302][1833321] Child process with pid: 2500634 was killed by signal: 15, core dumped: no
+WARNING:root:No history_user found for record ID 71 on device H8YLWF2 at 2026-02-05 12:44:20.190711+00:00
+Email sent successfully to ['samuel.kamande@mohiafrica.org']
+Email sent successfully to ['it@mohiafrica.org']
+Email sent successfully to ['samuel.kamande@mohiafrica.org']
+Email sent successfully to ['it@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Device assigned email sent to anisia.okanga@mohiafrica.org (cc: it@mohiafrica.org)
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+/home/ufdxwals/inventoryhub/ppm/views.py:274: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'ppm.models.PPMTask'> QuerySet.
+  paginator = Paginator(tasks, items_per_page)
+Email sent successfully to ['santana.macharia@mohiafrica.org', 'john.mwangi@mohiafrica.org', 'gerald.kamande@mohiafrica.org', 'sylvia.wanjiru@mohiafrica.org', 'glen.osano@mohiafrica.org', 'samuel.kamande@mohiafrica.org', 'ezra.ndonga@mohiafrica.org']
+[UID:1302][1145549] Child process with pid: 1146280 was killed by signal: 15, core dumped: no
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+[UID:1302][2823499] Reached max children process limit: 6, extra: 2, current: 8, busy: 7, please increase LSAPI_CHILDREN.
+[UID:1302][2823499] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2823499] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2823499] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2823499] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2823499] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2823499] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2823499] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][2823499] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:1302][1130121] Child process with pid: 1130185 was killed by signal: 15, core dumped: no
+Failed login attempt for username: noel.langat@mohiafrica.org
+Failed login attempt for username: noel.langat@mohiafrica.org
+[UID:1302][1557071] Child process with pid: 1624025 was killed by signal: 15, core dumped: no
+Device assigned email sent to ['kepha.mbetu@mohiafrica.org'] (cc: ['it@mohiafrica.org'])
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['ethan.bwibo@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['ethan.bwibo@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['ethan.bwibo@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+[UID:1302][1799422] Child process with pid: 1959290 was killed by signal: 15, core dumped: no
