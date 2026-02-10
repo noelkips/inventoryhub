@@ -384,3 +384,25 @@ Email sent successfully to ['santana.macharia@mohiafrica.org']
 Email sent successfully to ['ethan.bwibo@mohiafrica.org']
 Email sent successfully to ['santana.macharia@mohiafrica.org']
 [UID:1302][1799422] Child process with pid: 1959290 was killed by signal: 15, core dumped: no
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+[UID:1302][2170790] Child process with pid: 2223043 was killed by signal: 15, core dumped: no
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+Error in get_ppm_task: 'Import' object has no attribute 'hardware'
+Error in get_ppm_task: 'Import' object has no attribute 'hardware'
+Error in get_ppm_task: 'Import' object has no attribute 'hardware'
+[UID:1302][4132038] Child process with pid: 4132895 was killed by signal: 15, core dumped: no
+Email sent successfully to ['john.mwangi@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['sylvia.wanjiru@mohiafrica.org']
+Email sent successfully to ['john.mwangi@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['sylvia.wanjiru@mohiafrica.org']
+Email sent successfully to ['john.mwangi@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['sylvia.wanjiru@mohiafrica.org']

@@ -3561,3 +3561,50 @@ Traceback (most recent call last):
     all_tasks = list(chain(owned_tasks, collaborative_tasks))
 NameError: name 'chain' is not defined
 ERROR 2026-02-06 15:49:02,233 basehttp 22568 17412 "GET /it_operations/workplans/33/ HTTP/1.1" 500 77657
+ERROR 2026-02-09 11:03:15,591 log 2076134 140312957596160 Internal Server Error: /devices/1920/clear/
+Traceback (most recent call last):
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/contrib/auth/decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/home/ufdxwals/inventoryhub/devices/views/device_management_views.py", line 1811, in clear_user
+    agreement.archive()  # Mark as archived
+AttributeError: 'DeviceAgreement' object has no attribute 'archive'
+ERROR 2026-02-09 13:03:53,867 log 2464373 140244392870400 Internal Server Error: /devices/72/clear/
+Traceback (most recent call last):
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/contrib/auth/decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/home/ufdxwals/inventoryhub/devices/views/device_management_views.py", line 1811, in clear_user
+    agreement.archive()  # Mark as archived
+AttributeError: 'DeviceAgreement' object has no attribute 'archive'
+ERROR 2026-02-09 13:03:59,059 log 2464373 140244392870400 Internal Server Error: /devices/72/clear/
+Traceback (most recent call last):
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/contrib/auth/decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/home/ufdxwals/inventoryhub/devices/views/device_management_views.py", line 1811, in clear_user
+    agreement.archive()  # Mark as archived
+AttributeError: 'DeviceAgreement' object has no attribute 'archive'
+ERROR 2026-02-09 13:16:24,215 log 2480859 140244392870400 Internal Server Error: /devices/1822/clear/
+Traceback (most recent call last):
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/ufdxwals/virtualenv/inventoryhub/3.10/lib/python3.10/site-packages/django/contrib/auth/decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "/home/ufdxwals/inventoryhub/devices/views/device_management_views.py", line 1811, in clear_user
+    agreement.archive()  # Mark as archived
+AttributeError: 'DeviceAgreement' object has no attribute 'archive'
+ERROR 2026-02-09 14:28:16,419 log 3535055 139827565486592 Internal Server Error: /ppm/ppm/devices/482/task/get/
+ERROR 2026-02-09 14:29:35,278 log 3535055 139827565486592 Internal Server Error: /ppm/ppm/devices/479/task/get/
+ERROR 2026-02-09 14:30:01,083 log 3535055 139827565486592 Internal Server Error: /ppm/ppm/devices/482/task/get/
