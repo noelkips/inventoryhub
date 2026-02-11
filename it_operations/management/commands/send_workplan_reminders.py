@@ -33,7 +33,13 @@ class Command(BaseCommand):
         today = timezone.now().date()
         current_day = today.weekday()  # 0=Monday, 6=Sunday
 
-        base_url = getattr(settings, 'SITE_URL', 'http://localhost:8000')  # Use BASE_URL setting
+        if settings.DEBUG:
+            base_url = 'http://localhost:8000'  # Use localhost for development
+        else:
+            if settings.DATABASES.get('default') and settings.DATABASES.get('default', {}).get('NAME') == 'ufdxwals_it_test_db':
+                base_url = 'https://test.mohiit.org'
+            else:
+                base_url = 'https://mohiit.org'  # Default fallback URL
 
         sent_count = 0
 

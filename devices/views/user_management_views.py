@@ -3,44 +3,13 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.models import Group, Permission
-from django.contrib.contenttypes.models import ContentType
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction
-from django.db.models import Q, F, Case, When, IntegerField, Count
-from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
-from django.template.loader import get_template
-from django.urls import reverse
-from django.utils import timezone
-from datetime import timedelta, datetime
-from io import TextIOWrapper
-
-# Models
-from devices.models import CustomUser, DeviceAgreement, DeviceUserHistory, Employee, Import, Centre, Notification, PendingUpdate, Department
-from devices.utils.devices_utils import generate_pdf_buffer
-from devices.utils.emails import send_custom_email, send_custom_email, send_device_assignment_email
-from it_operations.models import BackupRegistry, WorkPlan, IncidentReport, MissionCriticalAsset, WorkPlanTask
-from devices.forms import ClearanceForm
-from ppm.models import PPMTask, PPMPeriod, PPMActivity
-
+from devices.models import CustomUser, Centre
 # Third-party & Standard Library
 import csv
 import logging
 from io import BytesIO
 
-# Excel (openpyxl)
-import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment
-
-# PDF (ReportLab)
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import landscape, A4
-from reportlab.lib.units import mm
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_LEFT, TA_CENTER
-from reportlab.platypus import (
-    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer,
-    Frame, PageTemplate
-)
 
 # Django Shortcuts and HTTP
 from django.shortcuts import render, redirect, get_object_or_404
@@ -52,22 +21,73 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.cache import never_cache
 
+
+
+
+def is_safe_url(url, allowed_host):
+    """
+    Check if a URL is safe for redirection.
+    Prevents open redirect vulnerabilities.
+    """
+    from urllib.parse import urlparse
+    
+    if not url:
+        return False
+    
+    # Don't allow URLs that start with multiple slashes or backslashes
+    if url.startswith('///') or url.startswith('\\\\'):
+        return False
+    
+    # Parse the URL
+    parsed = urlparse(url)
+    
+    # Check if it's a relative URL (no scheme and no netloc)
+    if not parsed.scheme and not parsed.netloc:
+        return True
+    
+    # If it has a scheme or netloc, ensure it matches the allowed host
+    if parsed.netloc:
+        return parsed.netloc == allowed_host
+    
+    return False
+
+
 @never_cache
 def login_view(request):
+    # If already authenticated, handle redirect
     if request.user.is_authenticated:
+        next_url = request.GET.get('next') or request.POST.get('next')
+        if next_url and is_safe_url(next_url, request.get_host()):
+            return redirect(next_url)
         return redirect('dashboard')
+    
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
+        next_url = request.POST.get('next', '').strip()  # Get next parameter
+        
         user = authenticate(request, username=username, password=password)
+        
         if user is not None:
             login(request, user)
             logger.info(f"Successful login for user: {username}")
+            
+            # Redirect to 'next' if it exists and is safe, otherwise dashboard
+            if next_url and is_safe_url(next_url, request.get_host()):
+                return redirect(next_url)
             return redirect('dashboard')
         else:
             logger.warning(f"Failed login attempt for username: {username}")
             messages.error(request, 'Invalid username or password.')
-    return render(request, 'login.html')
+            # Preserve 'next' parameter on failed login
+            if next_url:
+                return render(request, 'login.html', {'next': next_url})
+    
+    # GET request - preserve 'next' parameter
+    next_url = request.GET.get('next', '')
+    context = {'next': next_url} if next_url else {}
+    return render(request, 'login.html', context)
+
 
 def logout_view(request):
     logout(request)

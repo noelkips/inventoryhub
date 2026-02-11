@@ -1805,10 +1805,11 @@ def clear_user(request, device_id):
                 device.reason_for_update = f"Cleared by {request.user.username} on {timezone.now().date()}"
                 device.uaf_signed = False  # Reset UAF signed flag
                 device.save()
-                # Archive current agreement
+                # Archive current agreement (if exists)
                 agreement = device.agreements.filter(is_archived=False).first()
                 if agreement:
-                    agreement.archive()  # Mark as archived
+                    agreement.is_archived = True
+                    agreement.save(update_fields=['is_archived'])
                 # Send clearance email with PDF attachment to previous user
                 if previous_assignee and previous_assignee.email:
                     send_clearance_email_with_pdf(device, previous_assignee, request.user)
@@ -1820,7 +1821,6 @@ def clear_user(request, device_id):
         'form': form,
         'device': device
     })
-
 
 def send_clearance_email_with_pdf(device, assignee, cleared_by):
     """Sends clearance email with PDF form attached"""

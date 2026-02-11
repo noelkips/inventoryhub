@@ -3561,3 +3561,57 @@ Traceback (most recent call last):
     all_tasks = list(chain(owned_tasks, collaborative_tasks))
 NameError: name 'chain' is not defined
 ERROR 2026-02-06 15:49:02,233 basehttp 22568 17412 "GET /it_operations/workplans/33/ HTTP/1.1" 500 77657
+ERROR 2026-02-10 11:36:51,883 log 6760 16436 Internal Server Error: /
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\views\decorators\cache.py", line 80, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\noel.langat\Desktop\devs\inventory_test\devices\views\user_management_views.py", line 89, in login_view
+    return render(request, 'auth/login.html', context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\loader.py", line 61, in render_to_string
+    template = get_template(template_name, using=using)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\loader.py", line 19, in get_template
+    raise TemplateDoesNotExist(template_name, chain=chain)
+django.template.exceptions.TemplateDoesNotExist: auth/login.html
+ERROR 2026-02-10 11:36:51,888 basehttp 6760 16436 "GET / HTTP/1.1" 500 90497
+ERROR 2026-02-10 11:51:59,261 log 6760 8416 Internal Server Error: /
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\views\decorators\cache.py", line 80, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\noel.langat\Desktop\devs\inventory_test\devices\views\user_management_views.py", line 89, in login_view
+    return render(request, 'auth/login.html', context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\loader.py", line 61, in render_to_string
+    template = get_template(template_name, using=using)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\loader.py", line 19, in get_template
+    raise TemplateDoesNotExist(template_name, chain=chain)
+django.template.exceptions.TemplateDoesNotExist: auth/login.html
+ERROR 2026-02-10 11:51:59,262 basehttp 6760 8416 "GET / HTTP/1.1" 500 90343
+ERROR 2026-02-10 11:52:01,855 log 6760 8416 Internal Server Error: /
+Traceback (most recent call last):
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\views\decorators\cache.py", line 80, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\noel.langat\Desktop\devs\inventory_test\devices\views\user_management_views.py", line 89, in login_view
+    return render(request, 'auth/login.html', context)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\loader.py", line 61, in render_to_string
+    template = get_template(template_name, using=using)
+  File "C:\Users\noel.langat\.virtualenvs\inventory_test-1qVlE5H2\lib\site-packages\django\template\loader.py", line 19, in get_template
+    raise TemplateDoesNotExist(template_name, chain=chain)
+django.template.exceptions.TemplateDoesNotExist: auth/login.html
+ERROR 2026-02-10 11:52:01,856 basehttp 6760 8416 "GET / HTTP/1.1" 500 90343

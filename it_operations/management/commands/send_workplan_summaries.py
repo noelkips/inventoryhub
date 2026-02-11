@@ -24,6 +24,7 @@ Cron job (every Saturday at 6 AM):
 import calendar
 from datetime import date, timedelta
 from django.core.management.base import BaseCommand
+from django.urls import reverse
 from django.utils import timezone
 from django.conf import settings
 from django.db.models import Q
@@ -119,6 +120,14 @@ class Command(BaseCommand):
                 target_user=user
             )
 
+            if settings.DEBUG:
+                base_url = 'http://localhost:8000'  # Use localhost for development
+            else:
+                if settings.DATABASES.get('default') and settings.DATABASES.get('default', {}).get('NAME') == 'ufdxwals_it_test_db':
+                    base_url = 'https://test.mohiit.org'
+                else:
+                    base_url = 'https://mohiit.org'
+
             # Compose message
             message = f"""
 Dear {user.get_full_name()},
@@ -141,7 +150,10 @@ Please find attached:
 - Your detailed weekly work plan PDF
 - Your detailed monthly work plan PDF
 
+Your calendar: {base_url}{reverse('work_plan_calendar')}
+
 Thank you.
+
 
 Best regards,
 IT Operations System

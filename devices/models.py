@@ -185,6 +185,11 @@ class DeviceAgreement(models.Model):
     def __str__(self):
         return f"UAF for {self.device.serial_number} - {self.employee}"
 
+    def archive(self):
+        """Mark this agreement as archived."""
+        self.is_archived = True
+        self.save(update_fields=['is_archived'])
+
     class Meta:
         ordering = ['-issuance_date']
 

@@ -39,6 +39,9 @@
 
             <!-- Login Form -->
             <form method="POST" action="{% url 'login' %}">
+                {% if next %}
+                    <input type="hidden" name="next" value="{{ next }}">
+                {% endif %}
                 {% csrf_token %}
                 <div class="mb-4">
                     <label class="block text-gray-700 font-medium mb-1" for="username">Username</label>

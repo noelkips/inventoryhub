@@ -177,11 +177,13 @@ MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "/media/"
 
 AUTH_USER_MODEL = 'devices.CustomUser'
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
 
-
+LOGIN_URL = 'login'  
+# Optional but recommended:
+LOGIN_REDIRECT_URL = 'dashboard'
+SESSION_COOKIE_AGE = 86400  # 24 hours
+SESSION_SAVE_EVERY_REQUEST = True
 # ============================================================================
 # ⭐ SESSION SECURITY CONFIGURATION (2 HOURS AUTO-LOGOUT)
 # ============================================================================
@@ -282,30 +284,30 @@ else:
 # ============================================================================
 # Email CONFIGURATION
 # ============================================================================
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-
-        # Outgoing server (SMTP)
-             # Required for port 465
-EMAIL_USE_TLS = False            # Do NOT use TLS with port 465
-
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-EMAIL_HOST = os.getenv('EMAIL_HOST')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-EMAIL_PORT = 465                   # SSL SMTP port
-EMAIL_USE_SSL = True  
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_USE_TLS = False
+    EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+    EMAIL_HOST = os.getenv('EMAIL_HOST')
+    EMAIL_PORT = 465
+    EMAIL_USE_SSL = True
+    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
 
 #BACKUP PASSWORD
 DB_BACKUP_ENCRYPTION_PASSWORD = os.getenv('BACKUP_PASSWORD')
 
 # ============================================================================
 # SITE URL CONFIGURATION
-if DATABASES['default']['NAME'] == 'ufdxwals_it_test_db':
-    SITE_URL = os.getenv('SITE_URL_TEST', 'http://localhost:8000')
+if DEBUG:
+    SITE_URL = 'http://127.0.0.1:8000'
 else:
-    SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000')
+    if DATABASES['default']['NAME'] == 'ufdxwals_it_test_db':
+        SITE_URL = os.getenv('SITE_URL_TEST', 'http://127.0.0.1:8000')
+    else:
+        SITE_URL = os.getenv('SITE_URL', 'http://127.0.0.1:8000')
 # ============================================================================
 # LOGGING CONFIGURATION
 # ============================================================================

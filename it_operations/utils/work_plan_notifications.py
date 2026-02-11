@@ -9,11 +9,9 @@ def get_kenyan_holidays(year=None):
     if not year:
         year = date.today().year
     return list(PublicHoliday.objects.filter(date__year=year).values_list('date', flat=True))
-
-
 def notify_collaborator(task, new_collaborator):
     """
-    UPDATED: Includes direct link to work plan
+    UPDATED: Includes direct link to the specific task (with anchor)
     """
     # 1. System Notification
     Notification.objects.create(
@@ -23,8 +21,8 @@ def notify_collaborator(task, new_collaborator):
         object_id=task.id
     )
 
-    # 2. Email Notification with LINK
-    work_plan_url = f"{settings.SITE_URL}/work-plan/detail/{task.work_plan.id}/"
+    # 2. Email Notification with DIRECT TASK LINK
+    task_url = f"{settings.SITE_URL}/it_operations/workplans/{task.work_plan.pk}/#task-{task.pk}"
     
     subject = f"MOHI IT: New Collaboration Task - {task.date}"
     message = f"""
@@ -37,20 +35,21 @@ Date: {task.date}
 Centre: {task.centre.name if task.centre else 'N/A'}
 Target: {task.target or 'N/A'}
 
-Click here to view the full work plan and task details:
-{work_plan_url}
+Click the link below to go directly to the task:
+{task_url}
 
 Best regards,
 MOHI IT Department
-    """
+    """.strip()
+
     send_custom_email(subject, message, [new_collaborator.email])
 
 
 def notify_comment_added(task, comment_text, added_by):
     """
-    NEW FUNCTION: Notifies task owner and all collaborators when a comment is added
+    UPDATED: Direct link to the specific task (with anchor)
     """
-    work_plan_url = f"{settings.SITE_URL}/work-plan/detail/{task.work_plan.id}/"
+    task_url = f"{settings.SITE_URL}/it_operations/workplans/{task.work_plan.pk}/#task-{task.pk}"
     
     # Collect all people to notify (owner + collaborators, excluding the person who added comment)
     recipients = []
@@ -103,21 +102,21 @@ Comment:
 {comment_preview}
 ---
 
-Click here to view the full task details and all comments:
-{work_plan_url}
+Click the link below to go directly to the task and view/reply to comments:
+{task_url}
 
 Best regards,
 MOHI IT Department
-    """
+    """.strip()
     
     send_custom_email(subject, message, recipient_emails)
 
 
 def notify_task_status_changed(task, old_status, new_status, changed_by):
     """
-    NEW FUNCTION: Notifies relevant parties when task status changes
+    UPDATED: Direct link to the specific task (with anchor)
     """
-    work_plan_url = f"{settings.SITE_URL}/work-plan/detail/{task.work_plan.id}/"
+    task_url = f"{settings.SITE_URL}/it_operations/workplans/{task.work_plan.pk}/#task-{task.pk}"
     
     # Notify owner if someone else changed it
     recipients = []
@@ -159,11 +158,11 @@ Previous Status: {old_status}
 New Status: {new_status}
 Updated By: {changed_by.get_full_name()}
 
-Click here to view the task details:
-{work_plan_url}
+Click the link below to go directly to the task:
+{task_url}
 
 Best regards,
 MOHI IT Department
-    """
+    """.strip()
     
     send_custom_email(subject, message, recipient_emails)

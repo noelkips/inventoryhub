@@ -219,9 +219,9 @@ def get_ppm_task(request, device_id):
         if not active_period:
             return JsonResponse({'error': 'No active PPM period.'}, status=400)
 
-        # Initialize response data with hardware details
+        # Initialize response data with device_name details
         data = {
-            'hardware': device.hardware or '',
+            'device_name': device.device_name or '',
             'system_model': device.system_model or '',
             'processor': device.processor or '',
             'ram_gb': device.ram_gb or '',
@@ -511,7 +511,7 @@ def ppm_report(request):
                 Q(device__assignee_last_name__icontains=search_query) |
                 Q(device__department__name__icontains=search_query) |
                 Q(remarks__icontains=search_query) |
-                Q(device__hardware__icontains=search_query)
+                Q(device__device_name__icontains=search_query)
             )
             tasks_query = tasks_query.filter(query)
 
@@ -668,7 +668,7 @@ def ppm_report(request):
             table_data = [[
                 'No.',
                 'Serial Number',
-                'Hardware',
+                'device_name',
                 'Centre',
                 'Department',
                 'Assignee',
@@ -686,7 +686,7 @@ def ppm_report(request):
                 table_data.append([
                     str(idx),
                     Paragraph(task.device.serial_number or 'N/A', styles['Cell']),
-                    Paragraph(task.device.hardware or 'N/A', styles['Cell']),
+                    Paragraph(task.device.device_name or 'N/A', styles['Cell']),
                     Paragraph(task.device.centre.name if task.device.centre else 'N/A', styles['Cell']),
                     Paragraph(task.device.department.name if task.device.department else 'N/A', styles['Cell']),
                     Paragraph(f"{task.device.assignee_first_name or ''} {task.device.assignee_last_name or ''}".strip() or 'N/A', styles['Cell']),
@@ -766,7 +766,7 @@ def ppm_report(request):
 
             # Write headers
             headers = [
-                'No.', 'Serial Number', 'Hardware', 'Centre', 'Department',
+                'No.', 'Serial Number', 'device_name', 'Centre', 'Department',
                 'Assignee First Name', 'Assignee Last Name', 'Assignee Email',
                 'Activities', 'Status', 'Completed Date', 'Remarks', 'Period',
                 'Created By', 'Created At'
@@ -781,7 +781,7 @@ def ppm_report(request):
 
                 worksheet.write(row, 0, row - start_row, cell_format)
                 worksheet.write(row, 1, task.device.serial_number or 'N/A', cell_format)
-                worksheet.write(row, 2, task.device.hardware or 'N/A', cell_format)
+                worksheet.write(row, 2, task.device.device_name or 'N/A', cell_format)
                 worksheet.write(row, 3, task.device.centre.name if task.device.centre else 'N/A', cell_format)
                 worksheet.write(row, 4, task.device.department.name if task.device.department else 'N/A', cell_format)
                 worksheet.write(row, 5, task.device.assignee_first_name or 'N/A', cell_format)

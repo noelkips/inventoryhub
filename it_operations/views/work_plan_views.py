@@ -163,10 +163,12 @@ def work_plan_detail(request, pk):
     # Access Check
     is_owner = (user == work_plan.user)
     is_manager = is_manager_of(user, work_plan.user)
+    is_collab = work_plan.tasks.filter(collaborators=user).exists()
     
-    if not (is_owner or is_manager):
-        messages.error(request, "Access Denied.")
+    if not (is_owner or is_manager or is_collab):
+        messages.error(request, "Access Denied. You do not have permission to view this work plan.")
         return redirect('work_plan_list')
+   
 
     # Global "Can Add Task" Logic (Only the plan owner)
     can_add_global = work_plan.can_add_tasks and is_owner
