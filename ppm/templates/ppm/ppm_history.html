@@ -3,13 +3,18 @@
 
 {% block content %}
 <div class="container mx-auto p-2 sm:p-4 max-w-full">
-    <h2 class="text-xl sm:text-2xl font-bold mb-4 text-gray-800">PPM History {% if device_id %}for Device ID {{ device_id }}{% endif %}</h2>
 
-    <!-- Messages -->
+    <div class="mb-4 sm:mb-6">
+        <h2 class="text-xl sm:text-2xl font-bold text-gray-900">
+            PPM History {% if device_id %}<span class="text-gray-500 font-medium text-sm sm:text-base">• Device ID {{ device_id }}</span>{% endif %}
+        </h2>
+        <p class="text-xs sm:text-sm text-gray-600">Track PPM tasks and view what was performed.</p>
+    </div>
+
     {% if messages %}
-        <div class="mb-4">
+        <div class="mb-4 space-y-2">
             {% for message in messages %}
-                <div class="bg-{{ message.tags }}-100 border border-{{ message.tags }}-400 text-{{ message.tags }}-700 px-3 py-2 sm:px-4 sm:py-3 rounded-lg mb-2" role="alert">
+                <div class="bg-green-600 text-white px-4 py-3 rounded-xl shadow-sm ring-1 ring-black/5" role="alert">
                     {{ message }}
                 </div>
             {% endfor %}
@@ -17,113 +22,363 @@
     {% endif %}
 
     <!-- Filters -->
-    <div class="bg-white p-3 sm:p-4 rounded-lg shadow-md mb-6">
-        <form method="get" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+    <div class="bg-white shadow-sm ring-1 ring-black/5 rounded-2xl p-3 sm:p-4 mb-4">
+        <form method="get" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 items-end">
             <div>
-                <label for="search" class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Search</label>
-                <input type="text" name="search" id="search" value="{{ report_data.search_query }}" class="w-full border rounded-md p-2 text-sm sm:text-base" placeholder="Serial, User, Department">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                <input type="text" name="search" value="{{ report_data.search_query }}"
+                       class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       placeholder="Serial, assignee, department, user...">
             </div>
+
             {% if user.is_superuser %}
-                <div>
-                    <label for="centre" class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Centre</label>
-                    <select name="centre" id="centre" class="w-full border rounded-md p-2 text-sm sm:text-base">
-                        <option value="">All Centres</option>
-                        {% for centre in centres %}
-                            <option value="{{ centre.id }}" {% if report_data.centre_filter == centre.id|stringformat:"s" %}selected{% endif %}>{{ centre.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            {% endif %}
             <div>
-                <label for="items_per_page" class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Items per Page</label>
-                <select name="items_per_page" id="items_per_page" class="w-full border rounded-md p-2 text-sm sm:text-base" onchange="updateItemsPerPage(this)">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Centre</label>
+                <select name="centre"
+                        class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Centres</option>
+                    {% for centre in centres %}
+                        <option value="{{ centre.id }}" {% if report_data.centre_filter == centre.id|stringformat:"s" %}selected{% endif %}>
+                            {{ centre.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Items per page</label>
+                <select name="items_per_page"
+                        class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onchange="this.form.submit()">
                     {% for option in items_per_page_options %}
                         <option value="{{ option }}" {% if report_data.items_per_page == option %}selected{% endif %}>{{ option }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="flex items-end">
-                <button type="submit" class="bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 w-full sm:w-auto text-sm sm:text-base">Filter</button>
+
+            <div class="flex gap-2">
+                <button type="submit"
+                        class="w-full bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 shadow-sm hover:shadow-md transition text-sm font-semibold">
+                    Filter
+                </button>
+            </div>
+
+            <div class="md:col-span-4 flex items-center justify-between mt-1 text-xs sm:text-sm text-gray-600">
+                <div>Total: <span class="font-semibold text-gray-900">{{ report_data.total_records }}</span></div>
+                {% if tasks %}
+                    <div>
+                        Showing <span class="font-semibold text-gray-900">{{ tasks.start_index }}</span>
+                        – <span class="font-semibold text-gray-900">{{ tasks.end_index }}</span>
+                    </div>
+                {% endif %}
             </div>
         </form>
     </div>
 
-    <!-- Tasks Table -->
-    <div class="bg-white p-3 sm:p-4 rounded-lg shadow-md">
-        <h3 class="text-base sm:text-lg font-semibold mb-4 text-gray-800">PPM Tasks ({{ report_data.total_records }})</h3>
+    <!-- Content -->
+    <div class="bg-white shadow-sm ring-1 ring-black/5 rounded-2xl overflow-hidden">
+        <div class="px-3 sm:px-4 py-3 border-b bg-gradient-to-r from-white to-gray-50 flex items-center justify-between">
+            <h3 class="text-sm sm:text-base font-semibold text-gray-900">PPM Tasks</h3>
+        </div>
+
         {% if tasks %}
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white border text-sm sm:text-base">
-                    <thead>
-                        <tr class="bg-gray-200 text-gray-600">
-                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Device Serial</th>
-                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Period</th>
-                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Activities</th>
-                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Completed Date</th>
-                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Remarks</th>
-                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Centre</th>
+
+            <!-- Mobile cards -->
+            <div class="md:hidden p-3 space-y-3">
+                {% for task in tasks %}
+                    <div class="rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition bg-white overflow-hidden">
+                        <div class="p-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="text-sm font-semibold text-gray-900 truncate">
+                                        {{ task.device.device_name|default:"Device" }}
+                                    </p>
+                                    <p class="text-xs text-gray-600 mt-0.5">
+                                        SN: <span class="font-mono">{{ task.device.serial_number }}</span>
+                                    </p>
+                                </div>
+
+                                <div class="shrink-0">
+                                    {% if task.no_ppm_activity_performed %}
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full bg-red-100 text-red-700 text-xs font-semibold">
+                                            Not Done
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+                                            Done
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mt-3 grid grid-cols-1 gap-2 text-xs">
+                                <!-- Period -->
+                                <div class="rounded-xl bg-gray-50 border border-gray-100 p-2">
+                                    <p class="text-gray-500">PPM Period</p>
+                                    <p class="text-gray-900 font-medium">{{ task.period.name }}</p>
+                                </div>
+
+                                <!-- Status / Completed -->
+                                <div class="rounded-xl bg-gray-50 border border-gray-100 p-2">
+                                    <p class="text-gray-500">Status / Completed</p>
+                                    <p class="text-gray-900 font-medium">
+                                        {% if task.no_ppm_activity_performed %}No activity{% else %}Activities performed{% endif %}
+                                        <span class="text-gray-400">•</span>
+                                        {{ task.completed_date|default:"N/A" }}
+                                    </p>
+                                </div>
+
+                                <!-- Centre / Assignee -->
+                                <div class="rounded-xl bg-gray-50 border border-gray-100 p-2">
+                                    <p class="text-gray-500">Centre / Assignee</p>
+                                    <p class="text-gray-900 font-medium">
+                                        {{ task.device.centre.name|default:"N/A" }}
+                                        <span class="text-gray-400">•</span>
+                                        {{ task.assignee_name|default:"N/A" }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="mt-3">
+                                <button
+                                    class="view-task w-full bg-blue-600 text-white px-3 py-2 rounded-xl hover:bg-blue-700 shadow-sm hover:shadow-md transition text-xs font-semibold"
+                                    data-task-id="{{ task.id }}">
+                                    View details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Desktop table -->
+            <div class="hidden md:block overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-100 text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Device</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700">PPM Period</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Status / Completed</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Centre / Assignee</th>
+                            <th class="px-4 py-3 text-right font-semibold text-gray-700">Action</th>
                         </tr>
                     </thead>
-                    <tbody>
+
+                    <tbody class="divide-y divide-gray-50">
                         {% for task in tasks %}
-                            <tr class="hover:bg-gray-50">
-                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ task.device.serial_number }}</td>
-                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ task.period.name }}</td>
-                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">
-                                    {% for activity in task.activities.all %}
-                                        {{ activity.name }}{% if not forloop.last %}, {% endif %}
-                                    {% endfor %}
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="px-4 py-3">
+                                    <div class="font-semibold text-gray-900">{{ task.device.device_name|default:"Device" }}</div>
+                                    <div class="text-xs text-gray-600">
+                                        SN: <span class="font-mono">{{ task.device.serial_number }}</span>
+                                    </div>
                                 </td>
-                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ task.completed_date|default:"N/A" }}</td>
-                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ task.remarks|default:"N/A" }}</td>
-                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ task.device.centre.name }}</td>
+
+                                <td class="px-4 py-3">
+                                    <div class="font-medium text-gray-900">{{ task.period.name }}</div>
+                                    <div class="text-xs text-gray-600">
+                                        {{ task.period.start_date }} — {{ task.period.end_date }}
+                                    </div>
+                                </td>
+
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-2">
+                                        {% if task.no_ppm_activity_performed %}
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full bg-red-100 text-red-700 text-xs font-semibold">Not Done</span>
+                                        {% else %}
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">Done</span>
+                                        {% endif %}
+                                        <span class="text-gray-400">•</span>
+                                        <span class="text-gray-900 font-medium">{{ task.completed_date|default:"N/A" }}</span>
+                                    </div>
+
+                                    <div class="text-xs text-gray-600 mt-1">
+                                        {% if task.no_ppm_activity_performed %}
+                                            Reason: {{ task.reason|default:"N/A" }}
+                                        {% else %}
+                                            Activities: {{ task.activities.all|length }}
+                                        {% endif %}
+                                    </div>
+                                </td>
+
+                                <td class="px-4 py-3">
+                                    <div class="font-medium text-gray-900">{{ task.device.centre.name|default:"N/A" }}</div>
+                                    <div class="text-xs text-gray-600">{{ task.assignee_name|default:"N/A" }}</div>
+                                </td>
+
+                                <td class="px-4 py-3 text-right">
+                                    <button
+                                        class="view-task bg-blue-600 text-white px-3 py-2 rounded-xl hover:bg-blue-700 shadow-sm hover:shadow-md transition text-xs font-semibold"
+                                        data-task-id="{{ task.id }}">
+                                        View
+                                    </button>
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+
             <!-- Pagination -->
-            <div class="flex flex-col md:flex-row justify-between items-center mt-4 space-y-4 md:space-y-0">
-                <div class="text-gray-600 text-sm sm:text-base">
-                    Showing {{ tasks.start_index }} to {{ tasks.end_index }} of {{ report_data.total_records }} tasks
+            <div class="p-3 sm:p-4 border-t flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
+                <div class="text-gray-600">
+                    Page <span class="font-semibold text-gray-900">{{ tasks.number }}</span>
+                    of <span class="font-semibold text-gray-900">{{ tasks.paginator.num_pages }}</span>
                 </div>
-                <div class="flex flex-wrap space-x-1">
-                    {% if tasks.has_previous %}
-                        <a href="{% if device_id %}{% url 'ppm_history_device' device_id %}{% else %}{% url 'ppm_history' %}{% endif %}?page=1&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">&laquo; First</a>
-                        <a href="{% if device_id %}{% url 'ppm_history_device' device_id %}{% else %}{% url 'ppm_history' %}{% endif %}?page={{ tasks.previous_page_number }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">&lsaquo; Prev</a>
-                    {% endif %}
-                    {% for num in page_range %}
-                        {% if num is None %}
-                            <span class="px-2 py-1 text-gray-700 text-sm sm:text-base">...</span>
-                        {% elif num == tasks.number %}
-                            <span class="px-2 py-1 bg-blue-600 text-white rounded transition duration-200 text-sm sm:text-base">{{ num }}</span>
+
+                <div class="flex flex-wrap gap-1">
+                    {% for p in page_range %}
+                        {% if p %}
+                            <a href="?page={{ p }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}"
+                               class="px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm transition
+                                      {% if tasks.number == p %}bg-blue-600 text-white border-blue-600{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}">
+                                {{ p }}
+                            </a>
                         {% else %}
-                            <a href="{% if device_id %}{% url 'ppm_history_device' device_id %}{% else %}{% url 'ppm_history' %}{% endif %}?page={{ num }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">{{ num }}</a>
+                            <span class="px-2 py-1 text-gray-500">…</span>
                         {% endif %}
                     {% endfor %}
-                    {% if tasks.has_next %}
-                        <a href="{% if device_id %}{% url 'ppm_history_device' device_id %}{% else %}{% url 'ppm_history' %}{% endif %}?page={{ tasks.next_page_number }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">Next &rsaquo;</a>
-                        <a href="{% if device_id %}{% url 'ppm_history_device' device_id %}{% else %}{% url 'ppm_history' %}{% endif %}?page={{ paginator.num_pages }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">Last &raquo;</a>
-                    {% endif %}
                 </div>
             </div>
+
         {% else %}
-            <p class="text-gray-600 text-sm sm:text-base">No PPM tasks found.</p>
+            <div class="p-6 text-center text-gray-600">No PPM tasks found.</div>
         {% endif %}
+    </div>
+</div>
+<!-- ✅ Modal -->
+<div id="taskDetailModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+
+    <div class="relative min-h-full w-full flex items-end sm:items-center justify-center p-2 sm:p-6">
+        <div class="w-full max-w-2xl bg-white rounded-3xl shadow-2xl ring-1 ring-black/5 overflow-hidden max-h-[90vh] flex flex-col">
+
+            <div class="px-4 sm:px-6 py-4 border-b bg-gradient-to-r from-white to-gray-50 flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <h3 class="text-base sm:text-lg font-semibold text-gray-900" id="td_title">Task Details</h3>
+                    <p class="text-xs sm:text-sm text-gray-600 mt-0.5" id="td_subtitle"></p>
+                </div>
+                <button type="button" class="td-close shrink-0 rounded-xl p-2 hover:bg-gray-100 transition" aria-label="Close">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="p-4 sm:p-6 overflow-y-auto space-y-4">
+                <div class="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="text-sm font-semibold text-gray-900" id="td_status"></div>
+                        <div class="text-xs text-gray-600" id="td_completed"></div>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-600" id="td_meta"></div>
+                </div>
+
+                <div class="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
+                    <p class="text-sm font-semibold text-gray-900 mb-2">Activities</p>
+                    <div id="td_activities" class="flex flex-wrap gap-2"></div>
+                    <p id="td_no_activities" class="text-sm text-gray-600 hidden">No activities recorded.</p>
+                </div>
+
+                <div class="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
+                    <p class="text-sm font-semibold text-gray-900 mb-2">Notes</p>
+                    <p id="td_notes" class="text-sm text-gray-700"></p>
+                </div>
+            </div>
+
+            <div class="px-4 sm:px-6 py-4 border-t bg-white/90 backdrop-blur flex justify-end">
+                <button type="button" class="td-close bg-gray-100 text-gray-800 px-4 py-2 rounded-xl hover:bg-gray-200 shadow-sm transition font-semibold text-sm">
+                    Close
+                </button>
+            </div>
+
+        </div>
     </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"></script>
+
+
+
 <script>
-    function updateItemsPerPage(select) {
-        const itemsPerPage = select.value;
-        const urlParams = new URLSearchParams(window.location.search);
-        urlParams.set('items_per_page', itemsPerPage);
-        urlParams.set('page', 1);
-        const baseUrl = {% if device_id %}"{% url 'ppm_history_device' device_id %}"{% else %}"{% url 'ppm_history' %}"{% endif %};
-        window.location.href = baseUrl + "?" + urlParams.toString();
-    }
+$(function(){
+
+    function openModal() { $('#taskDetailModal').removeClass('hidden'); }
+    function closeModal() { $('#taskDetailModal').addClass('hidden'); }
+
+    $('.td-close').on('click', closeModal);
+    $('#taskDetailModal').on('click', function(e){
+        if (e.target === this) closeModal();
+    });
+
+    $('.view-task').on('click', function(){
+        const taskId = $(this).data('task-id');
+
+        const url = "{% url 'ppm_task_detail' 0 %}".replace("/0/", "/" + taskId + "/");
+
+        // reset
+        $('#td_title').text('Task Details');
+        $('#td_subtitle').text('');
+        $('#td_status').text('');
+        $('#td_completed').text('');
+        $('#td_meta').text('');
+        $('#td_activities').empty();
+        $('#td_no_activities').addClass('hidden');
+        $('#td_notes').text('');
+
+        $.get(url, function(resp){
+            if (!resp.success) {
+                alert(resp.error || "Failed to load task details.");
+                return;
+            }
+
+            const t = resp.task;
+
+            $('#td_title').text((t.device_name || "Device") + " • " + (t.device_serial || ""));
+            $('#td_subtitle').text("Period: " + (t.period || "N/A"));
+
+            if (t.no_activity) {
+                $('#td_status').html('<span class="inline-flex items-center px-2 py-1 rounded-full bg-red-100 text-red-700 text-xs font-semibold">Not Done</span>');
+            } else {
+                $('#td_status').html('<span class="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">Done</span>');
+            }
+
+            $('#td_completed').text("Completed: " + (t.completed_date || "N/A"));
+
+            $('#td_meta').text(
+                "Centre: " + (t.centre || "N/A") +
+                " • Assignee: " + (t.assignee || "N/A") +
+                " • By: " + (t.created_by || "N/A")
+            );
+
+            if (t.no_activity) {
+                // No activity performed => show reason as the key note
+                $('#td_notes').text(t.reason || "No reason provided.");
+                $('#td_no_activities').removeClass('hidden');
+            } else {
+                // show activities chips
+                if (t.activities && t.activities.length) {
+                    t.activities.forEach(function(a){
+                        $('#td_activities').append(
+                            '<span class="inline-flex items-center px-2 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-100">' +
+                            (a.name || "") +
+                            '</span>'
+                        );
+                    });
+                } else {
+                    $('#td_no_activities').removeClass('hidden');
+                }
+
+                $('#td_notes').text(t.remarks || "—");
+            }
+
+            openModal();
+        }).fail(function(){
+            alert("Failed to load task details.");
+        });
+    });
+
+});
 </script>
 {% endblock %}

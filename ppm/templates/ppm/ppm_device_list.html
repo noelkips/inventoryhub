@@ -3,221 +3,502 @@
 
 {% block content %}
 <div class="container mx-auto p-2 sm:p-4 max-w-full">
+
     {% if active_period %}
-        <h2 class="text-xl sm:text-2xl font-bold mb-4 text-gray-800">PPM Devices for {{ active_period.name }} ({{ active_period.start_date }} - {{ active_period.end_date }})</h2>
+        <div class="mb-4 sm:mb-6">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-900">
+                PPM Devices for {{ active_period.name }}
+            </h2>
+            <p class="text-xs sm:text-sm text-gray-600">
+                {{ active_period.start_date }} — {{ active_period.end_date }}
+            </p>
+        </div>
     {% else %}
-        <h2 class="text-xl sm:text-2xl font-bold mb-4 text-gray-800">No Active PPM Period</h2>
+        <div class="mb-4 sm:mb-6">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-900">No Active PPM Period</h2>
+        </div>
     {% endif %}
 
     {% if messages %}
-        <div id="messages" class="mb-4">
+        <div id="messages" class="mb-4 space-y-2">
             {% for message in messages %}
-                <div class="bg-green-500 border border-green-700 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-lg mb-2 alert" role="alert">
+                <div class="bg-green-600 text-white px-4 py-3 rounded-xl shadow-sm ring-1 ring-black/5" role="alert">
                     {{ message }}
                 </div>
             {% endfor %}
         </div>
+    {% else %}
+        <div id="messages" class="mb-4"></div>
     {% endif %}
 
-    <div class="bg-white p-3 sm:p-4 rounded-lg shadow-md mb-6">
-        <form method="get" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+    <!-- Filters -->
+    <div class="bg-white shadow-sm ring-1 ring-black/5 rounded-2xl p-3 sm:p-4 mb-4">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
             <div>
-                <label for="search" class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Search</label>
-                <input type="text" name="search" id="search" value="{{ report_data.search_query }}" class="w-full border rounded-md p-2 text-sm sm:text-base" placeholder="Serial, User, Department, Hardware">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                <input type="text" name="search" value="{{ report_data.search_query }}"
+                       class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       placeholder="Serial, employee, department, device...">
             </div>
-            {% if user.is_superuser %}
-                <div>
-                    <label for="centre" class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Centre</label>
-                    <select name="centre" id="centre" class="w-full border rounded-md p-2 text-sm sm:text-base">
-                        <option value="">All Centres</option>
-                        {% for centre in centres %}
-                            <option value="{{ centre.id }}" {% if report_data.centre_filter == centre.id|stringformat:"s" %}selected{% endif %}>{{ centre.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            {% endif %}
 
             <div>
-                <label for="ppm_status" class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">PPM Status</label>
-                <select name="ppm_status" id="ppm_status" class="w-full border rounded-md p-2 text-sm sm:text-base">
-                    <option value="">All Devices</option>
-                    <option value="done" {% if report_data.ppm_status_filter == 'done' %}selected{% endif %}>PPM Done</option>
-                    <option value="not_done" {% if report_data.ppm_status_filter == 'not_done' %}selected{% endif %}>PPM Not Done</option>
-                </select>
-            </div>
-            
-            <div>
-                <label for="items_per_page" class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Items per Page</label>
-                <select name="items_per_page" id="items_per_page" class="w-full border rounded-md p-2 text-sm sm:text-base" onchange="updateItemsPerPage(this)">
-                    {% for option in items_per_page_options %}
-                        <option value="{{ option }}" {% if report_data.items_per_page == option %}selected{% endif %}>{{ option }}</option>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Centre</label>
+                <select name="centre"
+                        class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Centres</option>
+                    {% for c in centres %}
+                        <option value="{{ c.id }}" {% if report_data.centre_filter == c.id|stringformat:"s" %}selected{% endif %}>
+                            {{ c.name }}
+                        </option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="flex items-end">
-                <button type="submit" class="bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 w-full sm:w-auto text-sm sm:text-base">Filter</button>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">PPM Status</label>
+                <select name="ppm_status"
+                        class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">All</option>
+                    <option value="done" {% if report_data.ppm_status_filter == "done" %}selected{% endif %}>Done</option>
+                    <option value="not_done" {% if report_data.ppm_status_filter == "not_done" %}selected{% endif %}>Not Done</option>
+                </select>
+            </div>
+
+            <div class="flex gap-2">
+                <button type="submit"
+                        class="w-full md:w-auto bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 shadow-sm hover:shadow-md transition">
+                    Apply
+                </button>
+                <a href="{% url 'ppm_device_list' %}"
+                   class="w-full md:w-auto bg-gray-100 text-gray-800 px-4 py-2 rounded-xl hover:bg-gray-200 shadow-sm transition text-center">
+                    Reset
+                </a>
+            </div>
+
+            <div class="md:col-span-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-1">
+                <div class="text-xs sm:text-sm text-gray-600">
+                    Total records: <span class="font-semibold text-gray-900">{{ report_data.total_records }}</span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <label class="text-xs sm:text-sm text-gray-700">Items per page</label>
+                    <select name="items_per_page"
+                            class="border border-gray-200 rounded-xl px-2 py-1 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onchange="this.form.submit()">
+                        {% for opt in items_per_page_options %}
+                            <option value="{{ opt }}" {% if report_data.items_per_page == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
         </form>
     </div>
 
-    <div class="bg-white p-3 sm:p-4 rounded-lg shadow-md">
-        <h3 class="text-base sm:text-lg font-semibold mb-4 text-gray-800">Devices ({{ report_data.total_records }})</h3>
-        {% if devices and active_period %}
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white border text-sm sm:text-base">
-                    <thead>
-                        <tr class="bg-gray-200 text-gray-600">
-                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Serial Number</th>
-                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Hardware</th>
-                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Assigned User</th>
-                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Department</th>
-                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Centre</th>
-                            <th class="py-2 px-2 sm:py-3 sm:px-4 border text-left">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for device in devices %}
-                            <tr class="hover:bg-gray-50">
-                                <td class="py-2 px-2 sm:py-2 sm:px-4 border font-mono text-xs sm:text-sm">{{ device.serial_number }}</td>
+    {% if active_period %}
+        <!-- Devices -->
+        <div class="bg-white shadow-sm ring-1 ring-black/5 rounded-2xl overflow-hidden">
+            <div class="px-3 sm:px-4 py-3 border-b bg-gradient-to-r from-white to-gray-50 flex items-center justify-between">
+                <h3 class="text-sm sm:text-base font-semibold text-gray-900">
+                    Devices
+                </h3>
+                <div class="text-xs sm:text-sm text-gray-600">
+                    Showing <span class="font-semibold text-gray-900">{{ devices.start_index }}</span>
+                    to <span class="font-semibold text-gray-900">{{ devices.end_index }}</span>
+                    of <span class="font-semibold text-gray-900">{{ report_data.total_records }}</span>
+                </div>
+            </div>
 
-                                <td class="py-2 px-2 sm:py-2 sm:px-4 border text-xs sm:text-sm">
-                                    <div><strong>{{ device.hardware|default:"—" }}</strong></div>
-                                    {% if device.system_model %}
-                                        <div class="text-gray-600">{{ device.system_model }}</div>
-                                    {% endif %}
-                                    {% if device.processor or device.ram_gb or device.hdd_gb %}
-                                        <div class="text-gray-500 text-xs">
-                                            {% if device.processor %}{{ device.processor }}{% endif %}
-                                            {% if device.ram_gb %} | {{ device.ram_gb }} GB RAM{% endif %}
-                                            {% if device.hdd_gb %} | {{ device.hdd_gb }} GB HDD{% endif %}
-                                        </div>
-                                    {% endif %}
-                                </td>
+            {% if devices %}
+                <!-- Mobile cards -->
+                <div class="md:hidden p-3 space-y-3">
+                    {% for device in devices %}
+                        <div class="rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition bg-white overflow-hidden">
+                            <div class="p-3">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-semibold text-gray-900 truncate">
+                                            {{ device.device_name|default:"N/A" }}
+                                        </p>
+                                        <p class="text-xs text-gray-600 mt-0.5">
+                                            <span class="font-medium text-gray-700">SN:</span>
+                                            <span class="font-mono">{{ device.serial_number|default:"N/A" }}</span>
+                                        </p>
+                                    </div>
 
-                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">
-                                    {{ device.assignee_first_name }} {{ device.assignee_last_name }}
-                                </td>
-                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ device.department }}</td>
-                                <td class="py-2 px-2 sm:py-2 sm:px-4 border">{{ device.centre.name }}</td>
-
-                                <td class="py-2 px-2 sm:py-2 sm:px-4 border flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                                    {% if user.is_superuser %}
+                                    <div class="shrink-0">
                                         {% if device.has_ppm_task %}
-                                            <button class="bg-yellow-500 text-white px-2 py-1 sm:px-3 sm:py-1 rounded-md hover:bg-yellow-600 add-ppm-task text-xs sm:text-base" data-device-id="{{ device.id }}" data-device-name="{{ device.serial_number }}" data-is-edit="true">Update PPM</button>
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+                                                Done
+                                            </span>
                                         {% else %}
-                                            <button class="bg-blue-600 text-white px-2 py-1 sm:px-3 sm:py-1 rounded-md hover:bg-blue-700 add-ppm-task text-xs sm:text-base" data-device-id="{{ device.id }}" data-device-name="{{ device.serial_number }}" data-is-edit="false">Add PPM</button>
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs font-semibold">
+                                                Not Done
+                                            </span>
                                         {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="mt-3 grid grid-cols-1 gap-2 text-xs">
+                                    <div class="rounded-xl bg-gray-50 border border-gray-100 p-2">
+                                        <p class="text-gray-500">Centre / Department</p>
+                                        <p class="text-gray-900 font-medium">
+                                            {{ device.centre.name|default:"N/A" }}
+                                            <span class="text-gray-400">•</span>
+                                            {{ device.department.name|default:"N/A" }}
+                                        </p>
+                                    </div>
+
+                                    <div class="rounded-xl bg-gray-50 border border-gray-100 p-2">
+                                        <p class="text-gray-500">Assignee</p>
+                                        <p class="text-gray-900 font-medium">{{ device.assignee_name|default:"N/A" }}</p>
+                                        {% if device.assignee_email %}
+                                            <p class="text-gray-600 truncate">{{ device.assignee_email }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="mt-3 flex flex-col sm:flex-row gap-2">
+                                    {% if user.is_superuser %}
+                                        <button
+                                            class="add-ppm-task w-full sm:w-auto bg-blue-600 text-white px-3 py-2 rounded-xl hover:bg-blue-700 shadow-sm hover:shadow-md transition text-xs font-semibold"
+                                            data-device-id="{{ device.id }}"
+                                            data-device-name="{{ device.serial_number }}"
+                                            data-is-edit="{% if device.has_ppm_task %}true{% else %}false{% endif %}">
+                                            {% if device.has_ppm_task %}Update PPM{% else %}Add PPM{% endif %}
+                                        </button>
                                     {% endif %}
-                                    <a href="{% url 'ppm_history_device' device.id %}" class="bg-gray-300 text-gray-700 px-2 py-1 sm:px-3 sm:py-1 rounded-md hover:bg-gray-400 text-xs sm:text-base">History</a>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
 
-            <div class="flex flex-col md:flex-row justify-between items-center mt-4 space-y-4 md:space-y-0">
-                <div class="text-gray-600 text-sm sm:text-base">
-                    Showing {{ devices.start_index }} to {{ devices.end_index }} of {{ report_data.total_records }} devices
-                </div>
-                <div class="flex flex-wrap space-x-1">
-                    {% if devices.has_previous %}
-                        <a href="{% url 'ppm_device_list' %}?page=1&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}{% if report_data.ppm_status_filter %}&ppm_status={{ report_data.ppm_status_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">First</a>
-                        <a href="{% url 'ppm_device_list' %}?page={{ devices.previous_page_number }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}{% if report_data.ppm_status_filter %}&ppm_status={{ report_data.ppm_status_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">Prev</a>
-                    {% endif %}
-                    {% for num in page_range %}
-                        {% if num is None %}
-                            <span class="px-2 py-1 text-gray-700 text-sm sm:text-base">...</span>
-                        {% elif num == devices.number %}
-                            <span class="px-2 py-1 bg-blue-600 text-white rounded transition duration-200 text-sm sm:text-base">{{ num }}</span>
-                        {% else %}
-                            <a href="{% url 'ppm_device_list' %}?page={{ num }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}{% if report_data.ppm_status_filter %}&ppm_status={{ report_data.ppm_status_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">{{ num }}</a>
-                        {% endif %}
-                    {% endfor %}
-                    {% if devices.has_next %}
-                        <a href="{% url 'ppm_device_list' %}?page={{ devices.next_page_number }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}{% if report_data.ppm_status_filter %}&ppm_status={{ report_data.ppm_status_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">Next</a>
-                        <a href="{% url 'ppm_device_list' %}?page={{ paginator.num_pages }}&items_per_page={{ report_data.items_per_page }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if report_data.centre_filter %}&centre={{ report_data.centre_filter }}{% endif %}{% if report_data.ppm_status_filter %}&ppm_status={{ report_data.ppm_status_filter }}{% endif %}" class="px-2 py-1 border rounded hover:bg-gray-200 transition duration-200 text-sm sm:text-base">Last</a>
-                    {% endif %}
-                </div>
-            </div>
-        {% else %}
-            <p class="text-gray-600 text-sm sm:text-base">{% if not active_period %}No active period. Please create and activate a period to manage devices.{% else %}No devices found.{% endif %}</p>
-        {% endif %}
-    </div>
-
-    {% if user.is_superuser %}
-        <div id="ppmTaskModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden" role="dialog">
-            <div class="relative top-10 sm:top-20 mx-auto p-4 sm:p-5 border w-full max-w-md sm:w-96 shadow-lg rounded-md bg-white">
-                <div class="mt-3 text-center">
-                    <h3 class="text-base sm:text-lg font-medium text-gray-900" id="modalTitle">Add PPM Task for <span id="deviceName"></span></h3>
-                    <div class="mt-2 text-left">
-                        <div class="mb-4 border-b pb-4">
-                            <h4 class="text-sm sm:text-md font-medium text-gray-700 mb-2">Device Details</h4>
-                            <div id="hardwareDetails">
-                                <p class="hardware-field text-sm sm:text-base" data-field="hardware"><strong>Hardware:</strong> <span id="deviceHardware"></span></p>
-                                <p class="hardware-field text-sm sm:text-base" data-field="system_model"><strong>System Model:</strong> <span id="deviceSystemModel"></span></p>
-                                <p class="hardware-field text-sm sm:text-base" data-field="processor"><strong>Processor:</strong> <span id="deviceProcessor"></span></p>
-                                <p class="hardware-field text-sm sm:text-base" data-field="ram"><strong>RAM:</strong> <span id="deviceRam"></span></p>
-                                <p class="hardware-field text-sm sm:text-base" data-field="hdd"><strong>HDD:</strong> <span id="deviceHdd"></span></p>
+                                    <a href="{% url 'ppm_history_device' device.id %}"
+                                       class="w-full sm:w-auto bg-gray-100 text-gray-800 px-3 py-2 rounded-xl hover:bg-gray-200 shadow-sm transition text-xs font-semibold text-center">
+                                        History
+                                    </a>
+                                </div>
                             </div>
-                            <p id="noHardwareMessage" class="text-gray-600 text-xs sm:text-sm hidden">No hardware details available.</p>
                         </div>
-                        <form id="ppmTaskForm" method="post" action="">
-                            {% csrf_token %}
-                            <div class="mb-4">
-                                <label class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Period</label>
-                                <input type="text" value="{{ active_period.name|default:'No active period' }}" class="w-full border rounded-md p-2 bg-gray-100 text-sm sm:text-base" readonly>
+                    {% endfor %}
+                </div>
+
+                <!-- Desktop table -->
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-100 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Device / Serial</th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Centre / Department</th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Assignee</th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Status</th>
+                                <th class="px-4 py-3 text-right font-semibold text-gray-700">Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody class="divide-y divide-gray-50">
+                            {% for device in devices %}
+                                <tr class="hover:bg-gray-50 transition">
+                                    <td class="px-4 py-3">
+                                        <div class="font-semibold text-gray-900">
+                                            {{ device.device_name|default:"N/A" }}
+                                        </div>
+                                        <div class="text-xs text-gray-600">
+                                            SN: <span class="font-mono">{{ device.serial_number|default:"N/A" }}</span>
+                                        </div>
+                                    </td>
+
+                                    <td class="px-4 py-3">
+                                        <div class="font-medium text-gray-900">{{ device.centre.name|default:"N/A" }}</div>
+                                        <div class="text-xs text-gray-600">{{ device.department.name|default:"N/A" }}</div>
+                                    </td>
+
+                                    <td class="px-4 py-3">
+                                        <div class="font-medium text-gray-900">{{ device.assignee_name|default:"N/A" }}</div>
+                                        <div class="text-xs text-gray-600">{{ device.assignee_email|default:"" }}</div>
+                                    </td>
+
+                                    <td class="px-4 py-3">
+                                        {% if device.has_ppm_task %}
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+                                                Done
+                                            </span>
+                                        {% else %}
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs font-semibold">
+                                                Not Done
+                                            </span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="px-4 py-3">
+                                        <div class="flex justify-end gap-2">
+                                            {% if user.is_superuser %}
+                                                <button
+                                                    class="add-ppm-task bg-blue-600 text-white px-3 py-2 rounded-xl hover:bg-blue-700 shadow-sm hover:shadow-md transition text-xs font-semibold"
+                                                    data-device-id="{{ device.id }}"
+                                                    data-device-name="{{ device.serial_number }}"
+                                                    data-is-edit="{% if device.has_ppm_task %}true{% else %}false{% endif %}">
+                                                    {% if device.has_ppm_task %}Update PPM{% else %}Add PPM{% endif %}
+                                                </button>
+                                            {% endif %}
+
+                                            <a href="{% url 'ppm_history_device' device.id %}"
+                                               class="bg-gray-100 text-gray-800 px-3 py-2 rounded-xl hover:bg-gray-200 shadow-sm transition text-xs font-semibold">
+                                                History
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="px-4 py-8 text-center text-gray-500">No devices found.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="p-6 text-center text-gray-600">No devices found.</div>
+            {% endif %}
+        </div>
+
+        <!-- Pagination -->
+        <div class="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
+            <div class="text-gray-600">
+                Page <span class="font-semibold text-gray-900">{{ devices.number }}</span>
+                of <span class="font-semibold text-gray-900">{{ devices.paginator.num_pages }}</span>
+            </div>
+
+            <div class="flex flex-wrap gap-1">
+                {% for p in page_range %}
+                    {% if p %}
+                        <a href="?page={{ p }}&search={{ report_data.search_query }}&centre={{ report_data.centre_filter }}&ppm_status={{ report_data.ppm_status_filter }}&items_per_page={{ report_data.items_per_page }}"
+                           class="px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm transition
+                                  {% if devices.number == p %}bg-blue-600 text-white border-blue-600{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}">
+                            {{ p }}
+                        </a>
+                    {% else %}
+                        <span class="px-2 py-1 text-gray-500">…</span>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Modal -->
+        <div id="ppmTaskModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+            <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+
+            <div class="relative min-h-full w-full flex items-end sm:items-center justify-center p-2 sm:p-6">
+                <div class="w-full max-w-3xl bg-white rounded-3xl shadow-2xl ring-1 ring-black/5 overflow-hidden transform transition-all max-h-[90vh] flex flex-col">
+
+                    <!-- Header -->
+                    <div class="px-4 sm:px-6 py-4 border-b bg-gradient-to-r from-white to-gray-50 flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <h3 class="text-base sm:text-lg font-semibold text-gray-900" id="modalTitle">
+                                Add PPM Task for <span id="deviceName"></span>
+                            </h3>
+                            <p class="text-xs sm:text-sm text-gray-600 mt-0.5">
+                                Fill activities, or mark as “No activity performed” if PPM couldn’t be done.
+                            </p>
+                        </div>
+
+                        <button type="button"
+                                class="cancel-modal shrink-0 rounded-xl p-2 hover:bg-gray-100 transition"
+                                aria-label="Close">
+                            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <form id="ppmTaskForm" method="post" action="" class="flex-1 overflow-y-auto">
+                        {% csrf_token %}
+
+                        <div class="p-4 sm:p-6 space-y-4">
+
+                            <!-- Device Details -->
+                            <div class="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
+                                <h4 class="text-sm font-semibold text-gray-900 mb-2">Device Details</h4>
+
+                                <div id="hardwareDetails" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                                    <p class="hardware-field" data-field="hardware">
+                                        <span class="text-gray-500">Hardware:</span>
+                                        <span class="font-medium text-gray-900" id="deviceHardware"></span>
+                                    </p>
+                                    <p class="hardware-field" data-field="system_model">
+                                        <span class="text-gray-500">System Model:</span>
+                                        <span class="font-medium text-gray-900" id="deviceSystemModel"></span>
+                                    </p>
+                                    <p class="hardware-field" data-field="processor">
+                                        <span class="text-gray-500">Processor:</span>
+                                        <span class="font-medium text-gray-900" id="deviceProcessor"></span>
+                                    </p>
+                                    <p class="hardware-field" data-field="ram">
+                                        <span class="text-gray-500">RAM:</span>
+                                        <span class="font-medium text-gray-900" id="deviceRam"></span>
+                                    </p>
+                                    <p class="hardware-field" data-field="hdd">
+                                        <span class="text-gray-500">HDD:</span>
+                                        <span class="font-medium text-gray-900" id="deviceHdd"></span>
+                                    </p>
+                                </div>
+
+                                <p id="noHardwareMessage" class="text-gray-600 text-sm hidden">
+                                    No hardware details available.
+                                </p>
+                            </div>
+
+                            <!-- Period -->
+                            <div class="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
+                                <label class="block text-sm font-semibold text-gray-900 mb-1">Period</label>
+                                <input type="text"
+                                       value="{{ active_period.name|default:'No active period' }}"
+                                       class="w-full border border-gray-200 rounded-xl px-3 py-2 bg-gray-50 text-sm"
+                                       readonly>
                                 <input type="hidden" name="period" value="{{ active_period.id }}">
                             </div>
-                            <div class="mb-4">
-                                <label class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Activities Performed</label>
-                                <p class="text-gray-600 text-xs sm:text-sm mb-2">Select the activities that have been performed:</p>
+
+                            <!-- No Activity toggle -->
+                            <div class="rounded-2xl border border-gray-100 bg-gray-50 shadow-sm p-4">
+                                <label class="flex items-start gap-3">
+                                    <input type="checkbox" id="noActivityToggle" name="no_ppm_activity_performed"
+                                           class="h-5 w-5 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-semibold text-gray-900">No activity performed</p>
+                                        <p class="text-xs text-gray-600">Use this if PPM couldn’t be done for this device in this period.</p>
+                                    </div>
+                                </label>
+
+                                <div id="noActivityFields" class="mt-3 hidden">
+                                    <label for="reason" class="block text-sm font-semibold text-gray-900 mb-1">
+                                        Reason <span class="text-red-600">*</span>
+                                    </label>
+                                    <textarea name="reason" id="reason" rows="2"
+                                              class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                              placeholder="e.g. Device not available / user absent / sent for repair"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Activities -->
+                            <div class="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
+                                <label class="block text-sm font-semibold text-gray-900 mb-1">Activities Performed</label>
+                                <p class="text-xs text-gray-600 mb-3">Select the activities that have been performed:</p>
+
                                 {% if activities %}
-                                    <div class="grid grid-cols-1 gap-2">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                         {% for activity in activities %}
-                                            <div class="flex items-center">
-                                                <input type="checkbox" name="activities" value="{{ activity.id }}" id="activity_{{ activity.id }}" class="form-check-input h-4 w-4 sm:h-5 sm:w-5">
-                                                <label for="activity_{{ activity.id }}" class="ml-2 text-gray-700 text-sm sm:text-base">{{ activity.name }}</label>
-                                            </div>
+                                            <label class="flex items-start gap-3 rounded-xl border border-gray-100 p-3 hover:bg-gray-50 transition cursor-pointer">
+                                                <input type="checkbox" name="activities" value="{{ activity.id }}" id="activity_{{ activity.id }}"
+                                                       class="h-5 w-5 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                <span class="text-sm text-gray-900 font-medium">{{ activity.name }}</span>
+                                            </label>
                                         {% endfor %}
                                     </div>
                                 {% else %}
-                                    <p class="text-gray-600 text-sm sm:text-base">No activities available for this period.</p>
+                                    <p class="text-gray-600 text-sm">No activities available for this period.</p>
                                 {% endif %}
                             </div>
-                            <div class="mb-4">
-                                <label for="completed_date" class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Completed Date</label>
-                                <input type="date" name="completed_date" id="completed_date" class="w-full border rounded-md p-2 text-sm sm:text-base">
+
+                            <!-- Completed Date -->
+                            <div class="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
+                                <label for="completed_date" class="block text-sm font-semibold text-gray-900 mb-1">Completed Date</label>
+                                <input type="date" name="completed_date" id="completed_date"
+                                       class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
-                            <div class="mb-4">
-                                <label for="remarks" class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Remarks</label>
-                                <textarea name="remarks" id="remarks" rows="3" class="w-full border rounded-md p-2 text-sm sm:text-base"></textarea>
+
+                            <!-- Notes -->
+                            <div class="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
+                                <label for="notes" class="block text-sm font-semibold text-gray-900 mb-1">Notes</label>
+                                <textarea name="notes" id="notes" rows="3"
+                                          class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                          placeholder="Optional notes..."></textarea>
+                                <p id="notesDisabledHint" class="mt-2 text-xs text-gray-500 hidden">
+                                    Notes disabled because <span class="font-semibold">Reason</span> is used as notes when no activity is performed.
+                                </p>
                             </div>
-                            <div class="mt-4 flex justify-center space-x-2">
-                                <button type="submit" class="bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 text-sm sm:text-base">Save</button>
-                                <button type="button" class="bg-gray-300 text-gray-700 px-3 py-2 rounded-md hover:bg-gray-400 cancel-modal text-sm sm:text-base">Cancel</button>
-                            </div>
-                        </form>
-                    </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="px-4 sm:px-6 py-4 border-t bg-white/90 backdrop-blur flex flex-col sm:flex-row gap-2 justify-end">
+                            <button type="button"
+                                    class="cancel-modal w-full sm:w-auto bg-gray-100 text-gray-800 px-4 py-2 rounded-xl hover:bg-gray-200 shadow-sm transition font-semibold text-sm">
+                                Cancel
+                            </button>
+                            <button type="submit"
+                                    class="w-full sm:w-auto bg-blue-600 text-white px-5 py-2 rounded-xl hover:bg-blue-700 shadow-sm hover:shadow-md transition font-semibold text-sm">
+                                Save
+                            </button>
+                        </div>
+                    </form>
+
                 </div>
             </div>
         </div>
+    {% else %}
+        <p class="text-gray-600 text-sm sm:text-base">
+            No active period. Please create and activate a period to manage devices.
+        </p>
     {% endif %}
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function() {
+
+    function setNotesDisabled(isDisabled) {
+        if (isDisabled) {
+            $('#notes').val('').prop('disabled', true).addClass('bg-gray-100 cursor-not-allowed');
+            $('#notesDisabledHint').removeClass('hidden');
+        } else {
+            $('#notes').prop('disabled', false).removeClass('bg-gray-100 cursor-not-allowed');
+            $('#notesDisabledHint').addClass('hidden');
+        }
+    }
+
+    function applyNoActivityState(isOn) {
+        if (isOn) {
+            $('#noActivityFields').removeClass('hidden');
+            $('#reason').prop('required', true);
+
+            // disable activities
+            $('input[name="activities"]').prop('checked', false).prop('disabled', true);
+
+            // ✅ disable notes (reason is the notes)
+            setNotesDisabled(true);
+        } else {
+            $('#noActivityFields').addClass('hidden');
+            $('#reason').prop('required', false);
+
+            // enable activities
+            $('input[name="activities"]').prop('disabled', false);
+
+            // ✅ enable notes
+            setNotesDisabled(false);
+        }
+    }
+
+    $('#noActivityToggle').on('change', function() {
+        applyNoActivityState($(this).is(':checked'));
+    });
+
     $('.add-ppm-task').click(function() {
         var deviceId = $(this).data('device-id');
         var deviceName = $(this).data('device-name');
-        var isEdit = $(this).data('is-edit') === true;
+
+        // (optional) make this reliable for your title only
+        var rawIsEdit = $(this).data('is-edit');
+        var isEdit = String(rawIsEdit).toLowerCase() === 'true';
+
         $('#deviceName').text(deviceName);
         $('#modalTitle').text((isEdit ? 'Update' : 'Add') + ' PPM Task for ' + deviceName);
+
         $('#ppmTaskForm').attr('action', '/ppm/ppm/devices/' + deviceId + '/task/create/');
         $('#ppmTaskForm')[0].reset();
+
+        // reset ui state
         $('#completed_date').val('');
-        $('#remarks').val('');
+        $('#notes').val('');
+        $('#reason').val('');
+        $('#noActivityToggle').prop('checked', false);
+        $('#noActivityFields').addClass('hidden');
+        $('input[name="activities"]').prop('checked', false).prop('disabled', false);
+        setNotesDisabled(false);
+
         $('#deviceHardware').text('');
         $('#deviceSystemModel').text('');
         $('#deviceProcessor').text('');
@@ -225,21 +506,15 @@ $(document).ready(function() {
         $('#deviceHdd').text('');
         $('#noHardwareMessage').addClass('hidden');
         $('#hardwareDetails').show();
+
         $.get('/ppm/ppm/devices/' + deviceId + '/task/get/', function(data) {
-            if (isEdit) {
-                if (data.activities) {
-                    data.activities.forEach(function(actId) {
-                        $('#activity_' + actId).prop('checked', true);
-                    });
-                }
-                $('#completed_date').val(data.completed_date || '');
-                $('#remarks').val(data.remarks || '');
-            }
+            // hardware
             $('#deviceHardware').text(data.hardware || 'N/A');
             $('#deviceSystemModel').text(data.system_model || 'N/A');
             $('#deviceProcessor').text(data.processor || 'N/A');
             $('#deviceRam').text(data.ram_gb ? data.ram_gb + ' GB' : 'N/A');
             $('#deviceHdd').text(data.hdd_gb ? data.hdd_gb + ' GB' : 'N/A');
+
             var allEmpty = (
                 $('#deviceHardware').text() === 'N/A' &&
                 $('#deviceSystemModel').text() === 'N/A' &&
@@ -247,28 +522,59 @@ $(document).ready(function() {
                 $('#deviceRam').text() === 'N/A' &&
                 $('#deviceHdd').text() === 'N/A'
             );
+
             if (allEmpty) {
                 $('#hardwareDetails').hide();
                 $('#noHardwareMessage').removeClass('hidden');
-            } else {
-                $('.hardware-field').each(function() {
-                    if ($(this).find('span').text() === 'N/A') {
-                        $(this).hide();
-                    } else {
-                        $(this).show();
-                    }
-                });
             }
-        }).fail(function() {
-            $('#hardwareDetails').hide();
-            $('#noHardwareMessage').removeClass('hidden');
+
+            // ✅ Always prefill based on response (not on isEdit)
+            var noAct = !!data.no_ppm_activity_performed;
+
+            $('#completed_date').val(data.completed_date || '');
+
+            if (noAct) {
+                $('#noActivityToggle').prop('checked', true);
+                applyNoActivityState(true);
+
+                $('#reason').val(data.reason || '');
+
+                // notes stays disabled & empty by design
+                $('#notes').val('');
+            } else {
+                $('#noActivityToggle').prop('checked', false);
+                applyNoActivityState(false);
+
+                // pre-check activities
+                $('input[name="activities"]').prop('checked', false);
+                if (data.activities && data.activities.length) {
+                    data.activities.forEach(function(actId) {
+                        $('#activity_' + actId).prop('checked', true);
+                    });
+                }
+
+                // notes/remarks
+                $('#notes').val(data.notes !== undefined ? data.notes : (data.remarks || ''));
+            }
+
+            $('#ppmTaskModal').removeClass('hidden');
         });
-        $('#ppmTaskModal').removeClass('hidden');
     });
 
     $('.cancel-modal').click(function() {
-        $('#ppmTaskForm')[0].reset();
         $('#ppmTaskModal').addClass('hidden');
+        $('#ppmTaskForm')[0].reset();
+        $('input[name="activities"]').prop('disabled', false);
+        setNotesDisabled(false);
+    });
+
+    $('#ppmTaskModal').on('click', function(e) {
+        if (e.target === this) {
+            $('#ppmTaskModal').addClass('hidden');
+            $('#ppmTaskForm')[0].reset();
+            $('input[name="activities"]').prop('disabled', false);
+            setNotesDisabled(false);
+        }
     });
 
     $('#ppmTaskForm').submit(function(e) {
@@ -279,68 +585,28 @@ $(document).ready(function() {
             data: $(this).serialize(),
             success: function(response) {
                 if (response.success) {
-                    var message = 'PPM task successfully ' + (response.is_new ? 'created' : 'updated') + ' for ' + response.device_name + '!';
-                    var alertDiv = $('<div class="bg-green-500 border border-green-700 text-white px-4 py-3 rounded-lg mb-2 alert" role="alert">' + message + '</div>');
+                    var message = 'PPM task successfully ' + (response.is_new ? 'created' : 'updated') + ' for ' + response.device_name + ' ✅';
+                    var alertDiv = $('<div class="bg-green-600 text-white px-4 py-3 rounded-xl shadow-sm ring-1 ring-black/5 mb-2 alert" role="alert">' + message + '</div>');
                     $('#messages').append(alertDiv);
-                    setTimeout(function() {
-                        alertDiv.fadeOut('slow', function() { $(this).remove(); });
-                    }, 5000);
+                    setTimeout(function() { alertDiv.fadeOut('slow', function() { $(this).remove(); }); }, 5000);
+
                     $('#ppmTaskModal').addClass('hidden');
                     $('#ppmTaskForm')[0].reset();
                     window.location.reload();
                 } else {
-                    var alertDiv = $('<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-2 alert" role="alert">' + response.error + '</div>');
+                    var alertDiv = $('<div class="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-xl mb-2 alert" role="alert">' + response.error + '</div>');
                     $('#messages').append(alertDiv);
-                    setTimeout(function() {
-                        alertDiv.fadeOut('slow', function() { $(this).remove(); });
-                    }, 5000);
+                    setTimeout(function() { alertDiv.fadeOut('slow', function() { $(this).remove(); }); }, 7000);
                 }
             },
             error: function() {
-                var alertDiv = $('<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-2 alert" role="alert">An error occurred while saving the task.</div>');
+                var alertDiv = $('<div class="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-xl mb-2 alert" role="alert">An error occurred. Please try again.</div>');
                 $('#messages').append(alertDiv);
-                setTimeout(function() {
-                    alertDiv.fadeOut('slow', function() { $(this).remove(); });
-                }, 5000);
+                setTimeout(function() { alertDiv.fadeOut('slow', function() { $(this).remove(); }); }, 7000);
             }
         });
     });
 
-    setTimeout(function() {
-        $('.alert').fadeOut('slow', function() { $(this).remove(); });
-    }, 5000);
-
-    // FIX: The original updateItemsPerPage function was broken because it used a static URL. 
-    // The filter values need to be dynamically pulled from the current URL to update correctly.
-
-    function updateItemsPerPage(select) {
-        const itemsPerPage = select.value;
-        const urlParams = new URLSearchParams(window.location.search);
-        urlParams.set('items_per_page', itemsPerPage);
-        urlParams.set('page', 1);
-        
-        // Retain other filters
-        if ('{{ report_data.search_query }}') {
-            urlParams.set('search', '{{ report_data.search_query }}');
-        } else {
-            urlParams.delete('search');
-        }
-
-        if ('{{ report_data.centre_filter }}') {
-            urlParams.set('centre', '{{ report_data.centre_filter }}');
-        } else {
-            urlParams.delete('centre');
-        }
-
-        if ('{{ report_data.ppm_status_filter }}') { // NEW: Retain PPM Status filter
-            urlParams.set('ppm_status', '{{ report_data.ppm_status_filter }}');
-        } else {
-            urlParams.delete('ppm_status');
-        }
-
-
-        window.location.href = "{% url 'ppm_device_list' %}?" + urlParams.toString();
-    }
 });
 </script>
 {% endblock %}

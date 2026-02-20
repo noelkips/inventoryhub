@@ -1,8 +1,12 @@
+from datetime import timezone
+
 from django.db import models
+from itinventory import settings
 from django.contrib.auth.models import AbstractUser
 from simple_history.models import HistoricalRecords
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
+from django.utils import timezone
 
 class Centre(models.Model):
     name = models.CharField(max_length=300)
@@ -155,8 +159,19 @@ class Import(models.Model):
         return f"{self.serial_number} ({self.centre.name if self.centre else 'No Centre'})"
 
 
-# Add these fields to your DeviceAgreement model
+class DeviceLog(models.Model):
+    device = models.ForeignKey("Import", on_delete=models.CASCADE, related_name="logs")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="device_logs")
+    message = models.TextField()
+    created_at = models.DateTimeField(default=timezone.now)
 
+    # optional context
+    ppm_task = models.ForeignKey("ppm.PPMTask", on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+        
 class DeviceAgreement(models.Model):
     device = models.ForeignKey("Import", on_delete=models.CASCADE, related_name='agreements')
     employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, related_name='device_agreements')
