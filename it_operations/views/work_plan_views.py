@@ -31,6 +31,11 @@ from ..utils import get_kenyan_holidays, notify_collaborator
 import openpyxl
 from openpyxl.styles import PatternFill, Font, Alignment
 from openpyxl.styles.borders import Border, Side
+import logging
+from itertools import chain
+from django.db import transaction
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -145,7 +150,7 @@ def get_task_details_json(request, pk):
     return JsonResponse(data)
 
 
-from itertools import chain
+
 
 @login_required
 def work_plan_detail(request, pk):
@@ -159,44 +164,109 @@ def work_plan_detail(request, pk):
     work_plan = get_object_or_404(WorkPlan, pk=pk)
     user = request.user
     today = timezone.now().date()
-    
+
     # Access Check
     is_owner = (user == work_plan.user)
     is_manager = is_manager_of(user, work_plan.user)
     is_collab = work_plan.tasks.filter(collaborators=user).exists()
-    
+
     if not (is_owner or is_manager or is_collab):
         messages.error(request, "Access Denied. You do not have permission to view this work plan.")
         return redirect('work_plan_list')
-   
 
     # Global "Can Add Task" Logic (Only the plan owner)
-    can_add_global = work_plan.can_add_tasks and is_owner
-    
+    can_add_global = bool(getattr(work_plan, "can_add_tasks", False) and is_owner)
+
+    # Helper: week bounds
+    week_start = work_plan.week_start_date
+    week_end = work_plan.week_end_date
+
     # Handle Add Task (POST) - only owner can add to their plan
-    if request.method == 'POST' and 'add_task' in request.POST:
+    if request.method == 'POST' and request.POST.get('add_task'):
         if not can_add_global:
             messages.error(request, "Adding tasks is locked for this week.")
             return redirect('work_plan_detail', pk=pk)
-        
-        # Your existing add_task logic (keep it exactly as before)
-        # ...
-        
+
+        # --- Read & validate inputs (match template field names) ---
+        date_str = (request.POST.get('date') or '').strip()
+        task_name = (request.POST.get('task_name') or '').strip()
+        resources_needed = (request.POST.get('resources_needed') or '').strip()
+        target = (request.POST.get('target') or '').strip()
+        other_parties = (request.POST.get('other_parties') or '').strip()
+
+        is_leave = request.POST.get('is_leave') in ('on', 'true', '1', 'yes')
+
+        centre_id = (request.POST.get('centre') or '').strip()
+        department_id = (request.POST.get('department') or '').strip()
+        collaborator_ids = request.POST.getlist('collaborators')  # multi-select
+
+        if not date_str:
+            messages.error(request, "Date is required.")
+            return redirect('work_plan_detail', pk=pk)
+
+        try:
+            task_date = timezone.datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            messages.error(request, "Invalid date.")
+            return redirect('work_plan_detail', pk=pk)
+
+        # Enforce only dates within this work plan week
+        if task_date < week_start or task_date > week_end:
+            messages.error(request, "Selected date must be within this work plan week.")
+            return redirect('work_plan_detail', pk=pk)
+
+        # If not leave, task_name must exist
+        if not is_leave and not task_name:
+            messages.error(request, "Task Name is required.")
+            return redirect('work_plan_detail', pk=pk)
+
+        # Optional FKs
+        centre = Centre.objects.filter(id=centre_id).first() if centre_id else None
+        department = Department.objects.filter(id=department_id).first() if department_id else None
+
+        # Collaborators must be valid users (and never include owner)
+        collab_qs = User.objects.filter(is_active=True, id__in=collaborator_ids).exclude(id=work_plan.user.id)
+
+        # Prevent adding tasks on a day already blocked by leave (optional rule)
+        if WorkPlanTask.objects.filter(work_plan=work_plan, date=task_date, is_leave=True).exists() and not is_leave:
+            messages.error(request, "That day is marked as On Leave. Pick another date.")
+            return redirect('work_plan_detail', pk=pk)
+
+        try:
+            with transaction.atomic():
+                new_task = WorkPlanTask.objects.create(
+                    work_plan=work_plan,
+                    created_by=user,  # ✅ FIX: required field
+                    date=task_date,
+                    task_name=("On Leave" if is_leave else task_name),
+                    is_leave=is_leave,
+                    centre=centre,
+                    department=department,
+                    resources_needed=resources_needed,
+                    target=target,
+                    other_parties=other_parties,
+                )
+
+                if collab_qs.exists():
+                    new_task.collaborators.set(collab_qs)
+
+            messages.success(request, "Task created successfully ✅")
+        except Exception as e:
+            logger.exception("Failed to create task for work_plan=%s", work_plan.id)
+            messages.error(request, f"Failed to create task: {str(e)}")
+
         return redirect('work_plan_detail', pk=pk)
 
     # Fetch owned tasks (from this plan)
     owned_tasks = work_plan.tasks.all().select_related('centre', 'department').prefetch_related('collaborators')
 
     # Fetch collaborative tasks from OTHER plans on the same week dates
-    week_start = work_plan.week_start_date
-    week_end = work_plan.week_end_date
-    
     collaborative_tasks = WorkPlanTask.objects.filter(
         collaborators=user,
         date__gte=week_start,
         date__lte=week_end
     ).exclude(
-        work_plan=work_plan  # Avoid duplicates
+        work_plan=work_plan
     ).select_related('work_plan__user', 'centre', 'department').prefetch_related('collaborators')
 
     # Combine and sort by date
@@ -208,11 +278,10 @@ def work_plan_detail(request, pk):
     for t in all_tasks:
         is_task_owner = (t.work_plan.user == user)
         is_task_collab = user in t.collaborators.all()
-        
+
         t.is_owned_task = is_task_owner
         t.is_collaborative_task = is_task_collab and not is_task_owner
-        
-        # Permissions
+
         t.can_edit = is_task_owner or (t.is_collaborative_task and t.date >= today)
         t.can_delete = is_task_owner or is_manager
         t.can_reschedule = is_task_owner or is_manager or (t.is_collaborative_task and t.date >= today)
@@ -235,14 +304,16 @@ def work_plan_detail(request, pk):
         'centres': Centre.objects.all(),
         'departments': Department.objects.all(),
         'potential_collaborators': User.objects.filter(is_active=True).exclude(id=work_plan.user.id).order_by('first_name'),
-        'week_days': [work_plan.week_start_date + timedelta(days=i) for i in range(6)],
+        'week_days': [work_plan.week_start_date + timedelta(days=i) for i in range(7)],
         'all_users': User.objects.filter(is_active=True).order_by('first_name'),
         'leave_dates': leave_dates,
         'is_owner': is_owner,
         'is_manager': is_manager,
         'has_collaborative_tasks': collaborative_tasks.exists(),
+        'is_collaborator': is_collab,
     }
     return render(request, 'work_plan/workplan_detail.html', context)
+
 
 @login_required
 @require_POST
