@@ -1,0 +1,91 @@
+Email sent successfully to ['walter.bulimu@mohiafrica.org']
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['ethan.bwibo@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['santana.macharia@mohiafrica.org']
+Email sent successfully to ['ezra.ndonga@mohiafrica.org', 'santana.macharia@mohiafrica.org', 'john.mwangi@mohiafrica.org', 'sylvia.wanjiru@mohiafrica.org']
+Device assigned email sent to ['nerreah.ogweno@mohiafrica.org'] (cc: ['it@mohiafrica.org'])
+Email sent successfully to ['joshua.mandere@mohiafrica.org']
+Email sent successfully to ['kipkurui.victor@mohiafrica.org']
+Email sent successfully to ['naomi.korir@mohiafrica.org']
+Email sent successfully to ['gideon.kiprotich@mohiafrica.org']
+Email sent successfully to ['faith.mwende@mohiafrica.org']
+Email sent successfully to ['doreen.ongachi@mohiafrica.org']
+Email sent successfully to ['wasandra.rodgers@mohiafrica.org']
+Device assigned email sent to ['chris.mithika@mohiafrica.org'] (cc: ['it@mohiafrica.org'])
+Email sent successfully to ['everline.kisomo@mohiafrica.org']
+Device assigned email sent to ['everline.kisomo@mohiafrica.org'] (cc: ['it@mohiafrica.org'])
+Email sent successfully to ['james.kilonzo@mohiafrica.org']
+Device assigned email sent to ['everline.otieno@mohiafrica.org'] (cc: ['it@mohiafrica.org'])
+Email sent successfully to ['josephine.waithera@mohiafrica.org']
+Email sent successfully to ['esther.mayabi@mohiafrica.org']
+Email sent successfully to ['ezekiel.namaswa@mohiafrica.org']
+Email sent successfully to ['henry.misiko@mohiafrica.org']
+Email sent successfully to ['titus.ekiru@mohiafrica.org']
+Device assigned email sent to ['daisy.kandie@mohiafrica.org'] (cc: ['it@mohiafrica.org'])
+Email sent successfully to ['griffin.milimu@mohiafrica.org']
+Device assigned email sent to ['griffin.milimu@mohiafrica.org'] (cc: ['it@mohiafrica.org'])
+Email sent successfully to ['meshack.mumo@mohiafrica.org']
+Email sent successfully to ['isaac.maingi@mohiafrica.org']
+Email sent successfully to ['julius.mumba@mohiafrica.org']
+Device assigned email sent to ['samuel.anditi@mohiafrica.org'] (cc: ['it@mohiafrica.org'])
+Email sent successfully to ['phanice.mukungu@mohiafrica.org']
+Email sent successfully to ['stephen.mayaka@mohiafrica.org']
+Failed login attempt for username: sylvia.wanjiru
+Failed login attempt for username: sylvia.wanjiru
+Email sent successfully to ['sylvia.wanjiru@mohiafrica.org']
+Email sent successfully to ['sylvia.wanjiru@mohiafrica.org']
+[UID:1302][586597] Child process with pid: 586701 was killed by signal: 15, core dumped: no
+[UID:1302][1269742] Child process with pid: 1309991 was killed by signal: 15, core dumped: no
+Failed login attempt for username: john.mwangi
+Failed login attempt for username: ephrem.onyango
+Failed login attempt for username: ephrem.onyango
+/home/ufdxwals/inventoryhub/ppm/views.py:274: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'ppm.models.PPMTask'> QuerySet.
+  paginator = Paginator(tasks, items_per_page)
+[UID:1302][2051662] Child process with pid: 2051760 was killed by signal: 15, core dumped: no
+[UID:1302][3008896] Child process with pid: 3009585 was killed by signal: 15, core dumped: no
+[UID:1302][3008896] Child process with pid: 3127711 was killed by signal: 15, core dumped: no
+[UID:1302][3646106] Child process with pid: 3646384 was killed by signal: 15, core dumped: no
+Failed login attempt for username: sylvia.wanjiru
+[UID:1302][3646106] Child process with pid: 3660427 was killed by signal: 15, core dumped: no
+Failed login attempt for username: ephrem.onyango
+Failed login attempt for username: ephrem.onyango
+Failed login attempt for username: ephrem.onyango
+Failed login attempt for username: noel.langat
+Failed login attempt for username: ephrem.onyango
+Failed login attempt for username: ephrem.onyango
+Failed login attempt for username: ephrem.onyango
+Failed login attempt for username: nicholus.musyoka
+Failed login attempt for username: username
+Failed login attempt for username: ephrem.onyango
+Failed login attempt for username: ephrem.onyango
+Failed login attempt for username: ephrem.onyango
+Failed login attempt for username: ephrem.onyango
+Failed login attempt for username: ephrem.onyango
+Failed login attempt for username: noel.langat
+Failed login attempt for username: ephrem.onyango
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+[UID:1302][4172317] Child process with pid: 4173215 was killed by signal: 15, core dumped: no
+Email sent successfully to ['gerald.kamande@mohiafrica.org']
+Email sent successfully to ['ezra.ndonga@mohiafrica.org']
+[UID:1302][1226943] Child process with pid: 1227398 was killed by signal: 15, core dumped: no
+Email sent successfully to ['gerald.kamande@mohiafrica.org']
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+Email sent successfully to ['james.muigai@mohiafrica.org']
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+/home/ufdxwals/inventoryhub/ppm/views.py:92: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'devices.models.Import'> QuerySet.
+  paginator = Paginator(devices, items_per_page)
+[UID:1302][2670441] Child process with pid: 2910287 was killed by signal: 15, core dumped: no

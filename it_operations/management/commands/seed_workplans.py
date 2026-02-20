@@ -9,82 +9,85 @@ from it_operations.models import WorkPlan, WorkPlanTask, PublicHoliday
 User = get_user_model()
 
 class Command(BaseCommand):
-    help = 'Creates a work plan task for Santana Macharia on Monday 9th Feb 2026'
+    help = 'Creates 10 work plan tasks (5 per day) for John Mwangi on 19th and 20th February 2026'
 
     def handle(self, *args, **kwargs):
         self.stdout.write(self.style.WARNING(
-            'Creating work plan task for Santana Macharia with Noel as collaborator...'
+            'Creating 10 work plan tasks for John Mwangi (Mwangi@mohiafrica.org)...'
         ))
 
         # ---------------------------------------------------------
         # CONFIG
         # ---------------------------------------------------------
-        task_date = date(2026, 2, 9)  # Monday 9th Feb
-        today = timezone.now().date()
+        task_dates = [date(2026, 2, 16), date(2026, 2, 17), date(2026, 2, 18), date(2026, 2, 19), date(2026, 2, 20)]  # 19th and 20th February 2026
+        tasks_per_day = 1 # Total 10 tasks across the two days
 
         # ---------------------------------------------------------
-        # TARGET USER AND COLLABORATOR
+        # TARGET USER
         # ---------------------------------------------------------
         try:
-            santana = User.objects.get(email="santana.macharia@mohiafrica.org")
+            john_mwangi = User.objects.get(email="samuel.kamande@mohiafrica.org")
         except User.DoesNotExist:
             self.stdout.write(self.style.ERROR(
-                "User santana.macharia@mohiafrica.org not found."
-            ))
-            return
-
-        try:
-            noel = User.objects.get(email="noel.langat@mohiafrica.org")
-        except User.DoesNotExist:
-            self.stdout.write(self.style.ERROR(
-                "User noel.langat@mohiafrica.org not found."
+                "User Mwangi@mohiafrica.org not found."
             ))
             return
 
         centres = list(Centre.objects.all())
         departments = list(Department.objects.all())
+        centre = centres[0] if centres else None
+        department = departments[0] if departments else None
 
         # ---------------------------------------------------------
-        # CLEAN EXISTING TASK (IF ANY)
+        # OPTIONAL: CLEAN EXISTING TASKS ON THESE DATES (UNCOMMENT IF NEEDED)
         # ---------------------------------------------------------
-        WorkPlanTask.objects.filter(
-            work_plan__user=santana,
-            date=task_date,
-            task_name="Prepare user training document for library system"
-        ).delete()
+        # This will delete ALL existing tasks for this user on the specified dates.
+        # Comment out if you want to preserve any existing tasks.
+        # WorkPlanTask.objects.filter(
+        #     work_plan__user=john_mwangi,
+        #     date__in=task_dates
+        # ).delete()
 
         # ---------------------------------------------------------
         # GENERATION
         # ---------------------------------------------------------
-        with transaction.atomic():
-            # Calculate Monday of the week
-            monday = task_date - timedelta(days=task_date.weekday())
-            
-            # Get or create work plan for that week
-            work_plan, _ = WorkPlan.objects.get_or_create(
-                user=santana,
-                week_start_date=monday,
-                defaults={
-                    'week_end_date': monday + timedelta(days=5)
-                }
-            )
+        task_index = 1
 
-            # Create the task
-            task = WorkPlanTask.objects.create(
-                work_plan=work_plan,
-                date=task_date,
-                is_leave=False,
-                task_name="Prepare user training document for library system",
-                centre=centres[0] if centres else None,
-                department=departments[0] if departments else None,
-                other_parties=noel.get_full_name() or noel.email,  # Noel as collaborator
-                resources_needed="LMS",
-                target="Complete task",
-                comments=None,
-                status="Pending",
-                created_by=santana
-            )
+        with transaction.atomic():
+            for task_date in task_dates:
+                # Calculate Monday of the week containing this date
+                monday = task_date - timedelta(days=task_date.weekday())
+
+                # Get or create work plan for that week
+                work_plan, _ = WorkPlan.objects.get_or_create(
+                    user=john_mwangi,
+                    week_start_date=monday,
+                    defaults={
+                        'week_end_date': monday + timedelta(days=5)
+                    }
+                )
+
+                # Create 5 tasks for this date
+                for _ in range(tasks_per_day):
+                    task_name = f"Week 2 Task {task_index}"
+
+                    WorkPlanTask.objects.create(
+                        work_plan=work_plan,
+                        date=task_date,
+                        is_leave=False,
+                        task_name=task_name,
+                        centre=centre,
+                        department=department,
+                        other_parties=None,  # No collaborator specified; set a name/email if needed
+                        resources_needed="As required",  # Customize if needed
+                        target="Complete task",
+                        comments=None,
+                        status="Pending",
+                        created_by=john_mwangi
+                    )
+
+                    task_index += 1
 
         self.stdout.write(self.style.SUCCESS(
-            f"Done! Created task for Santana Macharia on {task_date} with Noel as collaborator."
+            f"Done! Created 10 tasks (5 on {task_dates[0]}, 5 on {task_dates[1]}) for John Mwangi."
         ))
