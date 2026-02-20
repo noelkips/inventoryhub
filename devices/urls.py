@@ -3,7 +3,8 @@ from . import views
 
 urlpatterns = [
     # Authentication and User Management
-    path('', views.login_view, name='login'),
+    path('', views.landing_page, name='landing_page'),
+    path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
      path('accounts/password_reset/', 
          views.password_reset_request, 

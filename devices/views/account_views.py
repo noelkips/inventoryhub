@@ -65,6 +65,11 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
 
+def landing_page(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    return render(request, 'landing.html', {})
+
 @require_safe
 def session_ping(request):
     # Just touch the session → extends it

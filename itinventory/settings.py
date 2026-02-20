@@ -32,7 +32,7 @@ DB_NAME_CONFIG=os.getenv('DB_NAME')
 SECRET_KEY = 'django-insecure-=7ap+(zql*g##=bjqpdk9sgtd76k%ayih&k&qz(2y(t0^!7u^x'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 if DEBUG:
     ALLOWED_HOSTS = []
@@ -177,7 +177,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "/media/"
 
 AUTH_USER_MODEL = 'devices.CustomUser'
-LOGOUT_REDIRECT_URL = 'login'
+LOGOUT_REDIRECT_URL = 'landing_page'
 
 LOGIN_URL = 'login'  
 # Optional but recommended:

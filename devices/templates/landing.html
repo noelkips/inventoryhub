@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MOHI IT Management System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'mohi-blue': '#26A9E0',      /* Primary Blue */
+            'mohi-navy': '#002F66',      /* Primary Navy */
+            'mohi-logo-2': '#259ACC',    /* Logo Blue 2 */
+            'mohi-logo-3': '#0089BA',    /* Logo Blue 3 */
+            'mohi-green': '#8BC53F',     /* Primary Green */
+          },
+          animation: {
+            'float': 'float 6s ease-in-out infinite',
+            'pulse-slow': 'pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-20px)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* A much brighter, blended sky-to-ocean gradient */
+    .bright-blend {
+      background: linear-gradient(135deg, #e0f2fe 0%, #26A9E0 50%, #259ACC 100%);
+    }
+    /* White glass effect for better contrast on bright backgrounds */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bright-blend flex flex-col justify-center items-center overflow-hidden font-sans relative">
+
+  <div class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-white rounded-full filter blur-[120px] opacity-40 animate-pulse-slow"></div>
+  <div class="absolute bottom-0 right-0 w-[400px] h-[400px] bg-mohi-green rounded-full filter blur-[150px] opacity-20 animate-float"></div>
+
+  <main class="relative z-10 w-full max-w-md px-6">
+    <div class="glass-card p-10 rounded-[3rem] shadow-[0_25px_50px_-12px_rgba(0,47,102,0.2)] text-center transition-all duration-500 hover:shadow-[0_35px_60px_-15px_rgba(0,47,102,0.3)]">
+
+      <div class="mb-6 flex justify-center">
+        <div class="w-20 h-20 bg-white rounded-2xl flex items-center justify-center shadow-lg border border-blue-50">
+          <!-- IT icon -->
+          <svg class="text-mohi-navy w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9.75 17h4.5M9 20h6M4 4h16v10H4V4zm3 2h2m2 0h2m2 0h2" />
+          </svg>
+        </div>
+      </div>
+
+      <h1 class="text-3xl font-extrabold text-mohi-navy mb-3 tracking-tight">
+        MOHI <span class="text-mohi-blue">IT</span> System
+      </h1>
+
+      <p class="text-slate-600 mb-10 leading-relaxed text-sm font-medium">
+        Track assets, manage tickets, monitor devices, and keep your IT operations running smoothly across all centers.
+      </p>
+
+      <!-- Login is path('', views.login_view, name='login') -->
+      <a href="{% url 'login' %}" class="group relative flex items-center justify-center w-full py-4 bg-mohi-navy rounded-2xl text-white font-bold text-lg shadow-xl transition-all duration-300 hover:bg-mohi-logo-3 hover:-translate-y-1 active:scale-95">
+        <span>Sign In to Portal</span>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+        </svg>
+      </a>
+
+      <div class="mt-10 flex justify-center items-center gap-1.5">
+        <div class="h-1.5 w-12 bg-mohi-blue rounded-full"></div>
+        <div class="h-1.5 w-4 bg-mohi-green rounded-full"></div>
+        <div class="h-1.5 w-1.5 bg-slate-200 rounded-full"></div>
+      </div>
+
+      <footer class="mt-8 text-slate-400 text-xs font-semibold tracking-widest uppercase">
+        &copy; 2026 MOHI IT Management System
+      </footer>
+    </div>
+  </main>
+
+  <!-- Three.js CDN (single include) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+  <script>
+    // Canvas behind everything
+    const canvas = document.createElement("canvas");
+    canvas.style.position = "fixed";
+    canvas.style.top = "0";
+    canvas.style.left = "0";
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    canvas.style.zIndex = "-5";
+    canvas.style.pointerEvents = "none";
+    document.body.prepend(canvas);
+
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 140);
+    camera.position.z = 7.5;
+
+    // Lights (soft)
+    const light = new THREE.DirectionalLight(0xffffff, 1.05);
+    light.position.set(6, 6, 8);
+    scene.add(light);
+
+    const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+    scene.add(ambient);
+
+    // MOHI palette (as hex)
+    const MOHI_NAVY  = 0x002F66;
+    const MOHI_BLUE  = 0x26A9E0;
+    const MOHI_BLUE2 = 0x259ACC;
+    const MOHI_BLUE3 = 0x0089BA;
+    const MOHI_GREEN = 0x8BC53F;
+
+    function rand(min, max) { return min + Math.random() * (max - min); }
+
+    // Materials (semi-glass / modern)
+    function mat(color, opacity = 0.52, rough = 0.45, metal = 0.12) {
+      return new THREE.MeshStandardMaterial({
+        color,
+        roughness: rough,
+        metalness: metal,
+        transparent: true,
+        opacity
+      });
+    }
+
+    const bodyMats = [
+      mat(MOHI_NAVY, 0.55),
+      mat(MOHI_BLUE, 0.50),
+      mat(MOHI_BLUE2, 0.48),
+      mat(MOHI_BLUE3, 0.50)
+    ];
+    const accentMat = mat(MOHI_GREEN, 0.55, 0.55, 0.05);
+    const screenMat = new THREE.MeshStandardMaterial({
+      color: 0xf2f6ff,
+      roughness: 0.9,
+      metalness: 0.0,
+      transparent: true,
+      opacity: 0.38
+    });
+
+    function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+    // --- IT ITEM BUILDERS (simple but recognizable silhouettes) ---
+    function makeLaptop() {
+      const g = new THREE.Group();
+      const base = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.08, 0.75), pick(bodyMats));
+      const screen = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.70, 0.06), screenMat);
+      screen.position.set(0, 0.40, -0.30);
+      screen.rotation.x = -0.35;
+      const hinge = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.03, 0.06), accentMat);
+      hinge.position.set(0, 0.06, -0.24);
+      g.add(base, screen, hinge);
+      return g;
+    }
+
+    function makeMonitor() {
+      const g = new THREE.Group();
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.78, 0.10), pick(bodyMats));
+      const panel = new THREE.Mesh(new THREE.BoxGeometry(1.10, 0.64, 0.05), screenMat);
+      panel.position.z = 0.03;
+      const stand = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.20, 0.18), accentMat);
+      stand.position.set(0, -0.55, 0);
+      const base = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.06, 0.32), pick(bodyMats));
+      base.position.set(0, -0.70, 0);
+      g.add(frame, panel, stand, base);
+      return g;
+    }
+
+    function makeRouter() {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.18, 0.55), pick(bodyMats));
+      body.position.y = -0.08;
+
+      // antennas
+      const antGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.65, 10);
+      const a1 = new THREE.Mesh(antGeo, accentMat);
+      const a2 = new THREE.Mesh(antGeo, accentMat);
+      a1.position.set(-0.35, 0.28, 0.10);
+      a2.position.set(0.35, 0.28, 0.10);
+
+      // lights
+      const ledGeo = new THREE.BoxGeometry(0.10, 0.03, 0.03);
+      for (let i = 0; i < 4; i++){
+        const led = new THREE.Mesh(ledGeo, screenMat);
+        led.position.set(-0.35 + i * 0.22, -0.02, 0.28);
+        g.add(led);
+      }
+
+      g.add(body, a1, a2);
+      return g;
+    }
+
+    function makeServer() {
+      const g = new THREE.Group();
+      const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.85, 0.55), pick(bodyMats));
+      const bayGeo = new THREE.BoxGeometry(0.85, 0.12, 0.03);
+      for (let i = 0; i < 4; i++){
+        const bay = new THREE.Mesh(bayGeo, screenMat);
+        bay.position.set(0, 0.22 - i * 0.18, 0.30);
+        g.add(bay);
+      }
+      const indicator = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.10, 0.03), accentMat);
+      indicator.position.set(0.42, -0.28, 0.30);
+      g.add(chassis, indicator);
+      return g;
+    }
+
+    function makePhone() {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.05, 0.08), pick(bodyMats));
+      const screen = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.88, 0.04), screenMat);
+      screen.position.z = 0.03;
+      const button = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.05, 0.03), accentMat);
+      button.position.set(0, -0.45, 0.03);
+      g.add(body, screen, button);
+      return g;
+    }
+
+    const itemFactories = [makeLaptop, makeMonitor, makeRouter, makeServer, makePhone];
+
+    // --- Spawn IT items spread out ---
+    const items = [];
+    const itemCount = 26;
+
+    for (let i = 0; i < itemCount; i++) {
+      const item = itemFactories[i % itemFactories.length]();
+      item.position.set(rand(-6.8, 6.8), rand(-3.6, 3.6), rand(-7.2, 1.8));
+      item.rotation.set(rand(-0.35, 0.35), rand(-1.2, 1.2), rand(-0.6, 0.6));
+      item.scale.setScalar(rand(0.65, 1.05));
+
+      item.userData = {
+        baseX: item.position.x,
+        baseY: item.position.y,
+        baseZ: item.position.z,
+        speed: rand(0.10, 0.34),
+        phase: rand(0, Math.PI * 2),
+        spin: rand(0.0014, 0.0032),
+      };
+
+      scene.add(item);
+      items.push(item);
+    }
+
+    // Subtle particles for depth
+    const pCount = 170;
+    const pos = new Float32Array(pCount * 3);
+    for (let i = 0; i < pCount; i++) {
+      pos[i * 3 + 0] = rand(-12, 12);
+      pos[i * 3 + 1] = rand(-7, 7);
+      pos[i * 3 + 2] = rand(-14, 4);
+    }
+    const pGeom = new THREE.BufferGeometry();
+    pGeom.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    const pMat = new THREE.PointsMaterial({ size: 0.03, transparent: true, opacity: 0.32 });
+    const points = new THREE.Points(pGeom, pMat);
+    scene.add(points);
+
+    // Resize
+    function resize() {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+    }
+    window.addEventListener("resize", resize, { passive: true });
+    resize();
+
+    // Gentle mouse parallax
+    let mx = 0, my = 0;
+    window.addEventListener("mousemove", (e) => {
+      mx = (e.clientX / window.innerWidth) * 2 - 1;
+      my = (e.clientY / window.innerHeight) * 2 - 1;
+    }, { passive: true });
+
+    function smoothstep(edge0, edge1, x) {
+      const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+      return t * t * (3 - 2 * t);
+    }
+
+    function animate() {
+      const t = Date.now() * 0.001;
+
+      // Wider camera parallax (still controlled)
+      camera.position.x = mx * 0.35;
+      camera.position.y = -my * 0.22;
+      camera.lookAt(0, 0, 0);
+
+      // Gentle global drift
+      scene.rotation.y = Math.sin(t * 0.12) * 0.12;
+      scene.rotation.x = Math.cos(t * 0.10) * 0.08;
+
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        const u = it.userData;
+
+        // Stable “seed”
+        const seed = (u.baseX * 12.9898 + u.baseY * 78.233 + u.baseZ * 37.719);
+        const s1 = Math.abs(Math.sin(seed));
+        const s2 = Math.abs(Math.cos(seed * 0.77));
+
+        const rBase = 3.1 + s1 * 3.5;      // 3.1..6.6
+        const speed = 0.10 + s2 * 0.24;    // 0.10..0.34
+        const ang = t * speed + u.phase;
+
+        // Flow field (wind-like, organic)
+        const flowX = Math.sin(t * 0.55 + u.baseY * 0.35 + u.phase) * 0.62;
+        const flowY = Math.cos(t * 0.45 + u.baseX * 0.30 + u.phase) * 0.44;
+        const flowZ = Math.sin(t * 0.40 + u.baseZ * 0.25 + u.phase) * 0.52;
+
+        // Orbit ellipse + drift
+        it.position.x = Math.cos(ang) * rBase + flowX;
+        it.position.y = (Math.sin(u.phase) * 2.2) + Math.sin(t * (0.7 + speed) + u.phase) * 0.72 + flowY;
+        it.position.z = Math.sin(ang) * (rBase * 0.72) + (u.baseZ * 0.12) + flowZ;
+
+        // Keep them away from the camera
+        const zPush = smoothstep(1.8, 0.6, it.position.z);
+        it.position.z -= zPush * 1.25;
+
+        // Creative tumbling (varies per item)
+        it.rotation.y += u.spin * 1.25;
+        it.rotation.x += u.spin * 0.85;
+        it.rotation.z += u.spin * 0.65;
+
+        it.rotation.y += Math.sin(t * 0.6 + u.phase) * 0.0028;
+        it.rotation.x += Math.cos(t * 0.55 + u.phase) * 0.0022;
+      }
+
+      // Particles drift
+      points.rotation.y = t * 0.035;
+      points.rotation.x = t * 0.012;
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    // Reduced motion support
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      renderer.render(scene, camera);
+    } else {
+      animate();
+    }
+  </script>
+
+</body>
+</html>
