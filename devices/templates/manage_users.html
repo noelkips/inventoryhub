@@ -56,6 +56,7 @@
               data-is-trainer="{{ user.is_trainer }}"
               data-is-staff="{{ user.is_staff }}"
               data-is-superuser="{{ user.is_superuser }}"
+              data-is-active="{{ user.is_active }}"
               data-is-it-manager="{{ user.is_it_manager }}"
               data-is-senior-it-officer="{{ user.is_senior_it_officer }}"
               data-groups="{% for g in user.groups.all %}{{ g.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
@@ -129,9 +130,9 @@
               <input type="email" name="email" id="email" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required>
             </div>
             <div class="mb-4">
-              <label class="block text-gray-700 font-medium mb-1">Password</label>
-              <input type="password" name="password" id="password" class="border p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <p class="text-xs text-gray-500 mt-1">Leave blank to keep current password.</p>
+              <p class="text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded p-3">
+                A temporary password will be generated and sent to the user's email when creating a new account.
+              </p>
             </div>
           </div>
           <div>
@@ -154,7 +155,7 @@
             </div>
           </div>
 
-          {% if request.user.is_it_manager or request.user.is_senior_it_officer %}
+          {% if request.user.is_superuser or request.user.is_it_manager or request.user.is_senior_it_officer %}
           <div id="roleSection">
             <div class="mb-4">
               <label class="block text-gray-700 font-medium mb-1">Groups</label>
@@ -177,6 +178,10 @@
                 <input type="checkbox" name="is_superuser" id="is_superuser" class="mr-2">
                 <span>Is Superuser</span>
               </label>
+              <label class="flex items-center">
+                <input type="checkbox" name="is_active" id="is_active" class="mr-2" checked>
+                <span>Is Active</span>
+              </label>
             </div>
           </div>
           {% else %}
@@ -193,6 +198,7 @@
           <input type="hidden" name="is_trainer" value="false">
           <input type="hidden" name="is_staff" value="false">
           <input type="hidden" name="is_superuser" value="false">
+          <input type="hidden" name="is_active" value="false">
           {% endif %}
 
           <div class="col-span-1 md:col-span-3 flex justify-end space-x-3">
@@ -227,7 +233,7 @@
 </div>
 
 <script>
-const canEditRoles = {{ request.user.is_it_manager|yesno:"true,false" }} || {{ request.user.is_senior_it_officer|yesno:"true,false" }};
+const canEditRoles = {{ request.user.is_superuser|yesno:"true,false" }} || {{ request.user.is_it_manager|yesno:"true,false" }} || {{ request.user.is_senior_it_officer|yesno:"true,false" }};
 
 function showModal(action, userId = null) {
   const row = userId ? document.querySelector(`tr[data-user-id="${userId}"]`) : null;
@@ -269,17 +275,18 @@ function resetForm() {
   document.getElementById('userId').value = '';
   document.getElementById('username').value = '';
   document.getElementById('email').value = '';
-  document.getElementById('password').value = '';
   document.getElementById('first_name').value = '';
   document.getElementById('last_name').value = '';
   document.getElementById('centre').value = '';
   if (canEditRoles) {
     const groups = document.getElementById('groups');
     if (groups) Array.from(groups.options).forEach(o => o.selected = false);
-    ['is_trainer', 'is_staff', 'is_superuser'].forEach(id => {
+    ['is_trainer', 'is_staff', 'is_superuser', 'is_active'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.checked = false;
     });
+    const activeEl = document.getElementById('is_active');
+    if (activeEl) activeEl.checked = true;
   } else {
     document.getElementById('readonlyTrainer').textContent = 'No';
     document.getElementById('readonlyStaff').textContent = 'No';
@@ -297,8 +304,6 @@ function populateForm(row) {
   document.getElementById('first_name').value = row.dataset.firstName;
   document.getElementById('last_name').value = row.dataset.lastName;
   document.getElementById('centre').value = row.dataset.centre || '';
-  document.getElementById('password').value = '';
-
   if (canEditRoles) {
     const groupIds = row.dataset.groups ? row.dataset.groups.split(',').map(g => g.trim()) : [];
     const groupsSelect = document.getElementById('groups');
@@ -308,6 +313,7 @@ function populateForm(row) {
     document.getElementById('is_trainer').checked = row.dataset.isTrainer === 'true';
     document.getElementById('is_staff').checked = row.dataset.isStaff === 'true';
     document.getElementById('is_superuser').checked = row.dataset.isSuperuser === 'true';
+    document.getElementById('is_active').checked = row.dataset.isActive === 'true';
   } else {
     document.getElementById('readonlyTrainer').textContent = row.dataset.isTrainer === 'true' ? 'Yes' : 'No';
     document.getElementById('readonlyStaff').textContent = row.dataset.isStaff === 'true' ? 'Yes' : 'No';
@@ -321,14 +327,6 @@ function populateForm(row) {
 function closeModal(id) {
   document.getElementById(id).classList.add('hidden');
 }
-
-// Password required
-document.getElementById('userForm').addEventListener('submit', function(e) {
-  if (!document.getElementById('userId').value && !document.getElementById('password').value) {
-    e.preventDefault();
-    alert('Password is required for new users.');
-  }
-});
 
 // Centre required for trainers
 document.getElementById('is_trainer')?.addEventListener('change', updateCentreRequirement);

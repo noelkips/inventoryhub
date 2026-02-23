@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.cache import never_cache
+from django.utils.crypto import get_random_string
+from devices.utils.emails import send_custom_email
 
 
 
@@ -120,14 +122,14 @@ def user_add(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         email = request.POST.get('email')
-        password = request.POST.get('password')
         first_name = request.POST.get('first_name', '')
         last_name = request.POST.get('last_name', '')
         centre_id = request.POST.get('centre')
         is_trainer = request.POST.get('is_trainer') == 'on'
         is_staff = request.POST.get('is_staff') == 'on'
         is_superuser = request.POST.get('is_superuser') == 'on'
-        groups = request.POST.getlist('groups')
+        is_active = request.POST.get('is_active') == 'on'
+        groups = [group_id for group_id in request.POST.getlist('groups') if str(group_id).strip()]
         errors = []
 
         if not username:
@@ -138,8 +140,6 @@ def user_add(request):
             errors.append("Email is required.")
         if CustomUser.objects.filter(email=email).exists():
             errors.append("Email is already in use.")
-        if not password:
-            errors.append("Password is required.")
         if centre_id and centre_id != '' and not Centre.objects.filter(id=centre_id).exists():
             errors.append("Invalid centre selected.")
         if is_trainer and not centre_id:
@@ -153,19 +153,53 @@ def user_add(request):
         else:
             with transaction.atomic():
                 centre = Centre.objects.get(id=centre_id) if centre_id and centre_id != '' else None
+                temp_password = get_random_string(12)
                 user = CustomUser.objects.create_user(
                     username=username,
                     email=email,
-                    password=password,
+                    password=temp_password,
                     first_name=first_name,
                     last_name=last_name,
                     centre=centre,
                     is_trainer=is_trainer,
                     is_staff=is_staff,
-                    is_superuser=is_superuser
+                    is_superuser=is_superuser,
+                    is_active=is_active
                 )
                 if groups:
                     user.groups.set(groups)
+
+                assigned_group_names = list(user.groups.values_list('name', flat=True))
+                role_labels = []
+                if user.is_superuser:
+                    role_labels.append("Superuser")
+                if user.is_staff:
+                    role_labels.append("Staff")
+                if user.is_trainer:
+                    role_labels.append("Trainer")
+                if getattr(user, 'is_it_manager', False):
+                    role_labels.append("IT Manager")
+                if getattr(user, 'is_senior_it_officer', False):
+                    role_labels.append("Senior IT Officer")
+                if not role_labels:
+                    role_labels.append("User")
+
+                login_url = request.build_absolute_uri('/login/')
+                send_custom_email(
+                    subject="Your Mohiit.org Account Has Been Created",
+                    message=(
+                        f"Hello {user.get_full_name() or user.username},\n\n"
+                        f"Your Mohiit.org account has been created.\n"
+                        f"Login URL: {login_url}\n"
+                        f"Username: {user.username}\n"
+                        f"Temporary Password: {temp_password}\n"
+                        f"Assigned Roles: {', '.join(role_labels)}\n"
+                        f"Assigned Groups: {', '.join(assigned_group_names) if assigned_group_names else 'None'}\n"
+                        f"Centre: {centre.name if centre else 'N/A'}\n\n"
+                        f"Please log in and change your password immediately."
+                    ),
+                    recipient_list=[user.email],
+                )
                 messages.success(request, "User added successfully.")
                 return redirect('manage_users')
     return redirect('manage_users')
@@ -177,14 +211,14 @@ def user_update(request, pk):
     if request.method == 'POST':
         username = request.POST.get('username')
         email = request.POST.get('email')
-        password = request.POST.get('password')
         first_name = request.POST.get('first_name', '')
         last_name = request.POST.get('last_name', '')
         centre_id = request.POST.get('centre')
         is_trainer = request.POST.get('is_trainer') == 'on'
         is_staff = request.POST.get('is_staff') == 'on'
         is_superuser = request.POST.get('is_superuser') == 'on'
-        groups = request.POST.getlist('groups')
+        is_active = request.POST.get('is_active') == 'on'
+        groups = [group_id for group_id in request.POST.getlist('groups') if str(group_id).strip()]
         errors = []
 
         if not username:
@@ -210,14 +244,13 @@ def user_update(request, pk):
                 centre = Centre.objects.get(id=centre_id) if centre_id and centre_id != '' else None
                 user.username = username
                 user.email = email
-                if password:
-                    user.set_password(password)
                 user.first_name = first_name
                 user.last_name = last_name
                 user.centre = centre
                 user.is_trainer = is_trainer
                 user.is_staff = is_staff
                 user.is_superuser = is_superuser
+                user.is_active = is_active
                 user.save()
                 user.groups.clear()
                 if groups:
@@ -225,6 +258,8 @@ def user_update(request, pk):
                 messages.success(request, "User updated successfully.")
             return redirect('manage_users')
     return redirect('manage_users')
+
+
 def _can_delete_user(user):
     """Only IT Manager or Senior IT Officer can delete users."""
     return user.is_it_manager or user.is_senior_it_officer
