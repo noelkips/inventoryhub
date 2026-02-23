@@ -26,6 +26,7 @@ urlpatterns = [
     path('manage-users/', views.manage_users, name='manage_users'),
     path('user/add/', views.user_add, name='user_add'),
     path('user/update/<int:pk>/', views.user_update, name='user_update'),
+    path('user/resend-credentials/<int:pk>/', views.resend_user_credentials, name='resend_user_credentials'),
     path('user/delete/<int:pk>/', views.user_delete, name='user_delete'),
     path('manage-groups/', views.manage_groups, name='manage_groups'),
     path('delete-group/', views.delete_group, name='delete_group'),

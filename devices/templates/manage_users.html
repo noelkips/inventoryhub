@@ -73,6 +73,10 @@
             <td class="py-2 px-4 border flex flex-wrap gap-1 text-xs">
               <button onclick="showModal('view', {{ user.pk }})" class="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">View</button>
               <button onclick="showModal('update', {{ user.pk }})" class="bg-yellow-600 text-white px-2 py-1 rounded hover:bg-yellow-700">Edit</button>
+              <form method="post" action="{% url 'resend_user_credentials' user.pk %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700">Send Credentials</button>
+              </form>
 
               {% if request.user.is_it_manager or request.user.is_senior_it_officer %}
                 <button onclick="showModal('delete', {{ user.pk }})" class="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Delete</button>

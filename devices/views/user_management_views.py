@@ -116,6 +116,40 @@ def manage_users(request):
         'permissions': permissions
     })
 
+
+def _send_user_credentials_email(request, user, temp_password):
+    assigned_group_names = list(user.groups.values_list('name', flat=True))
+    role_labels = []
+    if user.is_superuser:
+        role_labels.append("Superuser")
+    if user.is_staff:
+        role_labels.append("Staff")
+    if user.is_trainer:
+        role_labels.append("Trainer")
+    if getattr(user, 'is_it_manager', False):
+        role_labels.append("IT Manager")
+    if getattr(user, 'is_senior_it_officer', False):
+        role_labels.append("Senior IT Officer")
+    if not role_labels:
+        role_labels.append("User")
+
+    login_url = request.build_absolute_uri('/login/')
+    return send_custom_email(
+        subject="Your Mohiit.org Account Credentials",
+        message=(
+            f"Hello {user.get_full_name() or user.username},\n\n"
+            f"Your Mohiit.org account credentials are below.\n"
+            f"Login URL: {login_url}\n"
+            f"Username: {user.username}\n"
+            f"Temporary Password: {temp_password}\n"
+            f"Assigned Roles: {', '.join(role_labels)}\n"
+            f"Assigned Groups: {', '.join(assigned_group_names) if assigned_group_names else 'None'}\n"
+            f"Centre: {user.centre.name if user.centre else 'N/A'}\n\n"
+            f"Please log in and change your password immediately."
+        ),
+        recipient_list=[user.email],
+    )
+
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def user_add(request):
@@ -168,38 +202,7 @@ def user_add(request):
                 )
                 if groups:
                     user.groups.set(groups)
-
-                assigned_group_names = list(user.groups.values_list('name', flat=True))
-                role_labels = []
-                if user.is_superuser:
-                    role_labels.append("Superuser")
-                if user.is_staff:
-                    role_labels.append("Staff")
-                if user.is_trainer:
-                    role_labels.append("Trainer")
-                if getattr(user, 'is_it_manager', False):
-                    role_labels.append("IT Manager")
-                if getattr(user, 'is_senior_it_officer', False):
-                    role_labels.append("Senior IT Officer")
-                if not role_labels:
-                    role_labels.append("User")
-
-                login_url = request.build_absolute_uri('/login/')
-                send_custom_email(
-                    subject="Your Mohiit.org Account Has Been Created",
-                    message=(
-                        f"Hello {user.get_full_name() or user.username},\n\n"
-                        f"Your Mohiit.org account has been created.\n"
-                        f"Login URL: {login_url}\n"
-                        f"Username: {user.username}\n"
-                        f"Temporary Password: {temp_password}\n"
-                        f"Assigned Roles: {', '.join(role_labels)}\n"
-                        f"Assigned Groups: {', '.join(assigned_group_names) if assigned_group_names else 'None'}\n"
-                        f"Centre: {centre.name if centre else 'N/A'}\n\n"
-                        f"Please log in and change your password immediately."
-                    ),
-                    recipient_list=[user.email],
-                )
+                _send_user_credentials_email(request, user, temp_password)
                 messages.success(request, "User added successfully.")
                 return redirect('manage_users')
     return redirect('manage_users')
@@ -260,6 +263,28 @@ def user_update(request, pk):
     return redirect('manage_users')
 
 
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def resend_user_credentials(request, pk):
+    user = get_object_or_404(CustomUser, pk=pk)
+
+    if not user.email:
+        messages.error(request, f"User '{user.username}' has no email address.")
+        return redirect('manage_users')
+
+    temp_password = get_random_string(12)
+    user.set_password(temp_password)
+    user.save(update_fields=['password'])
+
+    if _send_user_credentials_email(request, user, temp_password):
+        messages.success(request, f"Credentials sent to {user.email}.")
+    else:
+        messages.error(request, f"Failed to send credentials to {user.email}.")
+
+    return redirect('manage_users')
+
+    
 def _can_delete_user(user):
     """Only IT Manager or Senior IT Officer can delete users."""
     return user.is_it_manager or user.is_senior_it_officer
