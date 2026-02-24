@@ -652,11 +652,19 @@ def work_plan_calendar(request):
     for week in month_days:
         week_data = []
         week_start = week[0]
-        deadline_dt = datetime.combine(week_start, datetime.min.time()) + timedelta(hours=10)
-        deadline = timezone.make_aware(deadline_dt)
-        
-        can_add_to_week = (now <= deadline) and (target_user == request.user)
+        from datetime import datetime, time, timedelta
+        from django.utils import timezone
 
+
+        deadline_dt = datetime.combine(week_start, time(10, 0))
+
+        # Make deadline consistent with `now`
+        if timezone.is_aware(now) and timezone.is_naive(deadline_dt):
+            deadline = timezone.make_aware(deadline_dt, timezone.get_current_timezone())
+        else:
+            deadline = deadline_dt
+
+        can_add_to_week = (now <= deadline) and (target_user == request.user)
         for day in week:
             day_events = [e for e in events if e['date'] == day]
             
