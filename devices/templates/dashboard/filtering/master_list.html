@@ -201,18 +201,10 @@
             <!-- ======================= -->
             <div class="mb-6">
                 {% if list_type == 'devices' %}
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 gap-4">
                     <div class="bg-blue-100 p-4 rounded-xl shadow">
                         <p class="text-sm text-blue-800 font-medium">Total Found</p>
                         <p class="text-3xl font-bold text-blue-900">{{ stats.total }}</p>
-                    </div>
-                    <div class="bg-green-100 p-4 rounded-xl shadow col-span-1 md:col-span-2">
-                        <p class="text-sm text-green-800 font-medium">By Status</p>
-                        <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                            {% for s in stats.by_status %}
-                            <span class="text-lg text-green-900 font-semibold">{{ s.status|default:'Unknown' }}: <strong class="font-bold">{{ s.count }}</strong></span>
-                            {% endfor %}
-                        </div>
                     </div>
                 </div>
                 {% endif %}
@@ -292,12 +284,9 @@
                             <!-- Device Headers -->
                             {% if list_type == 'devices' %}
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Serial Number</th>
-                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Category</th>
-                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Centre</th>
-                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Status</th>
-                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Condition</th>
-                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Assignee</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Device</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Location & State</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Assigned To</th>
                                 <th class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Actions</th>
                             </tr>
                             {% endif %}
@@ -351,14 +340,53 @@
                             {% if list_type == 'devices' %}
                                 {% for item in page_obj %}
                                 <tr class="hover:bg-blue-50 transition-colors">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        <a href="{% url 'device_history' item.id %}" class="text-accent hover:underline">{{ item.serial_number }}</a>
+                                    <td class="px-6 py-4 text-sm text-gray-900">
+                                        <div class="min-w-[180px]">
+                                            <a href="{% url 'device_history' item.id %}" class="text-accent hover:underline font-semibold break-all">{{ item.serial_number|default:'N/A' }}</a>
+                                            <div class="mt-1 flex flex-wrap items-center gap-2">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                                                    {{ item.get_category_display|default:'Uncategorized' }}
+                                                </span>
+                                                {% if item.device_name or item.system_model %}
+                                                <span class="text-xs text-gray-500 truncate max-w-[220px]">
+                                                    {{ item.device_name|default:item.system_model }}
+                                                </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.get_category_display|default:'-' }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.centre.name|default:'-' }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.status|default:'-' }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.device_condition|default:'-' }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.assignee_first_name|default:'' }} {{ item.assignee_last_name|default:'' }}</td>
+                                    <td class="px-6 py-4 text-sm text-gray-700">
+                                        <div class="min-w-[220px] space-y-2">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Centre</span>
+                                                <span class="text-sm font-medium text-gray-800">{{ item.centre.name|default:'-' }}</span>
+                                            </div>
+                                            <div class="flex flex-wrap gap-2">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+                                                    Status: {{ item.status|default:'-' }}
+                                                </span>
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                                                    Condition: {{ item.device_condition|default:'-' }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-700">
+                                        <div class="min-w-[220px]">
+                                            {% if item.assignee %}
+                                                <p class="font-semibold text-gray-900">{{ item.assignee.full_name|default:item.assignee }}</p>
+                                                <div class="mt-1 space-y-1">
+                                                    <p class="text-xs text-gray-600">{{ item.assignee.email|default:'No email' }}</p>
+                                                    {% if item.assignee.staff_number %}
+                                                    <p class="text-xs text-gray-500">Staff No: {{ item.assignee.staff_number }}</p>
+                                                    {% endif %}
+                                                </div>
+                                            {% else %}
+                                                <p class="font-medium text-gray-700">{{ item.assignee_first_name|default:'' }} {{ item.assignee_last_name|default:'' }}</p>
+                                                <p class="text-xs text-gray-500">{{ item.assignee_email_address|default:'Unassigned' }}</p>
+                                            {% endif %}
+                                        </div>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                                         <button onclick="openModal(this)"
                                             data-type="device"
@@ -368,8 +396,12 @@
                                             data-department="{{ item.department.name|default:'N/A' }}"
                                             data-status="{{ item.status|default:'N/A' }}"
                                             data-condition="{{ item.device_condition|default:'N/A' }}"
-                                            data-assignee="{{ item.assignee_first_name|default:'' }} {{ item.assignee_last_name|default:'' }}"
-                                            data-email="{{ item.assignee_email_address|default:'N/A' }}"
+                                            data-assignee="{% if item.assignee %}{{ item.assignee.full_name|default:item.assignee }}{% else %}{{ item.assignee_first_name|default:'' }} {{ item.assignee_last_name|default:'' }}{% endif %}"
+                                            data-email="{% if item.assignee and item.assignee.email %}{{ item.assignee.email }}{% else %}{{ item.assignee_email_address|default:'N/A' }}{% endif %}"
+                                            data-assignee-staff-number="{% if item.assignee and item.assignee.staff_number %}{{ item.assignee.staff_number }}{% else %}N/A{% endif %}"
+                                            data-assignee-designation="{% if item.assignee and item.assignee.designation %}{{ item.assignee.designation }}{% else %}N/A{% endif %}"
+                                            data-assignee-department="{% if item.assignee and item.assignee.department %}{{ item.assignee.department.name }}{% else %}{{ item.department.name|default:'N/A' }}{% endif %}"
+                                            data-assignee-centre="{% if item.assignee and item.assignee.centre %}{{ item.assignee.centre.name }}{% else %}{{ item.centre.name|default:'N/A' }}{% endif %}"
                                             class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold hover:bg-blue-200 transition-colors">
                                             View
                                         </button>
@@ -592,8 +624,24 @@
                     <div><strong class="text-gray-600">Department:</strong> <span id="modalDeviceDepartment" class="text-gray-900"></span></div>
                     <div><strong class="text-gray-600">Status:</strong> <span id="modalDeviceStatus" class="text-gray-900"></span></div>
                     <div><strong class="text-gray-600">Condition:</strong> <span id="modalDeviceCondition" class="text-gray-900"></span></div>
-                    <div class="md:col-span-2"><strong class="text-gray-600">Assignee:</strong> <span id="modalDeviceAssignee" class="text-gray-900"></span></div>
-                    <div class="md:col-span-2"><strong class="text-gray-600">Email:</strong> <span id="modalDeviceEmail" class="text-gray-900"></span></div>
+                    <div class="md:col-span-2 mt-2 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-xs uppercase tracking-wide text-blue-700 font-semibold">Assigned Employee</p>
+                                <p id="modalDeviceAssignee" class="text-lg font-bold text-gray-900 mt-1"></p>
+                                <p id="modalDeviceEmail" class="text-sm text-gray-700 mt-1"></p>
+                            </div>
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-white text-blue-700 border border-blue-200">
+                                Employee FK
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 text-sm">
+                            <div><strong class="text-gray-600">Staff No:</strong> <span id="modalDeviceAssigneeStaffNumber" class="text-gray-900"></span></div>
+                            <div><strong class="text-gray-600">Designation:</strong> <span id="modalDeviceAssigneeDesignation" class="text-gray-900"></span></div>
+                            <div><strong class="text-gray-600">Employee Centre:</strong> <span id="modalDeviceAssigneeCentre" class="text-gray-900"></span></div>
+                            <div class="md:col-span-3"><strong class="text-gray-600">Employee Department:</strong> <span id="modalDeviceAssigneeDepartment" class="text-gray-900"></span></div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -674,6 +722,10 @@
             document.getElementById('modalDeviceCondition').innerText = button.dataset.condition;
             document.getElementById('modalDeviceAssignee').innerText = button.dataset.assignee;
             document.getElementById('modalDeviceEmail').innerText = button.dataset.email;
+            document.getElementById('modalDeviceAssigneeStaffNumber').innerText = button.dataset.assigneeStaffNumber || 'N/A';
+            document.getElementById('modalDeviceAssigneeDesignation').innerText = button.dataset.assigneeDesignation || 'N/A';
+            document.getElementById('modalDeviceAssigneeCentre').innerText = button.dataset.assigneeCentre || 'N/A';
+            document.getElementById('modalDeviceAssigneeDepartment').innerText = button.dataset.assigneeDepartment || 'N/A';
             document.getElementById('modalDeviceContent').classList.remove('hidden');
         } 
         

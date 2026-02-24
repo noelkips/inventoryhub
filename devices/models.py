@@ -42,7 +42,7 @@ class CustomUser(AbstractUser):
         return self.username
     
     def get_full_name(self):
-        full_name = f"{self.first_name} {self.last_name}".strip()
+        full_name = f"{self.first_name.capitalize()} {self.last_name.capitalize()}".strip()
         return full_name if full_name else self.username
     
 class Employee(models.Model):
@@ -71,7 +71,7 @@ class Employee(models.Model):
 
     @property
     def full_name(self):
-        return f"{self.first_name} {self.last_name}".strip()
+        return f"{self.first_name.capitalize()} {self.last_name.capitalize()}".strip()
 
 
 

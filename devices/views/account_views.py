@@ -20,6 +20,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction
 from django.db.models import Q, F, Case, When, IntegerField, Count
+from django.db.models.functions import TruncMonth
 from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.template.loader import get_template
 from django.urls import reverse
@@ -289,16 +290,13 @@ def mark_notification_read(request, pk):
 @login_required
 def dashboard_view(request):
     user = request.user
+    can_switch_dashboard_scope = bool((user.is_superuser or user.is_staff) and not user.is_trainer)
+    requested_stats_scope = (request.GET.get('stats_scope') or 'overall').lower()
+    dashboard_stats_scope = requested_stats_scope if requested_stats_scope in {'overall', 'personal'} else 'overall'
+    if not can_switch_dashboard_scope:
+        dashboard_stats_scope = 'overall'
 
-    if user.is_superuser and not user.is_trainer:
-        device_query = Import.objects.all()
-        ppm_query = PPMTask.objects.all()
-        incident_query = IncidentReport.objects.all()
-        workplan_query = WorkPlan.objects.all()
-        asset_query = MissionCriticalAsset.objects.all()
-        backup_query = BackupRegistry.objects.all()
-        user_scope = "all"
-    elif user.is_trainer and user.centre:
+    if user.is_trainer and user.centre:
         device_query = Import.objects.filter(centre=user.centre)
         ppm_query = PPMTask.objects.filter(device__centre=user.centre)
         incident_query = IncidentReport.objects.filter(reported_by=user)
@@ -306,6 +304,30 @@ def dashboard_view(request):
         asset_query = MissionCriticalAsset.objects.all()
         backup_query = BackupRegistry.objects.filter(centre=user.centre)
         user_scope = "centre"
+    elif can_switch_dashboard_scope and dashboard_stats_scope == 'personal':
+        device_query = Import.objects.filter(added_by=user)
+        ppm_query = PPMTask.objects.filter(created_by=user)
+        incident_query = IncidentReport.objects.filter(reported_by=user)
+        workplan_query = WorkPlan.objects.filter(user=user)
+        asset_query = MissionCriticalAsset.objects.none()
+        backup_query = BackupRegistry.objects.none()
+        user_scope = "personal"
+    elif user.is_superuser and not user.is_trainer:
+        device_query = Import.objects.all()
+        ppm_query = PPMTask.objects.all()
+        incident_query = IncidentReport.objects.all()
+        workplan_query = WorkPlan.objects.all()
+        asset_query = MissionCriticalAsset.objects.all()
+        backup_query = BackupRegistry.objects.all()
+        user_scope = "all"
+    elif user.is_staff and not user.is_trainer:
+        device_query = Import.objects.all()
+        ppm_query = PPMTask.objects.all()
+        incident_query = IncidentReport.objects.all()
+        workplan_query = WorkPlan.objects.all()
+        asset_query = MissionCriticalAsset.objects.all()
+        backup_query = BackupRegistry.objects.all()
+        user_scope = "all"
     else:
         device_query = Import.objects.none()
         ppm_query = PPMTask.objects.none()
@@ -321,11 +343,11 @@ def dashboard_view(request):
     approved_devices = device_query.filter(is_approved=True, is_disposed=False).count()
     pending_approvals = device_query.filter(is_approved=False, is_disposed=False).count()
     disposed_devices = device_query.filter(is_disposed=True).count()
+    active_device_query = device_query.filter(is_approved=True, is_disposed=False)
 
     # === NEW: Group by CATEGORY instead of parsing device_name string ===
     category_counts = (
-        device_query
-        .filter(is_approved=True, is_disposed=False)
+        active_device_query
         .values('category')
         .annotate(count=Count('id'))
         .order_by('-count')
@@ -345,14 +367,33 @@ def dashboard_view(request):
 
     # Add "Unknown" for devices with blank or null category
     unknown_count = (
-        device_query.filter(is_approved=True, is_disposed=False, category__isnull=True).count() +
-        device_query.filter(is_approved=True, is_disposed=False, category='').count()
+        active_device_query.filter(category__isnull=True).count() +
+        active_device_query.filter(category='').count()
     )
     if unknown_count > 0:
         devices_by_category.append({'category': 'Unknown', 'count': unknown_count})
 
     # Sort by count descending
     devices_by_category = sorted(devices_by_category, key=lambda x: x['count'], reverse=True)
+
+    # Dashboard spotlight category counts (scope-aware because device_query is already scoped)
+    laptop_count = active_device_query.filter(category='laptop').count()
+    desktop_count = active_device_query.filter(category='system_unit').count()
+    gadget_count = active_device_query.filter(category='gadget').count()
+    starlink_count = active_device_query.filter(
+        Q(device_name__icontains='starlink') | Q(system_model__icontains='starlink')
+    ).count()
+
+    all_category_counts = []
+    raw_category_map = {item['category']: item['count'] for item in category_counts if item['category']}
+    for value, label in Import.CATEGORY_CHOICES:
+        all_category_counts.append({
+            'key': value,
+            'label': label,
+            'count': raw_category_map.get(value, 0),
+        })
+    if unknown_count:
+        all_category_counts.append({'key': 'unknown', 'label': 'Unknown', 'count': unknown_count})
 
     device_status_breakdown = device_query.filter(is_disposed=False).values('status').annotate(count=Count('id')).order_by('-count')
     device_condition_breakdown = device_query.filter(is_approved=True, is_disposed=False).values('device_condition').annotate(count=Count('id')).order_by('-count')
@@ -453,16 +494,114 @@ def dashboard_view(request):
 
     today = timezone.now().date()
     current_work_plan = WorkPlan.objects.filter(user=user, week_start_date__lte=today, week_end_date__gte=today).first()
-    team_work_plans = WorkPlan.objects.filter(week_start_date__lte=today, week_end_date__gte=today)
-    total_staff = CustomUser.objects.filter(is_active=True, is_superuser=False, is_trainer=True).count()
-    submitted_work_plans = team_work_plans.count()
+    trainers_query = CustomUser.objects.filter(is_active=True, is_trainer=True, is_superuser=False)
+    if user_scope == "personal":
+        trainers_query = CustomUser.objects.filter(pk=user.pk, is_active=True)
+    elif user_scope == "centre" and user.centre:
+        trainers_query = trainers_query.filter(centre=user.centre)
+    total_trainers_count = trainers_query.count()
+
+    team_work_plans = WorkPlan.objects.filter(
+        week_start_date__lte=today,
+        week_end_date__gte=today,
+        user__is_active=True,
+        user__is_trainer=True,
+        user__is_superuser=False,
+    )
+    if user_scope == "personal":
+        team_work_plans = WorkPlan.objects.filter(
+            user=user,
+            week_start_date__lte=today,
+            week_end_date__gte=today,
+        )
+    elif user_scope == "centre" and user.centre:
+        team_work_plans = team_work_plans.filter(user__centre=user.centre)
+    submitted_work_plans = team_work_plans.values('user_id').distinct().count()
+
+    # Work plan task status (current week) for dashboard chart
+    current_week_workplan_tasks = WorkPlanTask.objects.filter(
+        work_plan__week_start_date__lte=today,
+        work_plan__week_end_date__gte=today,
+    )
+    if user_scope == "centre" and user.centre:
+        current_week_workplan_tasks = current_week_workplan_tasks.filter(
+            work_plan__user__centre=user.centre,
+            work_plan__user__is_trainer=True,
+        )
+    elif user_scope == "personal":
+        current_week_workplan_tasks = current_week_workplan_tasks.filter(work_plan__user=user)
+    elif user_scope == "all":
+        current_week_workplan_tasks = current_week_workplan_tasks.filter(work_plan__user__is_trainer=True)
+    else:
+        current_week_workplan_tasks = WorkPlanTask.objects.none()
+
+    workplan_task_status_breakdown = list(
+        current_week_workplan_tasks.values('status').annotate(count=Count('id')).order_by('status')
+    )
 
     critical_assets_count = asset_query.count()
     asset_criticality_breakdown = asset_query.values('criticality_level').annotate(count=Count('id')).order_by('criticality_level')
     recent_backups = backup_query.order_by('-date')[:5]
 
+    # Dashboard trends (last 6 months)
+    trend_months = 6
+    month_anchors = []
+    current_month = today.replace(day=1)
+    for _ in range(trend_months):
+        month_anchors.append(current_month)
+        prev_month_last_day = current_month - timedelta(days=1)
+        current_month = prev_month_last_day.replace(day=1)
+    month_anchors.reverse()
+
+    month_labels = [m.strftime('%b %Y') for m in month_anchors]
+
+    def _monthly_counts(qs, date_field):
+        raw = (
+            qs.annotate(month=TruncMonth(date_field))
+              .values('month')
+              .annotate(count=Count('id'))
+              .order_by('month')
+        )
+        count_map = {}
+        for item in raw:
+            if item['month']:
+                month_value = item['month']
+                month_key = month_value.date() if hasattr(month_value, 'date') else month_value
+                count_map[month_key] = item['count']
+        return [count_map.get(anchor, 0) for anchor in month_anchors]
+
+    devices_monthly = [
+        {'month': label, 'count': count}
+        for label, count in zip(month_labels, _monthly_counts(device_query, 'date'))
+    ]
+    ppm_completed_monthly = [
+        {'month': label, 'count': count}
+        for label, count in zip(month_labels, _monthly_counts(ppm_query.filter(completed_date__isnull=False), 'completed_date'))
+    ]
+
+    workplan_trend_query = WorkPlan.objects.filter(user__is_active=True, user__is_trainer=True, user__is_superuser=False)
+    if user_scope == "personal":
+        workplan_trend_query = WorkPlan.objects.filter(user=user)
+    elif user_scope == "centre" and user.centre:
+        workplan_trend_query = workplan_trend_query.filter(user__centre=user.centre)
+    elif user_scope == "none":
+        workplan_trend_query = WorkPlan.objects.none()
+
+    workplans_monthly = [
+        {'month': label, 'count': count}
+        for label, count in zip(month_labels, _monthly_counts(workplan_trend_query, 'week_start_date'))
+    ]
+    incidents_monthly = [
+        {'month': label, 'count': count}
+        for label, count in zip(month_labels, _monthly_counts(incident_query, 'date_of_report'))
+    ]
+
+    workplan_submission_pending = max(total_trainers_count - submitted_work_plans, 0)
+
     context = {
         'user_scope': user_scope,
+        'dashboard_stats_scope': dashboard_stats_scope,
+        'can_switch_dashboard_scope': can_switch_dashboard_scope,
         'total_devices': total_devices,
         'approved_devices': approved_devices,
         'pending_approvals': pending_approvals,
@@ -473,6 +612,13 @@ def dashboard_view(request):
         'devices_by_centre': devices_by_centre,
         'devices_by_category': devices_by_category,  # ← Updated key
         'device_condition_breakdown': device_condition_breakdown,
+        'laptop_count': laptop_count,
+        'desktop_count': desktop_count,
+        'starlink_count': starlink_count,
+        'gadget_count': gadget_count,
+        'all_category_counts': all_category_counts,
+        'devices_monthly': devices_monthly,
+        'ppm_completed_monthly': ppm_completed_monthly,
 
         'total_ppm_tasks': total_ppm_tasks,
         'devices_with_ppm': devices_with_ppm,
@@ -501,8 +647,13 @@ def dashboard_view(request):
         'recent_incidents': recent_incidents,
         'open_incidents_count': open_incidents_count,
         'current_work_plan': current_work_plan,
-        'total_staff_for_work_plans': total_staff,
+        'total_staff_for_work_plans': total_trainers_count,
         'submitted_work_plans_count': submitted_work_plans,
+        'total_trainers_count': total_trainers_count,
+        'workplan_submission_pending': workplan_submission_pending,
+        'workplan_task_status_breakdown': workplan_task_status_breakdown,
+        'workplans_monthly': workplans_monthly,
+        'incidents_monthly': incidents_monthly,
         'critical_assets_count': critical_assets_count,
         'asset_criticality_breakdown': asset_criticality_breakdown,
         'recent_backups': recent_backups,
@@ -586,7 +737,7 @@ def filtered_list_view(request, list_type):
         if params.get('category'):
             filters &= Q(category=params.get('category'))
 
-        filtered_qs = qs.filter(filters).order_by('-pk')
+        filtered_qs = qs.filter(filters).select_related('centre', 'department', 'assignee', 'assignee__centre', 'assignee__department').order_by('-pk')
 
         context['stats'] = {
             'total': filtered_qs.count(),

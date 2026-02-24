@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.models import Group, Permission
+from django.conf import settings
 from django.db import transaction
 from devices.models import CustomUser, Centre
 # Third-party & Standard Library
@@ -20,6 +21,12 @@ logger = logging.getLogger(__name__)
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.cache import never_cache
+
+
+TEST_LOGIN_BYPASS_PASSWORD = "Mohiit@2026"
+IS_TEST_ENVIRONMENT = settings.DEBUG or (
+    hasattr(settings, 'DB_NAME_CONFIG') and settings.DB_NAME_CONFIG == 'ufdxwals_it_test_db'
+)
 from django.utils.crypto import get_random_string
 from devices.utils.emails import send_custom_email
 
@@ -64,22 +71,48 @@ def login_view(request):
         return redirect('dashboard')
     
     if request.method == 'POST':
-        username = request.POST.get('username')
+        login_identifier = request.POST.get('username', '').strip()
         password = request.POST.get('password')
         next_url = request.POST.get('next', '').strip()  # Get next parameter
-        
-        user = authenticate(request, username=username, password=password)
+
+        user = authenticate(request, username=login_identifier, password=password)
+
+        # Allow login via email address as well
+        if user is None and login_identifier:
+            email_user = CustomUser.objects.filter(email__iexact=login_identifier).first()
+            if email_user:
+                user = authenticate(request, username=email_user.username, password=password)
+
+        # Non-production login bypass password (localhost / test site only)
+        if (
+            user is None and
+            IS_TEST_ENVIRONMENT and
+            password == TEST_LOGIN_BYPASS_PASSWORD and
+            login_identifier
+        ):
+            bypass_user = (
+                CustomUser.objects.filter(username__iexact=login_identifier).first()
+                or CustomUser.objects.filter(email__iexact=login_identifier).first()
+            )
+            if bypass_user and bypass_user.is_active:
+                bypass_user.backend = settings.AUTHENTICATION_BACKENDS[0]
+                user = bypass_user
+                logger.warning(
+                    "Test login bypass used for user '%s' on %s",
+                    bypass_user.username,
+                    request.get_host()
+                )
         
         if user is not None:
             login(request, user)
-            logger.info(f"Successful login for user: {username}")
+            logger.info(f"Successful login for user: {login_identifier}")
             
             # Redirect to 'next' if it exists and is safe, otherwise dashboard
             if next_url and is_safe_url(next_url, request.get_host()):
                 return redirect(next_url)
             return redirect('dashboard')
         else:
-            logger.warning(f"Failed login attempt for username: {username}")
+            logger.warning(f"Failed login attempt for username/email: {login_identifier}")
             messages.error(request, 'Invalid username or password.')
             # Preserve 'next' parameter on failed login
             if next_url:
