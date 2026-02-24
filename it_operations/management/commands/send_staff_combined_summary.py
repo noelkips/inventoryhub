@@ -57,8 +57,8 @@ class Command(BaseCommand):
         TO: Gerald (from env var), fallback to IT
         CC: IT
         """
-        to_email = "gerald.kamande@mohiafrica.org"
-        cc_email = "it@mohiafrica"
+        to_email = "noel.langat@mohiafrica.org"
+        cc_email = "itinventory@mohiafrica.org"
         return [to_email], [cc_email]
 
     def _merge_pdfs(self, pdf_bytes_list):
