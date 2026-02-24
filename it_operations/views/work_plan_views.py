@@ -3,6 +3,7 @@ import csv
 import os
 from datetime import datetime, date, timedelta
 import calendar
+from time import time
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -652,9 +653,7 @@ def work_plan_calendar(request):
     for week in month_days:
         week_data = []
         week_start = week[0]
-        from datetime import datetime, time, timedelta
-        from django.utils import timezone
-
+        
 
         deadline_dt = datetime.combine(week_start, time(10, 0))
 
