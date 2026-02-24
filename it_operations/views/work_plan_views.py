@@ -3,7 +3,6 @@ import csv
 import os
 from datetime import datetime, date, timedelta
 import calendar
-from time import time
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -35,6 +34,8 @@ from openpyxl.styles.borders import Border, Side
 import logging
 from itertools import chain
 from django.db import transaction
+from datetime import datetime, time, timedelta
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -654,6 +655,7 @@ def work_plan_calendar(request):
         week_data = []
         week_start = week[0]
         
+
 
         deadline_dt = datetime.combine(week_start, time(10, 0))
 
