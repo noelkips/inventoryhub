@@ -130,11 +130,16 @@ class WorkPlan(models.Model):
         Strict Rule: Adding NEW tasks is locked after Monday 10:00 AM of the current week.
         """
         now = timezone.now()
-        # Deadline is the Monday of this week at 10:00 AM
+
+        # Monday 10:00 AM of this plan's week (naive datetime)
         deadline_dt = datetime.combine(self.week_start_date, datetime.min.time()) + timedelta(hours=10)
-        deadline = timezone.make_aware(deadline_dt)
-        
-        # If we are past the deadline, return False
+
+        # Make deadline consistent with "now"
+        if timezone.is_aware(now):
+            deadline = timezone.make_aware(deadline_dt, timezone.get_current_timezone())
+        else:
+            deadline = deadline_dt
+
         return now <= deadline
 
     @property
