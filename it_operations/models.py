@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from devices.models import Centre, Department
 from django.core.exceptions import ValidationError
 
@@ -125,20 +125,20 @@ class WorkPlan(models.Model):
         return self.can_add_tasks
 
     @property
-    def can_add_tasks(self):
+    def can_add_tasks(self) -> bool:
         """
-        Strict Rule: Adding NEW tasks is locked after Monday 10:00 AM of the current week.
+        Strict Rule: Adding NEW tasks is locked after Monday 10:00 AM of the plan week.
         """
         now = timezone.now()
 
-        # Monday 10:00 AM of this plan's week (naive datetime)
-        deadline_dt = datetime.combine(self.week_start_date, datetime.min.time()) + timedelta(hours=10)
+        # Monday 10:00 AM for this plan's week_start_date
+        deadline = datetime.combine(self.week_start_date, time(10, 0))
 
-        # Make deadline consistent with "now"
-        if timezone.is_aware(now):
-            deadline = timezone.make_aware(deadline_dt, timezone.get_current_timezone())
-        else:
-            deadline = deadline_dt
+        # Ensure both datetimes are consistent (aware vs naive)
+        if timezone.is_aware(now) and timezone.is_naive(deadline):
+            deadline = timezone.make_aware(deadline, timezone.get_current_timezone())
+        elif timezone.is_naive(now) and timezone.is_aware(deadline):
+            deadline = timezone.make_naive(deadline, timezone.get_current_timezone())
 
         return now <= deadline
 
