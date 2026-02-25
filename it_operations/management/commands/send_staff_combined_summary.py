@@ -1,23 +1,10 @@
 # it_operations/management/commands/send_staff_combined_summary.py
 
-"""
-Send compact weekly workplan summary to Gerald (TO) and CC IT.
-
-- ONE compact PDF attachment grouped by DAY (Mon–Sat)
-- Table per day: Owner | Tasks
-- Email body contains quick summaries; details are in PDF
-
-Usage:
-  python manage.py send_staff_combined_summary
-
-Cron (every 2 minutes):
-*/2 * * * * cd /home/ufdxwals/inventoryhub && /home/ufdxwals/virtualenv/inventoryhub/3.10/bin/python -X utf8 manage.py send_staff_combined_summary >> /home/ufdxwals/inventoryhub/logs/staff_combined_summary.log 2>&1
-"""
-
-import calendar
+import os
 from datetime import timedelta
 from io import BytesIO
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict
+from xml.sax.saxutils import escape as xml_escape
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -30,9 +17,8 @@ from it_operations.models import WorkPlanTask
 
 
 class Command(BaseCommand):
-    help = "Sends compact combined weekly work plan summary PDF to Gerald, CC IT"
+    help = "Sends compact combined weekly work plan PDF to Gerald, CC IT"
 
-    # ✅ Explicit allow-list (order optional now; PDF is grouped by DAY)
     ORDERED_USERNAMES = [
         "glen.osano",
         "santana.macharia",
@@ -53,147 +39,250 @@ class Command(BaseCommand):
         "ezra.ndonga@mohiafrica.org",
     ]
 
-    def _get_to_and_cc(self):
-        # ✅ As you requested
-        to_email = "noel.langat@mohiafrica.org"
-        cc_email = "itinventory@mohiafrica.org"
-        return [to_email], [cc_email]
+    MOHI_GREEN = "#0B7A3B"
+    MOHI_GRAY = "#6B7280"
+    MOHI_BORDER = "#D1D5DB"
+    MOHI_ROW_ALT = "#F9FAFB"
+    MOHI_HEADER_BG = "#E9F7EF"
 
-    def _build_compact_weekly_pdf(self, *, week_start, week_end, users, tasks_qs) -> bytes:
-        """
-        Compact PDF grouped by day:
-          - Day heading
-          - Table: Owner | Tasks (compressed)
-        """
-        # ReportLab imports here to keep command import-safe
+    def _get_to_and_cc(self):
+        return ["gerald.kamande@mohiafrica.org"], ["it@mohiafrica.org"]
+
+    def _safe(self, v):
+        return "" if v is None else str(v).strip()
+
+    def _e(self, v):
+        """Escape user text for ReportLab Paragraph markup, preserve newlines."""
+        txt = self._safe(v)
+        txt = xml_escape(txt)
+        txt = txt.replace("\r\n", "\n").replace("\r", "\n")
+        txt = txt.replace("\n", "<br/>")
+        return txt
+
+    def _build_pdf(self, week_start, week_end, tasks_qs):
         from reportlab.lib.pagesizes import A4, landscape
         from reportlab.lib import colors
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import mm
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import mm, cm
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 
         buffer = BytesIO()
+
         doc = SimpleDocTemplate(
             buffer,
             pagesize=landscape(A4),
-            leftMargin=10 * mm,
-            rightMargin=10 * mm,
-            topMargin=10 * mm,
-            bottomMargin=10 * mm,
-            title="IT Staff Weekly Work Plan Summary",
+            leftMargin=8 * mm,
+            rightMargin=8 * mm,
+            topMargin=8 * mm,
+            bottomMargin=8 * mm,
         )
 
         styles = getSampleStyleSheet()
-        title_style = styles["Title"]
-        h_style = ParagraphStyle(
-            "DayHeading",
+
+        ReportTitle = ParagraphStyle(
+            "ReportTitle",
+            parent=styles["Title"],
+            fontSize=15,
+            textColor=colors.HexColor(self.MOHI_GREEN),
+            spaceAfter=4,
+        )
+
+        SubHeader = ParagraphStyle(
+            "SubHeader",
+            parent=styles["Normal"],
+            fontSize=10,
+            textColor=colors.HexColor(self.MOHI_GRAY),
+        )
+
+        DayHeader = ParagraphStyle(
+            "DayHeader",
             parent=styles["Heading2"],
-            fontSize=12,
+            fontSize=11,
+            textColor=colors.HexColor(self.MOHI_GREEN),
             spaceBefore=8,
             spaceAfter=6,
         )
-        small_style = ParagraphStyle(
-            "Small",
+
+        # Table header cells
+        TH = ParagraphStyle(
+            "TH",
             parent=styles["Normal"],
-            fontSize=9,
-            leading=11,
+            fontSize=8.5,
+            leading=10,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor(self.MOHI_GREEN),
         )
-        tiny_style = ParagraphStyle(
-            "Tiny",
+
+        # Body cell base styles
+        PeopleStyle = ParagraphStyle(
+            "PeopleStyle",
             parent=styles["Normal"],
-            fontSize=8,
+            fontSize=8.4,
             leading=10,
         )
 
-        elements = []
-        elements.append(Paragraph("IT Staff Weekly Work Plan Summary", title_style))
-        elements.append(Paragraph(f"Week: {week_start.strftime('%d %b %Y')} - {week_end.strftime('%d %b %Y')}", small_style))
-        elements.append(Spacer(1, 6))
+        TaskStyle = ParagraphStyle(
+            "TaskStyle",
+            parent=styles["Normal"],
+            fontSize=9.0,
+            leading=11,
+            fontName="Helvetica-Bold",
+        )
 
-        # Map user id -> display name (stable)
-        user_name = {u.id: (u.get_full_name() or u.username) for u in users}
+        DetailsStyle = ParagraphStyle(
+            "DetailsStyle",
+            parent=styles["Normal"],
+            fontSize=7.6,
+            leading=9.4,
+        )
 
-        # Build: day -> owner_id -> list of task strings
-        day_owner_tasks = OrderedDict()
-        cur = week_start
-        while cur <= week_end:
-            day_owner_tasks[cur] = defaultdict(list)
-            cur += timedelta(days=1)
+        StatusStyle = ParagraphStyle(
+            "StatusStyle",
+            parent=styles["Normal"],
+            fontSize=8.2,
+            leading=10,
+            fontName="Helvetica-Bold",
+        )
 
-        # Pull minimal task fields
-        tasks = tasks_qs.select_related("work_plan", "work_plan__user").prefetch_related("collaborators")
+        def P(html, style):
+            return Paragraph(html, style)
+
+        story = []
+
+        # ✅ HEADER IMAGE (exact structure you requested)
+        header_img_path = os.path.join(settings.BASE_DIR, "static", "images", "document_title_1.png")
+        if os.path.exists(header_img_path):
+            header_img = Image(header_img_path, width=19.5 * cm, height=1.4 * cm)
+            header_img.hAlign = "CENTER"
+            story.append(header_img)
+            story.append(Spacer(1, 0.3 * cm))
+
+        story.append(P("IT Department – Weekly Work Plan Report", ReportTitle))
+        story.append(Spacer(1, 0.3 * cm))
+        story.append(P(f"{week_start.strftime('%d %b %Y')} - {week_end.strftime('%d %b %Y')}", SubHeader))
+        story.append(Spacer(1, 0.3 * cm))
+
+        # Prepare days
+        day_map = OrderedDict()
+        d = week_start
+        while d <= week_end:
+            day_map[d] = []
+            d += timedelta(days=1)
+
+        tasks = (
+            tasks_qs.select_related("work_plan", "work_plan__user", "centre", "department")
+            .prefetch_related("collaborators")
+            .order_by("date", "work_plan__user__username")
+        )
 
         for t in tasks:
-            day = t.date
-            if day not in day_owner_tasks:
+            if t.date in day_map:
+                day_map[t.date].append(t)
+
+        for day, day_tasks in day_map.items():
+            story.append(P(day.strftime("%A (%d %b %Y)"), DayHeader))
+
+            if not day_tasks:
+                story.append(P("No tasks.", SubHeader))
+                story.append(Spacer(1, 6))
                 continue
 
-            owner = getattr(t.work_plan, "user", None)
-            if not owner:
-                continue
+            table_data = [
+                [
+                    P("People", TH),
+                    P("Task", TH),
+                    P("Details", TH),
+                    P("Status", TH),
+                ]
+            ]
 
-            owner_id = owner.id
-            # compressed task line: "Task name (Status)"
-            # try common fields gracefully
-            task_title = getattr(t, "title", None) or getattr(t, "name", None) or getattr(t, "task", None) or "Task"
-            status = getattr(t, "status", "") or ""
-            status_txt = f" ({status})" if status else ""
-            line = f"• {task_title}{status_txt}"
+            for t in day_tasks:
+                owner = getattr(getattr(t, "work_plan", None), "user", None)
+                owner_name = (owner.get_full_name() or owner.username) if owner else "N/A"
 
-            day_owner_tasks[day][owner_id].append(line)
+                collab_names = []
+                for u in t.collaborators.all():
+                    nm = (u.get_full_name() or u.username or "").strip()
+                    if nm and nm != owner_name:
+                        collab_names.append(nm)
+                collaborators = ", ".join(collab_names)
 
-        # Build PDF sections per day
-        for day, owners_map in day_owner_tasks.items():
-            day_label = day.strftime("%A (%d %b %Y)")
-            elements.append(Paragraph(day_label, h_style))
+                # ✅ People cell: owner bold, collaborators muted next line
+                people_html = f"<b>{self._e(owner_name)}</b>"
+                if collaborators:
+                    people_html += f"<br/><font color='{self.MOHI_GRAY}'>{self._e(collaborators)}</font>"
+                people_cell = P(people_html, PeopleStyle)
 
-            if not owners_map:
-                elements.append(Paragraph("No tasks.", tiny_style))
-                elements.append(Spacer(1, 6))
-                continue
+                # ✅ Task cell: task main + centre/department muted on next line
+                task_name = self._safe(getattr(t, "task_name", "")) or self._safe(getattr(t, "title", "")) or "Task"
+                centre = self._safe(getattr(getattr(t, "centre", None), "name", "")) or "N/A"
+                dept = self._safe(getattr(getattr(t, "department", None), "name", "")) or "N/A"
 
-            # Table rows
-            data = [["Owner", "Tasks"]]
-            for owner_id, lines in owners_map.items():
-                owner_display = user_name.get(owner_id, "Unknown")
-                # compress to fewer lines by joining with <br/>
-                tasks_html = "<br/>".join(lines)
-                data.append([
-                    Paragraph(owner_display, small_style),
-                    Paragraph(tasks_html, tiny_style),
-                ])
+                task_html = (
+                    f"{self._e(task_name)}<br/>"
+                    f"<font color='{self.MOHI_GRAY}'><i>{self._e(centre)} • {self._e(dept)}</i></font>"
+                )
+                task_cell = P(task_html, TaskStyle)
 
-            tbl = Table(data, colWidths=[55 * mm, 215 * mm])  # compact: owner small, tasks wide
-            tbl.setStyle(TableStyle([
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F3F4F6")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, 0), 9),
-                ("ALIGN", (0, 0), (-1, 0), "LEFT"),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#D1D5DB")),
-                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#FAFAFA")]),
-                ("LEFTPADDING", (0, 0), (-1, -1), 6),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-                ("TOPPADDING", (0, 0), (-1, -1), 4),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ]))
-            elements.append(tbl)
-            elements.append(Spacer(1, 8))
+                # ✅ Details cell: only show non-empty (escaped)
+                details_lines = []
+                other_parties = getattr(t, "other_parties", "")
+                resources_needed = getattr(t, "resources_needed", "")
+                target = getattr(t, "target", "")
+                comments = getattr(t, "comments", "")
+                reschedule_reason = getattr(t, "reschedule_reason", "")
 
-        doc.build(elements)
+                if self._safe(other_parties):
+                    details_lines.append(f"<b>Other parties:</b> {self._e(other_parties)}")
+                if self._safe(resources_needed):
+                    details_lines.append(f"<b>Resources:</b> {self._e(resources_needed)}")
+                if self._safe(target):
+                    details_lines.append(f"<b>Target:</b> {self._e(target)}")
+                if self._safe(comments):
+                    details_lines.append(f"<b>Comments:</b> {self._e(comments)}")
+                if self._safe(reschedule_reason):
+                    details_lines.append(f"<b>Reschedule reason:</b> {self._e(reschedule_reason)}")
+
+                details_html = "<br/>".join(details_lines) if details_lines else f"<font color='{self.MOHI_GRAY}'>—</font>"
+                details_cell = P(details_html, DetailsStyle)
+
+                status = self._safe(getattr(t, "status", "")) or "Pending"
+                status_cell = P(self._e(status), StatusStyle)
+
+                table_data.append([people_cell, task_cell, details_cell, status_cell])
+
+            table = Table(
+                table_data,
+                colWidths=[70 * mm, 90 * mm, 105 * mm, 25 * mm],
+                repeatRows=1,
+            )
+
+            table.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(self.MOHI_HEADER_BG)),
+                        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor(self.MOHI_BORDER)),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor(self.MOHI_ROW_ALT)]),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+                        ("TOPPADDING", (0, 0), (-1, -1), 3),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                    ]
+                )
+            )
+
+            story.append(table)
+            story.append(Spacer(1, 10))
+
+        doc.build(story)
         return buffer.getvalue()
 
     def handle(self, *args, **options):
-        self.stdout.write("📩 Sending compact weekly summary (grouped by day)...")
-
         today = timezone.now().date()
-
-        # Week (Mon–Sat)
         week_start = today - timedelta(days=today.weekday())
         week_end = week_start + timedelta(days=5)
 
-        # allow-listed users
         users_qs = CustomUser.objects.filter(is_active=True).filter(
             Q(username__in=self.ORDERED_USERNAMES) | Q(email__in=self.ALLOWED_EMAILS)
         ).distinct()
@@ -202,10 +291,9 @@ class Command(BaseCommand):
         allowed_users = [users_by_username[u] for u in self.ORDERED_USERNAMES if u in users_by_username]
 
         if not allowed_users:
-            self.stdout.write(self.style.WARNING("⚠️ No allow-listed users found. Skipping."))
+            self.stdout.write("No users found.")
             return
 
-        # Weekly tasks (owned OR collaborator) within week
         weekly_tasks_qs = WorkPlanTask.objects.filter(
             Q(work_plan__user__in=allowed_users) | Q(collaborators__in=allowed_users),
             date__gte=week_start,
@@ -213,45 +301,37 @@ class Command(BaseCommand):
         ).distinct()
 
         weekly_total = weekly_tasks_qs.count()
+        if weekly_total == 0:
+            self.stdout.write("No weekly tasks.")
+            return
+
         weekly_completed = weekly_tasks_qs.filter(status="Completed").count()
         weekly_pending = weekly_tasks_qs.filter(status="Pending").count()
         weekly_rescheduled = weekly_tasks_qs.filter(status="Rescheduled").count()
 
-        if weekly_total == 0:
-            self.stdout.write("ℹ️ No weekly activity detected. Skipping email.")
-            return
+        pdf_bytes = self._build_pdf(week_start, week_end, weekly_tasks_qs)
 
-        # Build compact PDF (weekly only, compact)
-        pdf_bytes = self._build_compact_weekly_pdf(
-            week_start=week_start,
-            week_end=week_end,
-            users=allowed_users,
-            tasks_qs=weekly_tasks_qs,
-        )
-
-        # Email
-        subject = f"IT Weekly Work Plan Summary - {week_start.strftime('%d %b')} to {week_end.strftime('%d %b %Y')}"
-
+        subject = f"Work Plan Summary - Week of {week_start.strftime('%d %b %Y')}"
         to_list, cc_list = self._get_to_and_cc()
 
         body = (
             "Dear Gerald,\n\n"
-            "Kindly find the weekly work plan summary below. Full task details are attached in the PDF.\n\n"
-            f"Week: {week_start.strftime('%d %b %Y')} - {week_end.strftime('%d %b %Y')}\n"
-            f"Total Tasks: {weekly_total}\n"
-            f"Completed: {weekly_completed}\n"
-            f"Pending: {weekly_pending}\n"
-            f"Rescheduled: {weekly_rescheduled}\n\n"
-            "Regards,\n"
+            "Here is the weekly work plan summary for the whole IT team. Full task details are in the attached PDF.\n\n"
+            f"WEEKLY SUMMARY ({week_start.strftime('%d %b')} - {week_end.strftime('%d %b %Y')}):\n"
+            f"- Total tasks: {weekly_total}\n"
+            f"- Completed: {weekly_completed}\n"
+            f"- Pending: {weekly_pending}\n"
+            f"- Rescheduled: {weekly_rescheduled}\n\n"
+            "Best regards,\n"
             "IT Operations System\n"
         )
 
-        # DEBUG/SQLite -> console only
+        # Debug/SQLite: print to console only
         if settings.DEBUG or (settings.DATABASES.get("default", {}).get("ENGINE") == "django.db.backends.sqlite3"):
-            self.stdout.write("🧪 DEBUG/SQLITE mode: Email not sent.")
+            self.stdout.write("DEBUG/SQLITE mode: email not sent.")
             self.stdout.write(f"TO: {to_list} | CC: {cc_list}")
             self.stdout.write(body)
-            self.stdout.write(f"(PDF bytes length: {len(pdf_bytes)})")
+            self.stdout.write(f"PDF bytes: {len(pdf_bytes)}")
             return
 
         email = EmailMultiAlternatives(
@@ -262,8 +342,11 @@ class Command(BaseCommand):
             cc=cc_list,
         )
 
-        filename = f"IT_Weekly_WorkPlan_{week_start.strftime('%Y%m%d')}_{week_end.strftime('%Y%m%d')}.pdf"
-        email.attach(filename, pdf_bytes, "application/pdf")
+        email.attach(
+            f"Weekly_WorkPlan_{week_start.strftime('%Y%m%d')}.pdf",
+            pdf_bytes,
+            "application/pdf",
+        )
 
         email.send(fail_silently=False)
-        self.stdout.write(self.style.SUCCESS("✅ Sent to Gerald (CC IT) with compact PDF attached"))
+        self.stdout.write("Summary sent successfully.")
