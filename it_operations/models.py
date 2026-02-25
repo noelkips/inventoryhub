@@ -100,6 +100,10 @@ class WorkPlan(models.Model):
     # We store the start of the week to identify the "Plan Period"
     week_start_date = models.DateField(help_text="The Monday date of this work week")
     week_end_date = models.DateField(help_text="The Saturday date of this work week")
+    manager_task_creation_override_open = models.BooleanField(
+        default=False,
+        help_text="Manager override to reopen task creation after deadline for the current week only.",
+    )
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -124,23 +128,36 @@ class WorkPlan(models.Model):
         """
         return self.can_add_tasks
 
-    @property
-    def can_add_tasks(self) -> bool:
-        """
-        Strict Rule: Adding NEW tasks is locked after Monday 10:00 AM of the plan week.
-        """
+    def add_task_deadline(self):
+        """Returns Monday 10:00 AM deadline for this plan week."""
+        deadline = datetime.combine(self.week_start_date, time(10, 0))
         now = timezone.now()
 
-        # Monday 10:00 AM for this plan's week_start_date
-        deadline = datetime.combine(self.week_start_date, time(10, 0))
-
-        # Ensure both datetimes are consistent (aware vs naive)
         if timezone.is_aware(now) and timezone.is_naive(deadline):
             deadline = timezone.make_aware(deadline, timezone.get_current_timezone())
         elif timezone.is_naive(now) and timezone.is_aware(deadline):
             deadline = timezone.make_naive(deadline, timezone.get_current_timezone())
 
-        return now <= deadline
+        return deadline
+
+    @property
+    def is_current_week(self) -> bool:
+        today = timezone.now().date()
+        current_week_start = today - timedelta(days=today.weekday())
+        return self.week_start_date == current_week_start
+
+    @property
+    def deadline_passed_for_adding(self) -> bool:
+        return timezone.now() > self.add_task_deadline()
+
+    @property
+    def can_add_tasks(self) -> bool:
+        """
+        Strict Rule: Adding NEW tasks is locked after Monday 10:00 AM of the plan week.
+        """
+        if not self.deadline_passed_for_adding:
+            return True
+        return bool(self.is_current_week and self.manager_task_creation_override_open)
 
     @property
     def status_summary(self):

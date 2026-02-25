@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.conf import settings
+from django.core.mail import send_mail
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.db.models import Q
@@ -70,6 +71,53 @@ def _get_next_working_day(from_date):
             current += timedelta(days=1)
             continue
         return current
+
+
+def _week_add_deadline(week_start, now=None):
+    """Monday 10:00 AM deadline for a given week start, timezone-consistent."""
+    now = now or timezone.now()
+    deadline_dt = datetime.combine(week_start, time(10, 0))
+    if timezone.is_aware(now) and timezone.is_naive(deadline_dt):
+        return timezone.make_aware(deadline_dt, timezone.get_current_timezone())
+    if timezone.is_naive(now) and timezone.is_aware(deadline_dt):
+        return timezone.make_naive(deadline_dt, timezone.get_current_timezone())
+    return deadline_dt
+
+
+def _send_workplan_reopened_email(work_plan, reopened_by):
+    """Notify the plan owner that current-week task creation was reopened."""
+    recipient = getattr(work_plan.user, "email", None)
+    if not recipient:
+        return False, "User has no email address."
+
+    owner_name = work_plan.user.get_full_name() or work_plan.user.username
+    manager_name = reopened_by.get_full_name() or reopened_by.username
+    week_start = work_plan.week_start_date
+    week_end = work_plan.week_end_date
+
+    subject = f"Work Plan Reopened for {week_start.strftime('%d %b %Y')}"
+    body = (
+        f"Dear {owner_name},\n\n"
+        "Your weekly work plan has been reopened by the IT Manager so you can add tasks.\n\n"
+        f"Week: {week_start.strftime('%A, %d %b %Y')} - {week_end.strftime('%A, %d %b %Y')}\n"
+        f"Reopened by: {manager_name}\n\n"
+        "Please log in and complete your work plan as soon as possible.\n\n"
+        "Regards,\n"
+        "IT Operations System\n"
+    )
+
+    try:
+        send_mail(
+            subject=subject,
+            message=body,
+            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
+            recipient_list=[recipient],
+            fail_silently=False,
+        )
+        return True, None
+    except Exception as exc:
+        logger.exception("Failed to send work plan reopened email for work_plan=%s", work_plan.id)
+        return False, str(exc)
 
 
 # ============ VIEWS ============
@@ -170,6 +218,7 @@ def work_plan_detail(request, pk):
     # Access Check
     is_owner = (user == work_plan.user)
     is_manager = is_manager_of(user, work_plan.user)
+    is_it_manager_user = bool(getattr(user, 'is_it_manager', False))
     is_collab = work_plan.tasks.filter(collaborators=user).exists()
 
     if not (is_owner or is_manager or is_collab):
@@ -182,6 +231,12 @@ def work_plan_detail(request, pk):
     # Helper: week bounds
     week_start = work_plan.week_start_date
     week_end = work_plan.week_end_date
+    manager_can_toggle_creation = bool(
+        is_it_manager_user
+        and is_manager
+        and work_plan.is_current_week
+        and work_plan.deadline_passed_for_adding
+    )
 
     # Handle Add Task (POST) - only owner can add to their plan
     if request.method == 'POST' and request.POST.get('add_task'):
@@ -311,10 +366,55 @@ def work_plan_detail(request, pk):
         'leave_dates': leave_dates,
         'is_owner': is_owner,
         'is_manager': is_manager,
+        'manager_can_toggle_creation': manager_can_toggle_creation,
+        'manager_override_creation_open': work_plan.manager_task_creation_override_open,
+        'is_current_week_plan': work_plan.is_current_week,
+        'creation_deadline_passed': work_plan.deadline_passed_for_adding,
         'has_collaborative_tasks': collaborative_tasks.exists(),
         'is_collaborator': is_collab,
     }
     return render(request, 'work_plan/workplan_detail.html', context)
+
+
+@login_required
+@require_POST
+def work_plan_toggle_creation_override(request, pk):
+    work_plan = get_object_or_404(WorkPlan, pk=pk)
+
+    if not getattr(request.user, 'is_it_manager', False):
+        messages.error(request, "Permission denied.")
+        return redirect('work_plan_detail', pk=pk)
+
+    if not is_manager_of(request.user, work_plan.user):
+        messages.error(request, "Permission denied.")
+        return redirect('work_plan_detail', pk=pk)
+
+    if not work_plan.is_current_week:
+        messages.error(request, "This action only applies to the current week.")
+        return redirect('work_plan_detail', pk=pk)
+
+    if not work_plan.deadline_passed_for_adding:
+        messages.error(request, "Manager override is only available after Monday 10:00 AM.")
+        return redirect('work_plan_detail', pk=pk)
+
+    action = (request.POST.get('action') or '').strip().lower()
+    if action not in {'open', 'close'}:
+        action = 'close' if work_plan.manager_task_creation_override_open else 'open'
+
+    work_plan.manager_task_creation_override_open = (action == 'open')
+    work_plan.save(update_fields=['manager_task_creation_override_open', 'updated_at'])
+
+    if work_plan.manager_task_creation_override_open:
+        email_sent, email_error = _send_workplan_reopened_email(work_plan, request.user)
+        messages.success(request, f"Task creation reopened for {work_plan.user.get_full_name() or work_plan.user.username} (current week).")
+        if email_sent:
+            messages.info(request, f"Email notification sent to {work_plan.user.email}.")
+        elif email_error:
+            messages.warning(request, f"Reopened, but email notification failed: {email_error}")
+    else:
+        messages.success(request, f"Task creation closed again for {work_plan.user.get_full_name() or work_plan.user.username} (current week).")
+
+    return redirect('work_plan_detail', pk=pk)
 
 
 @login_required
@@ -657,15 +757,14 @@ def work_plan_calendar(request):
         
 
 
-        deadline_dt = datetime.combine(week_start, time(10, 0))
-
-        # Make deadline consistent with `now`
-        if timezone.is_aware(now) and timezone.is_naive(deadline_dt):
-            deadline = timezone.make_aware(deadline_dt, timezone.get_current_timezone())
-        else:
-            deadline = deadline_dt
-
-        can_add_to_week = (now <= deadline) and (target_user == request.user)
+        deadline = _week_add_deadline(week_start, now=now)
+        existing_plan = WorkPlan.objects.filter(user=target_user, week_start_date=week_start).first()
+        override_open = bool(
+            existing_plan
+            and existing_plan.manager_task_creation_override_open
+            and existing_plan.is_current_week
+        )
+        can_add_to_week = bool((target_user == request.user) and ((now <= deadline) or override_open))
         for day in week:
             day_events = [e for e in events if e['date'] == day]
             
@@ -714,9 +813,16 @@ def work_plan_create_task_from_calendar(request):
         task_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         week_start = task_date - timedelta(days=task_date.weekday())
         
-        # Security: Check deadline
-        deadline_dt = datetime.combine(week_start, datetime.min.time()) + timedelta(hours=10)
-        if timezone.now() > timezone.make_aware(deadline_dt):
+        # Security: Check deadline (allow manager override on existing current-week plan)
+        now = timezone.now()
+        deadline = _week_add_deadline(week_start, now=now)
+        existing_plan = WorkPlan.objects.filter(user=request.user, week_start_date=week_start).first()
+        override_open = bool(
+            existing_plan
+            and existing_plan.manager_task_creation_override_open
+            and existing_plan.is_current_week
+        )
+        if now > deadline and not override_open:
             messages.error(request, "Deadline passed for this week.")
             return redirect('work_plan_calendar')
 

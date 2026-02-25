@@ -19,6 +19,7 @@ urlpatterns = [
     path('workplans/', views.work_plan_list, name='work_plan_list'),
     path('workplans/create/', views.work_plan_create, name='work_plan_create'),
     path('workplans/<int:pk>/', views.work_plan_detail, name='work_plan_detail'),
+    path('workplans/<int:pk>/toggle-creation-override/', views.work_plan_toggle_creation_override, name='work_plan_toggle_creation_override'),
     
     # Task Actions (POST)
     path('workplans/task/<int:pk>/delete/', views.work_plan_task_delete, name='work_plan_task_delete'),
