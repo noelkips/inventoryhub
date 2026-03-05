@@ -5,16 +5,32 @@ from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction
-from django.db.models import Q, F, Case, When, IntegerField, Count
+from django.db.models import Q, F, Case, When, IntegerField, Count, Sum
+from django.db.models.functions import TruncMonth
 from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.template.loader import get_template
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta, datetime
 from io import TextIOWrapper
+from decimal import Decimal, InvalidOperation
 
 # Models
-from devices.models import CustomUser, DeviceAgreement, DeviceUserHistory, Employee, Import, Centre, Notification, PendingUpdate, Department
+from devices.models import (
+    CustomUser,
+    DeviceAgreement,
+    DeviceLog,
+    DeviceRepair,
+    DeviceUserHistory,
+    Employee,
+    Import,
+    Centre,
+    Notification,
+    PendingUpdate,
+    Department,
+    DeviceConfigurationType,
+    DeviceConfiguration,
+)
 from devices.utils.devices_utils import generate_pdf_buffer
 from devices.utils.emails import send_custom_email, send_custom_email, send_device_assignment_email
 from it_operations.models import BackupRegistry, WorkPlan, IncidentReport, MissionCriticalAsset, WorkPlanTask
@@ -24,6 +40,7 @@ from ppm.models import PPMTask, PPMPeriod, PPMActivity
 # Third-party & Standard Library
 import csv
 import logging
+import re
 from io import BytesIO
 
 # Excel (openpyxl)
@@ -49,6 +66,85 @@ from django.http import Http404
 logger = logging.getLogger(__name__)
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+
+
+ASSET_TAG_RE = re.compile(r"^\s*(\d+)-([LDS])-\s*MOHI\s*$", re.IGNORECASE)
+
+
+def _device_asset_kind_from_record(device: Import):
+    if (device.device_name or "").upper().endswith("-L-MOHI") or device.category == "laptop":
+        return "laptop"
+    if (device.device_name or "").upper().endswith("-S-MOHI"):
+        return "server"
+    if (device.device_name or "").upper().endswith("-D-MOHI") or device.category == "system_unit":
+        if (device.system_model or "").lower().find("server") != -1:
+            return "server"
+        return "desktop"
+    return None
+
+
+def _asset_letter_for_kind(kind: str):
+    return {"laptop": "L", "desktop": "D", "server": "S"}.get(kind)
+
+
+def _next_asset_tag(kind: str):
+    letter = _asset_letter_for_kind(kind)
+    if not letter:
+        return None
+
+    existing = Import.objects.filter(device_name__iendswith=f"-{letter}-MOHI").values_list("device_name", flat=True)
+    max_num = 0
+    for name in existing:
+        if not name:
+            continue
+        match = ASSET_TAG_RE.match(str(name))
+        if not match:
+            continue
+        num_str, found_letter = match.group(1), match.group(2).upper()
+        if found_letter != letter:
+            continue
+        try:
+            max_num = max(max_num, int(num_str))
+        except ValueError:
+            continue
+
+    # Laptop sequence must continue from 0565-L-MOHI -> next is 0566-L-MOHI (at minimum)
+    if kind == "laptop":
+        max_num = max(max_num, 565)
+
+    next_num = max_num + 1
+    # Always format as 4 digits (matches 0565-L-MOHI)
+    while True:
+        candidate = f"{next_num:04d}-{letter}-MOHI"
+        if not Import.objects.filter(device_name__iexact=candidate).exists():
+            return candidate
+        next_num += 1
+
+
+def _ensure_device_configuration_items(device: Import):
+    kind = _device_asset_kind_from_record(device)
+    if kind not in {"laptop", "desktop", "server"}:
+        return
+
+    types = DeviceConfigurationType.objects.filter(is_active=True).order_by("sort_order", "name")
+    if kind == "laptop":
+        types = types.filter(applies_to_laptop=True)
+    elif kind == "desktop":
+        types = types.filter(applies_to_desktop=True)
+    else:
+        types = types.filter(applies_to_server=True)
+
+    DeviceConfiguration.objects.bulk_create(
+        [DeviceConfiguration(device=device, config_type=t) for t in types],
+        ignore_conflicts=True,
+    )
+
+
+def _block_actions_if_inactive(request, device: Import):
+    if getattr(device, "is_active", True):
+        return None
+    messages.warning(request, "This device is currently under repair and is inactive. Actions are blocked until repairs are completed.")
+    return redirect("device_detail", pk=device.pk)
 
 
 def _can_delete(user):
@@ -125,38 +221,6 @@ This device has been permanently removed from the inventory.
     return redirect('display_approved_imports')
 
 
-@login_required
-def device_detail(request, pk):
-    device = get_object_or_404(Import, pk=pk)
-
-    # Permission: trainers can only view their centre's devices
-    if request.user.is_trainer and device.centre != request.user.centre:
-        messages.error(request, "You can only view devices from your own centre.")
-        return redirect('display_approved_imports')
-
-    # Get related agreement (if any) - current active agreement
-    agreement_exists = DeviceAgreement.objects.filter(device=device, is_archived=False).exists()
-    
-    # Check if there are any past (archived) agreements
-    past_agreements_exist = DeviceAgreement.objects.filter(device=device, is_archived=True).exists()
-
-    # Clearance record (latest)
-    clearance = device.clearances.order_by('-created_at').first()
-
-    context = {
-        'device': device,
-        'agreement_exists': agreement_exists,
-        'past_agreements_exist': past_agreements_exist,  # NEW
-        'can_edit': request.user.is_staff,
-        'clearance': clearance,
-        'can_edit': request.user.is_superuser or request.user.is_trainer,
-        'can_approve': request.user.is_superuser and not request.user.is_trainer and not device.is_approved,
-        'can_dispose': request.user.is_superuser and not request.user.is_trainer and not device.is_disposed,
-        'can_delete': request.user.is_it_manager or request.user.is_senior_it_officer,
-    }
-
-    return render(request, 'import/device_detail.html', context)
-
 @require_POST
 @login_required
 def check_serial(request):
@@ -168,6 +232,146 @@ def check_serial(request):
         'exists': exists,
         'pk': pk if pk else None
     })
+
+
+@login_required
+def start_device_configuration(request, pk):
+    device = get_object_or_404(Import, pk=pk)
+    if request.user.is_trainer and device.centre != request.user.centre:
+        messages.error(request, "You can only configure devices from your own centre.")
+        return redirect('display_approved_imports')
+
+    blocked = _block_actions_if_inactive(request, device)
+    if blocked:
+        return blocked
+
+    kind = _device_asset_kind_from_record(device)
+    if kind not in {"laptop", "desktop", "server"}:
+        messages.warning(request, "Configuration checklist is only available for Laptop/Desktop/Server devices.")
+        return redirect("device_detail", pk=device.pk)
+
+    _ensure_device_configuration_items(device)
+    return redirect('device_configuration', pk=device.pk)
+
+
+@login_required
+def device_configuration(request, pk):
+    device = get_object_or_404(Import, pk=pk)
+    if request.user.is_trainer and device.centre != request.user.centre:
+        messages.error(request, "You can only configure devices from your own centre.")
+        return redirect('display_approved_imports')
+
+    blocked = _block_actions_if_inactive(request, device)
+    if blocked:
+        return blocked
+
+    kind = _device_asset_kind_from_record(device)
+    if kind not in {"laptop", "desktop", "server"}:
+        messages.warning(request, "Configuration checklist is only available for Laptop/Desktop/Server devices.")
+        return redirect("device_detail", pk=device.pk)
+
+    _ensure_device_configuration_items(device)
+    configs = DeviceConfiguration.objects.filter(device=device).select_related('config_type', 'completed_by')
+
+    if request.method == 'POST':
+        selected = set(request.POST.getlist('completed'))
+        now = timezone.now()
+        for cfg in configs:
+            want_completed = str(cfg.pk) in selected
+            if want_completed and not cfg.is_completed:
+                cfg.is_completed = True
+                cfg.completed_by = request.user
+                cfg.completed_at = now
+                cfg.save(update_fields=['is_completed', 'completed_by', 'completed_at'])
+            elif (not want_completed) and cfg.is_completed:
+                cfg.is_completed = False
+                cfg.completed_by = None
+                cfg.completed_at = None
+                cfg.save(update_fields=['is_completed', 'completed_by', 'completed_at'])
+
+        messages.success(request, "Configuration checklist updated.")
+        return redirect('device_detail', pk=device.pk)
+
+    total = configs.count()
+    completed = configs.filter(is_completed=True).count()
+    context = {
+        'device': device,
+        'configs': configs,
+        'total': total,
+        'completed': completed,
+        'done': (total > 0 and completed == total),
+    }
+    return render(request, 'import/device_configuration.html', context)
+
+
+def _is_superuser(user):
+    return user.is_superuser
+
+
+@login_required
+@user_passes_test(_is_superuser)
+def manage_configuration_types(request):
+    types = DeviceConfigurationType.objects.all().order_by('sort_order', 'name')
+    if request.method == 'POST':
+        name = (request.POST.get('name') or '').strip()
+        if not name:
+            messages.error(request, "Name is required.")
+            return redirect('manage_configuration_types')
+
+        description = (request.POST.get('description') or '').strip()
+        applies_to_laptop = bool(request.POST.get('applies_to_laptop'))
+        applies_to_desktop = bool(request.POST.get('applies_to_desktop'))
+        applies_to_server = bool(request.POST.get('applies_to_server'))
+        is_active = 'is_active' in request.POST
+        try:
+            sort_order = int(request.POST.get('sort_order') or 0)
+        except ValueError:
+            sort_order = 0
+
+        DeviceConfigurationType.objects.create(
+            name=name,
+            description=description or None,
+            sort_order=sort_order,
+            is_active=is_active,
+            applies_to_laptop=applies_to_laptop,
+            applies_to_desktop=applies_to_desktop,
+            applies_to_server=applies_to_server,
+        )
+        messages.success(request, "Configuration type added.")
+        return redirect('manage_configuration_types')
+
+    return render(request, 'configuration/manage_types.html', {'types': types})
+
+
+@login_required
+@user_passes_test(_is_superuser)
+def configuration_type_edit(request, type_id):
+    t = get_object_or_404(DeviceConfigurationType, id=type_id)
+    if request.method == 'POST':
+        t.name = (request.POST.get('name') or '').strip()
+        t.description = (request.POST.get('description') or '').strip() or None
+        try:
+            t.sort_order = int(request.POST.get('sort_order') or 0)
+        except ValueError:
+            t.sort_order = 0
+        t.is_active = bool(request.POST.get('is_active'))
+        t.applies_to_laptop = bool(request.POST.get('applies_to_laptop'))
+        t.applies_to_desktop = bool(request.POST.get('applies_to_desktop'))
+        t.applies_to_server = bool(request.POST.get('applies_to_server'))
+        t.save()
+        messages.success(request, "Configuration type updated.")
+        return redirect('manage_configuration_types')
+    return render(request, 'configuration/type_edit.html', {'t': t})
+
+
+@login_required
+@user_passes_test(_is_superuser)
+@require_POST
+def configuration_type_delete(request, type_id):
+    t = get_object_or_404(DeviceConfigurationType, id=type_id)
+    t.delete()
+    messages.success(request, "Configuration type deleted.")
+    return redirect('manage_configuration_types')
 
 @login_required
 def get_list_context(request, initial_queryset, view_name, is_disposed=False):
@@ -240,11 +444,33 @@ def get_list_context(request, initial_queryset, view_name, is_disposed=False):
     except EmptyPage:
         page_obj = paginator.page(paginator.num_pages)
 
+    page_ids = [obj.id for obj in page_obj]
+
+    open_repairs_by_device_id = {}
+    if page_ids:
+        # Single query for "who put it under repair" on this page.
+        # If multiple open repairs exist, we pick the most recent one per device.
+        open_repairs = (
+            DeviceRepair.objects.filter(
+                device_id__in=page_ids,
+                status=DeviceRepair.STATUS_IN_PROGRESS,
+            )
+            .select_related("created_by")
+            .order_by("-created_at")
+        )
+        for repair in open_repairs:
+            if repair.device_id not in open_repairs_by_device_id:
+                open_repairs_by_device_id[repair.device_id] = repair
+
     # Pending updates
     data_with_pending = []
     for item in page_obj:
         pending = PendingUpdate.objects.filter(import_record=item).order_by('-created_at').first() if not is_disposed else None
-        data_with_pending.append({'item': item, 'pending_update': pending})
+        data_with_pending.append({
+            'item': item,
+            'pending_update': pending,
+            'open_repair': open_repairs_by_device_id.get(item.id),
+        })
 
     # Stats
     total_devices = initial_queryset.count()
@@ -256,6 +482,37 @@ def get_list_context(request, initial_queryset, view_name, is_disposed=False):
     ).count() if is_disposed else 0
 
     category_choices = Import.CATEGORY_CHOICES
+
+    # Configuration status for Laptop/Desktop/Server (shown as button in list)
+    required_ids = set()
+    needs_configuration_ids = set()
+    configuration_progress = {}
+    if page_ids:
+        required_ids = set(
+            Import.objects.filter(id__in=page_ids).filter(
+                Q(category__in=['laptop', 'system_unit']) |
+                Q(device_name__iendswith='-L-MOHI') |
+                Q(device_name__iendswith='-D-MOHI') |
+                Q(device_name__iendswith='-S-MOHI')
+            ).values_list('id', flat=True)
+        )
+        if required_ids:
+            progress_rows = DeviceConfiguration.objects.filter(
+                device_id__in=required_ids
+            ).values('device_id').annotate(
+                total=Count('id'),
+                completed=Count('id', filter=Q(is_completed=True)),
+            )
+            for row in progress_rows:
+                device_id = row['device_id']
+                total = row['total'] or 0
+                completed = row['completed'] or 0
+                configuration_progress[device_id] = {'completed': completed, 'total': total}
+
+            for device_id in required_ids:
+                progress = configuration_progress.get(device_id, {'completed': 0, 'total': 0})
+                if progress['total'] == 0 or progress['completed'] < progress['total']:
+                    needs_configuration_ids.add(device_id)
 
     return {
         'data_with_pending': data_with_pending,
@@ -278,7 +535,9 @@ def get_list_context(request, initial_queryset, view_name, is_disposed=False):
         'approved_imports': approved_imports,
         'view_name': view_name,
         'this_month_count': this_month_count,
-        'employees': Employee.objects.filter(is_active=True).order_by('last_name', 'first_name')
+        'employees': Employee.objects.filter(is_active=True).order_by('last_name', 'first_name'),
+        'needs_configuration_ids': needs_configuration_ids,
+        'configuration_progress': configuration_progress,
     }
 
 @login_required
@@ -341,9 +600,13 @@ def dispose_device(request, device_id):
 
 
 
+
 @login_required
 def device_history(request, pk):
-    device = get_object_or_404(Import, pk=pk)
+    device = get_object_or_404(
+        Import.objects.select_related("assignee", "department", "centre", "added_by", "approved_by"),
+        pk=pk,
+    )
 
     # Permission check
     if request.user.is_trainer and device.centre != request.user.centre:
@@ -351,7 +614,9 @@ def device_history(request, pk):
         return redirect('display_approved_imports')
 
     # ===== Device Tracking Timeline (most recent first) =====
-    historical_records = device.history.order_by('history_date')  # oldest first for building
+    historical_records = device.history.select_related(
+        "assignee", "department", "centre", "history_user"
+    ).order_by("history_date")  # oldest first for building
     timeline = []
     current_state = None
     start_date = None
@@ -417,7 +682,9 @@ def device_history(request, pk):
     timeline = timeline[::-1]
 
     # ===== Summarized Change History (newest first) =====
-    history_records = list(device.history.all().order_by('-history_date'))  # list for indexing
+    history_records = list(
+        device.history.select_related("history_user").order_by("-history_date")
+    )  # list for indexing
     history_data = []
 
     field_names = {
@@ -440,6 +707,65 @@ def device_history(request, pk):
     }
 
     i = 0
+    centre_name_cache: dict[int, str] = {}
+    department_name_cache: dict[int, str] = {}
+    user_username_cache: dict[int, str] = {}
+    employee_display_cache: dict[int, str] = {}
+
+    def _as_int(value):
+        try:
+            return int(value)
+        except Exception:
+            return None
+
+    def _centre_name(value) -> str:
+        pk_int = _as_int(value)
+        if not pk_int:
+            return "N/A"
+        if pk_int in centre_name_cache:
+            return centre_name_cache[pk_int]
+        name = Centre.objects.filter(pk=pk_int).values_list("name", flat=True).first() or "N/A"
+        centre_name_cache[pk_int] = name
+        return name
+
+    def _department_name(value) -> str:
+        pk_int = _as_int(value)
+        if not pk_int:
+            return "N/A"
+        if pk_int in department_name_cache:
+            return department_name_cache[pk_int]
+        name = Department.objects.filter(pk=pk_int).values_list("name", flat=True).first() or "N/A"
+        department_name_cache[pk_int] = name
+        return name
+
+    def _username(value) -> str:
+        pk_int = _as_int(value)
+        if not pk_int:
+            return "N/A"
+        if pk_int in user_username_cache:
+            return user_username_cache[pk_int]
+        username = CustomUser.objects.filter(pk=pk_int).values_list("username", flat=True).first() or "N/A"
+        user_username_cache[pk_int] = username
+        return username
+
+    def _employee_display(value) -> str:
+        pk_int = _as_int(value)
+        if not pk_int:
+            return "N/A"
+        if pk_int in employee_display_cache:
+            return employee_display_cache[pk_int]
+        row = Employee.objects.filter(pk=pk_int).values("first_name", "last_name", "staff_number").first()
+        if not row:
+            disp = "N/A"
+        else:
+            staff_no = row.get("staff_number") or "N/A"
+            first = (row.get("first_name") or "").strip()
+            last = (row.get("last_name") or "").strip()
+            full = (f"{first} {last}").strip() or "N/A"
+            disp = f"{full} ({staff_no})"
+        employee_display_cache[pk_int] = disp
+        return disp
+
     while i < len(history_records):
         record = history_records[i]
         user = (
@@ -475,9 +801,8 @@ def device_history(request, pk):
             else:
                 break
 
-        # Base record for diff (before first change in group)
-        first_record_in_group = group[-1]['record']
-        prev = first_record_in_group.prev_record
+        # Base record for diff (record just before the group, older than the group's oldest)
+        prev = history_records[j] if j < len(history_records) else None
 
         # Latest record for date
         latest_record = group[0]['record']
@@ -496,6 +821,561 @@ def device_history(request, pk):
             field_name = field_names.get(change.field, change.field.replace('_', ' ').title())
 
             # Resolve values
+            if change.field == 'centre':
+                old_value = _centre_name(change.old)
+                new_value = _centre_name(change.new)
+            elif change.field == 'department':
+                old_value = _department_name(change.old)
+                new_value = _department_name(change.new)
+            elif change.field in ['added_by', 'approved_by']:
+                old_value = _username(change.old)
+                new_value = _username(change.new)
+            elif change.field == 'assignee':
+                old_value = _employee_display(change.old)
+                new_value = _employee_display(change.new)
+            else:
+                old_value = change.old if change.old is not None else 'N/A'
+                new_value = change.new if change.new is not None else 'N/A'
+
+            if str(old_value).strip() == str(new_value).strip():
+                continue
+
+            diff[field_name] = {'old': old_value, 'new': new_value}
+
+        if diff or len(group) == 1:
+            history_data.append({
+                'date': latest_record.history_date,
+                'change_type': 'Edited' if len(group) == 1 else 'Edited (multiple saves)',
+                'diff': diff,
+                'user': user,
+                'is_multiple': len(group) > 1,
+            })
+
+        i = j
+
+    # ===== Legacy User History =====
+    user_history = device.user_history.all().order_by('assigned_date').values(
+        'assignee_first_name', 'assignee_last_name', 'assignee_email_address',
+        'assigned_by__username', 'assigned_date', 'cleared_date'
+    )
+
+    # IMPORTANT: your template uses entry.assignee_first_name etc, so keep raw dict keys
+    user_history_data = [
+        {
+            'assignee_first_name': f"{entry['assignee_first_name'] or ''} {entry['assignee_last_name'] or ''}".strip() or 'N/A',
+            'email': entry['assignee_email_address'] or 'N/A',
+            'assigned_by': entry['assigned_by__username'] or 'N/A',
+            'assigned_date': entry['assigned_date'],
+            'cleared_date': entry['cleared_date']
+        }
+        for entry in user_history
+    ]
+
+    # ===== UAF Agreements =====
+    past_agreements = DeviceAgreement.objects.filter(
+        device=device, is_archived=True
+    ).select_related('employee', 'issuance_it_user', 'clearance_it_user').order_by('-clearance_date')
+
+    current_agreement = DeviceAgreement.objects.filter(
+        device=device, is_archived=False
+    ).select_related('employee', 'issuance_it_user').first()
+
+    maintenance_logs = (
+        device.logs.filter(ppm_task__isnull=False)
+        .select_related("user", "ppm_task", "ppm_task__period")
+        .prefetch_related("ppm_task__activities")
+        .order_by("-created_at")
+    )
+
+    reason_re = re.compile(r"Reason:\s*(.*?)(?:\n|$)", re.IGNORECASE)
+    notes_re = re.compile(r"Notes:\s*(.*?)(?:\n|$)", re.IGNORECASE)
+    notes_pipe_re = re.compile(r"\|\s*Notes:\s*(.*)$", re.IGNORECASE)
+    activities_done_re = re.compile(r"Activities performed:\s*(.*?)(?:\n|$)", re.IGNORECASE)
+    activities_legacy_re = re.compile(r"Activities:\s*(.*?)(?:\n|$)", re.IGNORECASE)
+
+    for log in maintenance_logs:
+        msg = (log.message or "").replace("\r\n", "\n").replace("\r", "\n")
+        msg_lower = msg.lower()
+
+        log.ppm_is_not_done = ("no activity performed" in msg_lower) or ("not done" in msg_lower)
+
+        log.ppm_reason = None
+        log.ppm_notes = None
+        log.ppm_activities = None
+
+        reason_match = reason_re.search(msg)
+        if reason_match:
+            log.ppm_reason = reason_match.group(1).strip() or None
+
+        notes_match = notes_re.search(msg) or notes_pipe_re.search(msg)
+        if notes_match:
+            log.ppm_notes = notes_match.group(1).strip() or None
+
+        activities_match = activities_done_re.search(msg) or activities_legacy_re.search(msg)
+        if activities_match:
+            log.ppm_activities = activities_match.group(1).strip() or None
+
+    return render(request, 'import/device_history.html', {
+        'device': device,
+        'timeline': timeline,
+        'history': history_data,
+        'user_history': user_history_data,
+        'past_agreements': past_agreements,
+        'current_agreement': current_agreement,
+        'maintenance_logs': maintenance_logs,
+    })
+
+
+@login_required
+def device_detail(request, pk):
+    device = get_object_or_404(
+        Import.objects.select_related("assignee", "department", "centre", "added_by", "approved_by"),
+        pk=pk,
+    )
+
+    # Permission: trainers can only view their centre's devices
+    if request.user.is_trainer and device.centre != request.user.centre:
+        messages.error(request, "You can only view devices from your own centre.")
+        return redirect('display_approved_imports')
+
+    agreement_exists = DeviceAgreement.objects.filter(device=device, is_archived=False).exists()
+    past_agreements_exist = DeviceAgreement.objects.filter(device=device, is_archived=True).exists()
+    current_agreement = None
+    if device.assignee:
+        current_agreement = (
+            DeviceAgreement.objects.filter(device=device, employee=device.assignee, is_archived=False)
+            .order_by("-issuance_date", "-id")
+            .first()
+        )
+    if not current_agreement:
+        current_agreement = DeviceAgreement.objects.filter(device=device, is_archived=False).order_by("-issuance_date", "-id").first()
+
+    clearance = device.clearances.order_by('-created_at').first()
+
+    config_kind = _device_asset_kind_from_record(device)
+    supports_configuration = config_kind in {"laptop", "desktop", "server"}
+    configuration_types_exist = False
+    if supports_configuration:
+        types = DeviceConfigurationType.objects.filter(is_active=True)
+        if config_kind == "laptop":
+            types = types.filter(applies_to_laptop=True)
+        elif config_kind == "desktop":
+            types = types.filter(applies_to_desktop=True)
+        else:
+            types = types.filter(applies_to_server=True)
+        configuration_types_exist = types.exists()
+
+    context = {
+        'device': device,
+        'agreement_exists': agreement_exists,
+        'past_agreements_exist': past_agreements_exist,
+        'current_agreement': current_agreement,
+        'clearance': clearance,
+
+        'can_edit': request.user.is_superuser or request.user.is_trainer,
+        'can_approve': request.user.is_superuser and not request.user.is_trainer and not device.is_approved,
+        'can_dispose': request.user.is_superuser and not request.user.is_trainer and not device.is_disposed,
+        'can_delete': request.user.is_it_manager or request.user.is_senior_it_officer,
+
+        'supports_configuration': supports_configuration,
+        'configuration_types_exist': configuration_types_exist,
+    }
+
+    return render(request, 'import/device_detail.html', context)
+
+
+@login_required
+def device_repairs(request, pk):
+    device = get_object_or_404(
+        Import.objects.select_related("assignee", "department", "centre"),
+        pk=pk,
+    )
+
+    if request.user.is_trainer and device.centre != request.user.centre:
+        messages.error(request, "You can only view devices from your own centre.")
+        return redirect("display_approved_imports")
+
+    repairs = DeviceRepair.objects.filter(device=device).select_related("created_by").order_by("-created_at")
+    open_repairs = repairs.filter(status=DeviceRepair.STATUS_IN_PROGRESS)
+
+    return render(request, "import/device_repairs.html", {
+        "device": device,
+        "repairs": repairs,
+        "open_repairs": open_repairs,
+    })
+
+
+@login_required
+@require_POST
+def device_repair_create(request, pk):
+    device = get_object_or_404(
+        Import.objects.select_related("assignee", "department", "centre"),
+        pk=pk,
+    )
+
+    if request.user.is_trainer and device.centre != request.user.centre:
+        messages.error(request, "You can only update records for your own centre.")
+        return redirect("display_approved_imports")
+
+    date_str = (request.POST.get("date_of_repair") or "").strip()
+    date_of_repair = None
+    if not date_str:
+        messages.error(request, "Date of repair is required.")
+        return redirect("device_detail", pk=device.pk)
+    try:
+        date_of_repair = datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        messages.error(request, "Invalid repair date.")
+        return redirect("device_detail", pk=device.pk)
+
+    month = date_of_repair.strftime("%B")
+
+    reported_by = (request.POST.get("reported_by") or "").strip()
+    issue_description = (request.POST.get("issue_description") or "").strip()
+    repair_action_taken = (request.POST.get("repair_action_taken") or "").strip()
+    technician_responsible = (request.POST.get("technician_responsible") or "").strip()
+    notes = (request.POST.get("notes") or "").strip()
+    external_repair = (request.POST.get("external_repair") in {"on", "true", "1", True})
+    status = (request.POST.get("status") or DeviceRepair.STATUS_IN_PROGRESS).strip()
+
+    if not issue_description:
+        messages.error(request, "Issue description is required.")
+        return redirect("device_detail", pk=device.pk)
+
+    cost_val = (request.POST.get("cost_kes") or "").strip()
+    cost_kes = None
+    if cost_val:
+        try:
+            cost_kes = Decimal(cost_val)
+        except (InvalidOperation, ValueError):
+            messages.error(request, "Invalid cost value.")
+            return redirect("device_detail", pk=device.pk)
+
+    centre_name = device.centre.name if device.centre else "N/A"
+    dept_name = device.department.name if device.department else "N/A"
+    centre_department = f"{centre_name} - {dept_name}"
+
+    if device.assignee:
+        owner = f"{device.assignee.full_name} ({device.assignee.staff_number or 'No ID'})"
+    else:
+        owner = "Unassigned"
+
+    repair = DeviceRepair.objects.create(
+        device=device,
+        month=month or None,
+        date_of_repair=date_of_repair,
+        centre_department=centre_department,
+        owner=owner,
+        model=device.system_model or device.device_name or None,
+        serial_number=device.serial_number or None,
+        reported_by=reported_by or None,
+        issue_description=issue_description,
+        repair_action_taken=repair_action_taken or None,
+        technician_responsible=technician_responsible or None,
+        cost_kes=cost_kes,
+        status=status if status in dict(DeviceRepair.STATUS_CHOICES) else DeviceRepair.STATUS_IN_PROGRESS,
+        notes=notes or None,
+        external_repair=bool(external_repair),
+        created_by=request.user,
+        completed_at=timezone.now() if status == DeviceRepair.STATUS_COMPLETED else None,
+    )
+
+    if repair.status == DeviceRepair.STATUS_IN_PROGRESS:
+        if device.is_active:
+            device.is_active = False
+            device.save(update_fields=["is_active"])
+    elif repair.status == DeviceRepair.STATUS_COMPLETED:
+        if not DeviceRepair.objects.filter(device=device, status=DeviceRepair.STATUS_IN_PROGRESS).exists():
+            device.is_active = True
+            device.save(update_fields=["is_active"])
+    else:
+        device.is_active = False
+        device.save(update_fields=["is_active"])
+
+    messages.success(request, "Repair record saved.")
+    return redirect("device_repairs", pk=device.pk)
+
+
+@login_required
+@require_POST
+def device_repair_close(request, pk, repair_id):
+    device = get_object_or_404(Import, pk=pk)
+    repair = get_object_or_404(DeviceRepair, pk=repair_id, device_id=device.pk)
+
+    if request.user.is_trainer and device.centre != request.user.centre:
+        messages.error(request, "You can only update records for your own centre.")
+        return redirect("display_approved_imports")
+
+    repair.status = DeviceRepair.STATUS_COMPLETED
+    repair.completed_at = timezone.now()
+    repair.save(update_fields=["status", "completed_at", "updated_at"])
+
+    if not DeviceRepair.objects.filter(device=device, status=DeviceRepair.STATUS_IN_PROGRESS).exists():
+        if not device.is_active:
+            device.is_active = True
+            device.save(update_fields=["is_active"])
+
+    messages.success(request, "Repair marked as completed.")
+    return redirect("device_repairs", pk=device.pk)
+
+
+@login_required
+def repair_report(request):
+    user = request.user
+    qs = DeviceRepair.objects.select_related("device", "created_by", "device__centre", "device__department")
+
+    if user.is_trainer and user.centre:
+        qs = qs.filter(device__centre=user.centre)
+
+    period = (request.GET.get("period") or "").strip()  # YYYY-MM
+    if period:
+        try:
+            year_str, month_str = period.split("-", 1)
+            qs = qs.filter(date_of_repair__year=int(year_str), date_of_repair__month=int(month_str))
+        except Exception:
+            period = ""
+
+    status_filter = (request.GET.get("status") or "").strip()
+    if status_filter in {DeviceRepair.STATUS_IN_PROGRESS, DeviceRepair.STATUS_COMPLETED, DeviceRepair.STATUS_WRITTEN_OFF}:
+        qs = qs.filter(status=status_filter)
+    else:
+        status_filter = ""
+
+    if request.GET.get("export") == "excel":
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Repairs"
+        ws.append([
+            "MONTH",
+            "Date of Repair",
+            "Center/Department",
+            "Owner",
+            "Model",
+            "Serial Number",
+            "Reported By",
+            "Issue Description",
+            "Repair Action Taken",
+            "Technician Responsible",
+            "Cost (KES)",
+            "Status",
+            "Notes",
+            "External repair",
+        ])
+        for r in qs.order_by("-date_of_repair", "-created_at"):
+            ws.append([
+                r.month or "",
+                r.date_of_repair.isoformat() if r.date_of_repair else "",
+                r.centre_department or "",
+                r.owner or "",
+                r.model or "",
+                r.serial_number or "",
+                r.reported_by or "",
+                r.issue_description or "",
+                r.repair_action_taken or "",
+                r.technician_responsible or "",
+                float(r.cost_kes) if r.cost_kes is not None else "",
+                dict(DeviceRepair.STATUS_CHOICES).get(r.status, r.status),
+                r.notes or "",
+                bool(r.external_repair),
+            ])
+
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        resp = HttpResponse(
+            output.read(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        filename = "repair_report.xlsx" if not period else f"repair_report_{period}.xlsx"
+        resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return resp
+
+    periods = (
+        DeviceRepair.objects.exclude(date_of_repair=None)
+        .annotate(m=TruncMonth("date_of_repair"))
+        .values_list("m", flat=True)
+        .distinct()
+        .order_by("-m")
+    )
+    period_options = [p.strftime("%Y-%m") for p in periods if p]
+
+    total_repairs = qs.count()
+    open_repairs = qs.filter(status=DeviceRepair.STATUS_IN_PROGRESS).count()
+    completed_repairs = qs.filter(status=DeviceRepair.STATUS_COMPLETED).count()
+    written_off_repairs = qs.filter(status=DeviceRepair.STATUS_WRITTEN_OFF).count()
+    total_cost = qs.aggregate(total=Sum("cost_kes"))["total"] or 0
+    external_count = qs.filter(external_repair=True).count()
+
+    monthly = (
+        qs.exclude(date_of_repair=None)
+        .annotate(m=TruncMonth("date_of_repair"))
+        .values("m")
+        .annotate(count=Count("id"), cost=Sum("cost_kes"))
+        .order_by("m")
+    )
+    chart_labels = [row["m"].strftime("%b %Y") for row in monthly if row["m"]]
+    chart_counts = [row["count"] for row in monthly]
+    chart_costs = [float(row["cost"] or 0) for row in monthly]
+
+    return render(request, "repairs/repair_report.html", {
+        "period": period,
+        "status_filter": status_filter,
+        "period_options": period_options,
+        "total_repairs": total_repairs,
+        "open_repairs": open_repairs,
+        "completed_repairs": completed_repairs,
+        "written_off_repairs": written_off_repairs,
+        "external_count": external_count,
+        "total_cost": total_cost,
+        "chart_labels": chart_labels,
+        "chart_counts": chart_counts,
+        "chart_costs": chart_costs,
+        "repairs": qs.order_by("-date_of_repair", "-created_at")[:200],
+    })
+
+def _build_device_history_payload(device: Import):
+    """
+    Builds history + agreements context used by the comprehensive device details page.
+    """
+    # ===== Device Tracking Timeline (most recent first) =====
+    historical_records = device.history.order_by('history_date')  # oldest first for building
+    timeline = []
+    current_state = None
+    start_date = None
+    change_user = None
+
+    for record in historical_records:
+        assignee_display = (
+            f"{record.assignee.first_name} {record.assignee.last_name} ({record.assignee.staff_number})"
+            if getattr(record, 'assignee', None) else "Unassigned"
+        )
+        department_display = record.department.name if getattr(record, 'department', None) else "N/A"
+        centre_display = record.centre.name if getattr(record, 'centre', None) else "N/A"
+        status_display = record.status or "N/A"
+        condition_display = record.device_condition or "N/A"
+
+        state = (
+            assignee_display,
+            department_display,
+            centre_display,
+            status_display,
+            condition_display,
+        )
+
+        user = (
+            record.history_user.get_full_name() or record.history_user.username
+            if getattr(record, 'history_user', None) else "System"
+        )
+
+        if current_state is None:
+            current_state = state
+            start_date = record.history_date
+            change_user = user
+            continue
+
+        if state != current_state:
+            timeline.append({
+                'start_date': start_date,
+                'end_date': record.history_date,
+                'assignee': current_state[0],
+                'department': current_state[1],
+                'centre': current_state[2],
+                'status': current_state[3],
+                'condition': current_state[4],
+                'changed_by': change_user,
+            })
+            current_state = state
+            start_date = record.history_date
+            change_user = user
+
+    if current_state:
+        timeline.append({
+            'start_date': start_date,
+            'end_date': 'Current',
+            'assignee': current_state[0],
+            'department': current_state[1],
+            'centre': current_state[2],
+            'status': current_state[3],
+            'condition': current_state[4],
+            'changed_by': 'N/A',
+        })
+
+    timeline = timeline[::-1]
+
+    # ===== Summarized Change History (newest first) =====
+    history_records = list(device.history.all().order_by('-history_date'))
+    history_data = []
+
+    field_names = {
+        'centre': 'Centre',
+        'department': 'Department',
+        'device_name': 'Device Name',
+        'system_model': 'System Model',
+        'processor': 'Processor',
+        'ram_gb': 'RAM (GB)',
+        'hdd_gb': 'HDD (GB)',
+        'serial_number': 'Serial Number',
+        'assignee': 'Assignee',
+        'device_condition': 'Device Condition',
+        'status': 'Status',
+        'added_by': 'Added By',
+        'approved_by': 'Approved By',
+        'is_approved': 'Is Approved',
+        'reason_for_update': 'Reason for Update',
+        'category': 'Category',
+    }
+
+    i = 0
+    while i < len(history_records):
+        record = history_records[i]
+        user = (
+            record.history_user.get_full_name() or record.history_user.username
+            if getattr(record, 'history_user', None) else "Unknown"
+        )
+
+        if record.history_type == '+':
+            history_data.append({
+                'date': record.history_date,
+                'change_type': 'Created',
+                'diff': {},
+                'user': user,
+                'is_multiple': False,
+            })
+            i += 1
+            continue
+
+        group = [{'record': record, 'user': user}]
+        j = i + 1
+        while j < len(history_records):
+            next_record = history_records[j]
+            next_user = (
+                next_record.history_user.get_full_name() or next_record.history_user.username
+                if getattr(next_record, 'history_user', None) else "Unknown"
+            )
+            time_diff = record.history_date - next_record.history_date
+            if next_user == user and time_diff <= timedelta(minutes=15):
+                group.append({'record': next_record, 'user': next_user})
+                j += 1
+            else:
+                break
+
+        first_record_in_group = group[-1]['record']
+        prev = first_record_in_group.prev_record
+        latest_record = group[0]['record']
+
+        if prev is None:
+            i = j
+            continue
+
+        changes = latest_record.diff_against(prev)
+        diff = {}
+
+        for change in changes.changes:
+            if not hasattr(change, 'field'):
+                continue
+
+            field_name = field_names.get(change.field, change.field.replace('_', ' ').title())
+
             if change.field == 'centre':
                 old_value = Centre.objects.get(pk=change.old).name if change.old and Centre.objects.filter(pk=change.old).exists() else 'N/A'
                 new_value = Centre.objects.get(pk=change.new).name if change.new and Centre.objects.filter(pk=change.new).exists() else 'N/A'
@@ -544,23 +1424,21 @@ def device_history(request, pk):
         for entry in user_history
     ]
 
-    # ===== UAF Agreements =====
     past_agreements = DeviceAgreement.objects.filter(
         device=device, is_archived=True
     ).select_related('employee', 'issuance_it_user', 'clearance_it_user').order_by('-clearance_date')
 
     current_agreement = DeviceAgreement.objects.filter(
         device=device, is_archived=False
-    ).select_related('employee', 'issuance_it_user').first()
+    ).select_related('employee', 'issuance_it_user', 'clearance_it_user').first()
 
-    return render(request, 'import/device_history.html', {
-        'device': device,
+    return {
         'timeline': timeline,
         'history': history_data,
         'user_history': user_history_data,
         'past_agreements': past_agreements,
         'current_agreement': current_agreement,
-    })
+    }
 
 
 
@@ -1098,6 +1976,7 @@ def import_add(request):
                     department_id = request.POST.get('department')
                     category      = request.POST.get('category')
                     serial_number = (request.POST.get('serial_number') or '').strip()
+                    is_server = str(request.POST.get('is_server') or '').strip().lower() in {'1', 'true', 'yes', 'y', 'on'}
 
                     if not all([centre_id, department_id, category, serial_number]):
                         messages.error(request, "All required fields must be filled.")
@@ -1113,12 +1992,20 @@ def import_add(request):
                     assignee_id = request.POST.get('assignee')
                     assignee = Employee.objects.get(id=assignee_id) if assignee_id and assignee_id.strip() else None
 
+                    kind = None
+                    if category == "laptop":
+                        kind = "laptop"
+                    elif category == "system_unit":
+                        kind = "server" if is_server else "desktop"
+
+                    generated_device_name = _next_asset_tag(kind) if kind else None
+
                     device = Import(
                         added_by=user,
                         centre=centre,
                         department=department,
                         category=category,
-                        device_name=request.POST.get('device_name'),
+                        device_name=generated_device_name if generated_device_name else request.POST.get('device_name'),
                         system_model=request.POST.get('system_model'),
                         processor=request.POST.get('processor'),
                         ram_gb=request.POST.get('ram_gb'),
@@ -1139,11 +2026,14 @@ def import_add(request):
                             device=device,
                             employee=assignee,
                         )
-                        # Redirect to signing page
-                        return redirect('sign_issuance', pk=device.pk)
-                    else:
-                        messages.success(request, f"Device {serial_number} added successfully.")
-                        return redirect('display_approved_imports')
+
+                    if kind in {"laptop", "desktop", "server"}:
+                        _ensure_device_configuration_items(device)
+                        messages.success(request, f"Device {serial_number} added. Start configuration checks to finish setup.")
+                        return redirect('device_detail', pk=device.pk)
+
+                    messages.success(request, f"Device {serial_number} added successfully.")
+                    return redirect('display_approved_imports')
 
             except Exception as e:
                 logger.exception("Single device add failed")
@@ -1201,7 +2091,11 @@ def handle_uploaded_file(file, user, centre, department, category):
         sn_idx = headers.index('serial_number')
 
         devices_to_create = []
-        admins = CustomUser.objects.filter(is_superuser=True, is_trainer=False)
+        admins = CustomUser.objects.filter(
+            is_trainer=False
+        ).filter(
+            Q(is_superuser=True) | Q(is_it_manager=True) | Q(is_senior_it_officer=True)
+        )
 
         for row in reader:
             if not any(row):
@@ -1329,29 +2223,69 @@ def import_approve(request, pk):
         with transaction.atomic():
             pending_update = PendingUpdate.objects.filter(import_record=import_instance).order_by('-created_at').first()
             old_assignee = import_instance.assignee
+
+            def _mark_related_notifications_read(*, pending_update_id=None, trainer_user_id=None):
+                q = Q(
+                    content_type=ContentType.objects.get_for_model(Import),
+                    object_id=import_instance.pk,
+                )
+                if pending_update_id:
+                    q |= Q(
+                        content_type=ContentType.objects.get_for_model(PendingUpdate),
+                        object_id=pending_update_id,
+                    )
+
+                qs = Notification.objects.filter(q, is_read=False).filter(
+                    Q(user__is_superuser=True) | Q(user__is_it_manager=True) | Q(user__is_senior_it_officer=True)
+                )
+                if trainer_user_id:
+                    qs = qs.exclude(user_id=trainer_user_id)
+                qs.update(is_read=True, responded_by=request.user)
+
             if pending_update:
                 # Save pk before deleting
                 pending_update_id = pending_update.pk
+                trainer_user_id = pending_update.updated_by_id
                 # Apply updates
-                import_instance.centre = pending_update.centre
-                import_instance.department = pending_update.department
-                import_instance.category = pending_update.category
-                import_instance.device_name = pending_update.device_name
-                import_instance.system_model = pending_update.system_model
-                import_instance.processor = pending_update.processor
-                import_instance.ram_gb = pending_update.ram_gb
-                import_instance.hdd_gb = pending_update.hdd_gb
-                import_instance.serial_number = pending_update.serial_number
-                import_instance.assignee = pending_update.assignee
-                import_instance.device_condition = pending_update.device_condition
-                import_instance.status = pending_update.status
-                import_instance.date = pending_update.date if pending_update.date else timezone.now().date()
-                import_instance.reason_for_update = pending_update.reason_for_update
+                if pending_update.centre is not None:
+                    import_instance.centre = pending_update.centre
+                if pending_update.department is not None:
+                    import_instance.department = pending_update.department
+                if getattr(pending_update, "category", None):
+                    import_instance.category = pending_update.category
+                if pending_update.device_name is not None:
+                    import_instance.device_name = pending_update.device_name
+                if pending_update.system_model is not None:
+                    import_instance.system_model = pending_update.system_model
+                if pending_update.processor is not None:
+                    import_instance.processor = pending_update.processor
+                if pending_update.ram_gb is not None:
+                    import_instance.ram_gb = pending_update.ram_gb
+                if pending_update.hdd_gb is not None:
+                    import_instance.hdd_gb = pending_update.hdd_gb
+                if getattr(pending_update, "serial_number", None):
+                    import_instance.serial_number = pending_update.serial_number
+                if getattr(pending_update, "assignee", None) is not None:
+                    import_instance.assignee = pending_update.assignee
+                if pending_update.assignee_first_name is not None:
+                    import_instance.assignee_first_name = pending_update.assignee_first_name
+                if pending_update.assignee_last_name is not None:
+                    import_instance.assignee_last_name = pending_update.assignee_last_name
+                if pending_update.assignee_email_address is not None:
+                    import_instance.assignee_email_address = pending_update.assignee_email_address
+                if pending_update.device_condition is not None:
+                    import_instance.device_condition = pending_update.device_condition
+                if pending_update.status is not None:
+                    import_instance.status = pending_update.status
+                if pending_update.date is not None:
+                    import_instance.date = pending_update.date
+                if pending_update.reason_for_update is not None:
+                    import_instance.reason_for_update = pending_update.reason_for_update
                 import_instance.is_approved = True
                 import_instance.approved_by = request.user
                 import_instance.save()
                 # Check if assignee changed
-                if pending_update.assignee != old_assignee:
+                if import_instance.assignee != old_assignee:
                     # Email to old assignee (cleared)
                     if old_assignee and old_assignee.email:
                         send_device_assignment_email(import_instance, action='cleared', cleared_by=request.user)
@@ -1363,29 +2297,16 @@ def import_approve(request, pk):
                         send_device_assignment_email(import_instance, action='transferred', cleared_by=request.user)
                 # Delete pending update after saving
                 pending_update.delete()
-                # Mark related notifications as read (for admins only)
-                content_type = ContentType.objects.get_for_model(PendingUpdate)
-                Notification.objects.filter(
-                    content_type=content_type,
-                    object_id=pending_update_id,
-                    user__is_superuser=True,
-                    user__is_trainer=False,
-                    is_read=False
-                ).update(is_read=True, responded_by=request.user)
+                _mark_related_notifications_read(
+                    pending_update_id=pending_update_id,
+                    trainer_user_id=trainer_user_id,
+                )
                 messages.success(request, f"Device {import_instance.serial_number} update approved.")
             else:
                 import_instance.is_approved = True
                 import_instance.approved_by = request.user
                 import_instance.save()
-                # Mark related notifications as read (for admins only)
-                content_type = ContentType.objects.get_for_model(Import)
-                Notification.objects.filter(
-                    content_type=content_type,
-                    object_id=import_instance.pk,
-                    user__is_superuser=True,
-                    user__is_trainer=False,
-                    is_read=False
-                ).update(is_read=True, responded_by=request.user)
+                _mark_related_notifications_read()
                 messages.success(request, f"Device {import_instance.serial_number} approved.")
             return redirect('display_unapproved_imports')
     return redirect('display_unapproved_imports')
@@ -1397,6 +2318,25 @@ def import_reject(request, pk):
     if request.method == 'POST':
         with transaction.atomic():
             pending_update = PendingUpdate.objects.filter(import_record=import_instance).order_by('-created_at').first()
+
+            def _mark_related_notifications_read(*, pending_update_id=None, trainer_user_id=None):
+                q = Q(
+                    content_type=ContentType.objects.get_for_model(Import),
+                    object_id=import_instance.pk,
+                )
+                if pending_update_id:
+                    q |= Q(
+                        content_type=ContentType.objects.get_for_model(PendingUpdate),
+                        object_id=pending_update_id,
+                    )
+
+                qs = Notification.objects.filter(q, is_read=False).filter(
+                    Q(user__is_superuser=True) | Q(user__is_it_manager=True) | Q(user__is_senior_it_officer=True)
+                )
+                if trainer_user_id:
+                    qs = qs.exclude(user_id=trainer_user_id)
+                qs.update(is_read=True, responded_by=request.user)
+
             if pending_update:
                 pending_update.pending_clarification = True
                 pending_update.save()
@@ -1411,15 +2351,10 @@ def import_reject(request, pk):
                             content_type=content_type,
                             object_id=pending_update.pk
                         )
-                # Mark notifications as read for admins only
-                content_type = ContentType.objects.get_for_model(PendingUpdate)
-                Notification.objects.filter(
-                    content_type=content_type,
-                    object_id=pending_update.pk,
-                    user__is_superuser=True,
-                    user__is_trainer=False,
-                    is_read=False
-                ).update(is_read=True, responded_by=request.user)
+                _mark_related_notifications_read(
+                    pending_update_id=pending_update.pk,
+                    trainer_user_id=getattr(trainer, "id", None),
+                )
                 messages.success(request, f"Update for device {pending_update.serial_number} sent back for clarification.")
             else:
                 # For new import requests, mark as pending clarification
@@ -1436,15 +2371,7 @@ def import_reject(request, pk):
                             content_type=content_type,
                             object_id=import_instance.pk
                         )
-                # Mark notifications as read for admins only
-                content_type = ContentType.objects.get_for_model(Import)
-                Notification.objects.filter(
-                    content_type=content_type,
-                    object_id=import_instance.pk,
-                    user__is_superuser=True,
-                    user__is_trainer=False,
-                    is_read=False
-                ).update(is_read=True, responded_by=request.user)
+                _mark_related_notifications_read(trainer_user_id=getattr(trainer, "id", None))
                 messages.success(request, f"Import request for device {import_instance.serial_number} sent back for clarification.")
             return redirect('display_unapproved_imports')
     return redirect('display_unapproved_imports')
@@ -1535,9 +2462,10 @@ def import_approve_all(request):
                     Notification.objects.filter(
                         content_type=content_type,
                         object_id=pending_update.pk,
-                        user__is_superuser=True,
                         user__is_trainer=False,
                         is_read=False
+                    ).filter(
+                        Q(user__is_superuser=True) | Q(user__is_it_manager=True) | Q(user__is_senior_it_officer=True)
                     ).update(is_read=True, responded_by=request.user)
                     approved_count += 1
                 elif not item.is_approved:
@@ -1548,9 +2476,10 @@ def import_approve_all(request):
                     Notification.objects.filter(
                         content_type=content_type,
                         object_id=item.pk,
-                        user__is_superuser=True,
                         user__is_trainer=False,
                         is_read=False
+                    ).filter(
+                        Q(user__is_superuser=True) | Q(user__is_it_manager=True) | Q(user__is_senior_it_officer=True)
                     ).update(is_read=True, responded_by=request.user)
                     approved_count += 1
         if approved_count > 0:
@@ -1578,6 +2507,9 @@ def import_update(request, pk):
     if request.user.is_trainer and device.centre != request.user.centre:
         messages.error(request, "You can only update records for your own centre.")
         return redirect('display_approved_imports')
+    blocked = _block_actions_if_inactive(request, device)
+    if blocked:
+        return blocked
     if request.method == 'POST':
         # Handle new employee creation from modal
         if request.POST.get('new_employee_submit') == '1':
@@ -1720,7 +2652,10 @@ def import_update(request, pk):
                     device.approved_by = None
                     device.save()
                     # Notify admins
-                    for admin in CustomUser.objects.filter(is_superuser=True, is_trainer=False):
+                    admins = CustomUser.objects.filter(is_trainer=False).filter(
+                        Q(is_superuser=True) | Q(is_it_manager=True) | Q(is_senior_it_officer=True)
+                    )
+                    for admin in admins:
                         Notification.objects.create(
                             user=admin,
                             message=f"Update request for device {device.serial_number} by {request.user} — awaiting approval.",
@@ -1776,6 +2711,9 @@ def clear_user(request, device_id):
     if request.user.is_trainer and device.centre != request.user.centre:
         messages.error(request, "You can only clear devices from your centre.")
         return redirect('display_approved_imports')
+    blocked = _block_actions_if_inactive(request, device)
+    if blocked:
+        return blocked
     if request.method == 'POST':
         form = ClearanceForm(request.POST)
         if form.is_valid():

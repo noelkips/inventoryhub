@@ -40,6 +40,16 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
+
+def _block_if_rescheduled_task(request, task) -> bool:
+    """
+    Rescheduled tasks are historical placeholders. All updates should happen on the new scheduled task.
+    """
+    if getattr(task, "status", None) == "Rescheduled":
+        messages.warning(request, "This task was rescheduled and is locked. Update the new scheduled task instead.")
+        return True
+    return False
+
 User = get_user_model()
 
 # ============ PERMISSION HELPERS ============
@@ -245,31 +255,20 @@ def work_plan_detail(request, pk):
             return redirect('work_plan_detail', pk=pk)
 
         # --- Read & validate inputs (match template field names) ---
-        date_str = (request.POST.get('date') or '').strip()
         task_name = (request.POST.get('task_name') or '').strip()
         resources_needed = (request.POST.get('resources_needed') or '').strip()
         target = (request.POST.get('target') or '').strip()
         other_parties = (request.POST.get('other_parties') or '').strip()
 
         is_leave = request.POST.get('is_leave') in ('on', 'true', '1', 'yes')
+        is_recurring = request.POST.get('is_recurring') in ('on', 'true', '1', 'yes')
 
         centre_id = (request.POST.get('centre') or '').strip()
         department_id = (request.POST.get('department') or '').strip()
         collaborator_ids = request.POST.getlist('collaborators')  # multi-select
 
-        if not date_str:
-            messages.error(request, "Date is required.")
-            return redirect('work_plan_detail', pk=pk)
-
-        try:
-            task_date = timezone.datetime.strptime(date_str, "%Y-%m-%d").date()
-        except ValueError:
-            messages.error(request, "Invalid date.")
-            return redirect('work_plan_detail', pk=pk)
-
-        # Enforce only dates within this work plan week
-        if task_date < week_start or task_date > week_end:
-            messages.error(request, "Selected date must be within this work plan week.")
+        if is_leave and is_recurring:
+            messages.error(request, "On Leave cannot be a recurring task. Please select a single date.")
             return redirect('work_plan_detail', pk=pk)
 
         # If not leave, task_name must exist
@@ -284,30 +283,74 @@ def work_plan_detail(request, pk):
         # Collaborators must be valid users (and never include owner)
         collab_qs = User.objects.filter(is_active=True, id__in=collaborator_ids).exclude(id=work_plan.user.id)
 
-        # Prevent adding tasks on a day already blocked by leave (optional rule)
-        if WorkPlanTask.objects.filter(work_plan=work_plan, date=task_date, is_leave=True).exists() and not is_leave:
-            messages.error(request, "That day is marked as On Leave. Pick another date.")
+        # Determine target dates
+        task_dates = []
+        if is_recurring:
+            date_strs = [d.strip() for d in request.POST.getlist('dates') if (d or '').strip()]
+            if not date_strs:
+                messages.error(request, "Please select at least one date for a recurring task.")
+                return redirect('work_plan_detail', pk=pk)
+
+            unique_strs = sorted(set(date_strs))
+            try:
+                task_dates = [timezone.datetime.strptime(d, "%Y-%m-%d").date() for d in unique_strs]
+            except ValueError:
+                messages.error(request, "One or more selected dates are invalid.")
+                return redirect('work_plan_detail', pk=pk)
+        else:
+            date_str = (request.POST.get('date') or '').strip()
+            if not date_str:
+                messages.error(request, "Date is required.")
+                return redirect('work_plan_detail', pk=pk)
+
+            try:
+                task_dates = [timezone.datetime.strptime(date_str, "%Y-%m-%d").date()]
+            except ValueError:
+                messages.error(request, "Invalid date.")
+                return redirect('work_plan_detail', pk=pk)
+
+        # Enforce only dates within this work plan week
+        out_of_range = [d for d in task_dates if d < week_start or d > week_end]
+        if out_of_range:
+            messages.error(request, "Selected date(s) must be within this work plan week.")
             return redirect('work_plan_detail', pk=pk)
+
+        # Prevent adding tasks on dates blocked by leave
+        if not is_leave:
+            blocked = set(
+                WorkPlanTask.objects.filter(work_plan=work_plan, date__in=task_dates, is_leave=True)
+                .values_list('date', flat=True)
+            )
+            if blocked:
+                blocked_str = ", ".join(sorted({d.strftime("%a %d %b") for d in blocked}))
+                messages.error(request, f"Some selected dates are marked as On Leave: {blocked_str}.")
+                return redirect('work_plan_detail', pk=pk)
 
         try:
             with transaction.atomic():
-                new_task = WorkPlanTask.objects.create(
-                    work_plan=work_plan,
-                    created_by=user,  # ✅ FIX: required field
-                    date=task_date,
-                    task_name=("On Leave" if is_leave else task_name),
-                    is_leave=is_leave,
-                    centre=centre,
-                    department=department,
-                    resources_needed=resources_needed,
-                    target=target,
-                    other_parties=other_parties,
-                )
+                created_count = 0
+                for task_date in task_dates:
+                    new_task = WorkPlanTask.objects.create(
+                        work_plan=work_plan,
+                        created_by=user,  # ✅ FIX: required field
+                        date=task_date,
+                        task_name=("On Leave" if is_leave else task_name),
+                        is_leave=is_leave,
+                        centre=centre,
+                        department=department,
+                        resources_needed=resources_needed,
+                        target=target,
+                        other_parties=other_parties,
+                    )
 
-                if collab_qs.exists():
-                    new_task.collaborators.set(collab_qs)
+                    if collab_qs.exists():
+                        new_task.collaborators.set(collab_qs)
+                    created_count += 1
 
-            messages.success(request, "Task created successfully ✅")
+            if is_recurring:
+                messages.success(request, f"Task created for {created_count} date(s) ✅")
+            else:
+                messages.success(request, "Task created successfully ✅")
         except Exception as e:
             logger.exception("Failed to create task for work_plan=%s", work_plan.id)
             messages.error(request, f"Failed to create task: {str(e)}")
@@ -339,11 +382,13 @@ def work_plan_detail(request, pk):
         t.is_owned_task = is_task_owner
         t.is_collaborative_task = is_task_collab and not is_task_owner
 
-        t.can_edit = is_task_owner or (t.is_collaborative_task and t.date >= today)
-        t.can_delete = is_task_owner or is_manager
-        t.can_reschedule = is_task_owner or is_manager or (t.is_collaborative_task and t.date >= today)
-        t.can_change_status = (is_task_owner or is_manager or t.is_collaborative_task) and (t.date <= today)
-        t.can_comment = True
+        is_rescheduled = (t.status == "Rescheduled")
+
+        t.can_edit = (is_task_owner or (t.is_collaborative_task and t.date >= today)) and not is_rescheduled
+        t.can_delete = (is_task_owner or is_manager) and not is_rescheduled
+        t.can_reschedule = (is_task_owner or is_manager or (t.is_collaborative_task and t.date >= today)) and not is_rescheduled
+        t.can_change_status = ((is_task_owner or is_manager or t.is_collaborative_task) and (t.date <= today)) and not is_rescheduled
+        t.can_comment = not is_rescheduled
 
         processed_tasks.append(t)
 
@@ -361,7 +406,7 @@ def work_plan_detail(request, pk):
         'centres': Centre.objects.all(),
         'departments': Department.objects.all(),
         'potential_collaborators': User.objects.filter(is_active=True).exclude(id=work_plan.user.id).order_by('first_name'),
-        'week_days': [work_plan.week_start_date + timedelta(days=i) for i in range(7)],
+        'week_days': [week_start + timedelta(days=i) for i in range((week_end - week_start).days + 1)],
         'all_users': User.objects.filter(is_active=True).order_by('first_name'),
         'leave_dates': leave_dates,
         'is_owner': is_owner,
@@ -421,6 +466,9 @@ def work_plan_toggle_creation_override(request, pk):
 @require_POST
 def work_plan_task_status_update(request, pk):
     task = get_object_or_404(WorkPlanTask, pk=pk)
+
+    if _block_if_rescheduled_task(request, task):
+        return redirect(request.META.get('HTTP_REFERER'))
     
     # 1. Date Security Check (Server-side enforcement)
     today = timezone.now().date()
@@ -452,6 +500,9 @@ def work_plan_task_status_update(request, pk):
 def work_plan_task_edit(request, pk):
     task = get_object_or_404(WorkPlanTask, pk=pk)
     user = request.user
+
+    if _block_if_rescheduled_task(request, task):
+        return redirect(request.META.get('HTTP_REFERER', 'work_plan_list'))
     
     # Permission check
     is_owner = (user == task.work_plan.user)
@@ -570,6 +621,9 @@ def work_plan_task_edit(request, pk):
 def work_plan_task_reschedule(request, pk):
     task = get_object_or_404(WorkPlanTask, pk=pk)
     user = request.user
+
+    if _block_if_rescheduled_task(request, task):
+        return redirect(request.META.get('HTTP_REFERER'))
     
     # Permission: Owner OR Manager OR Collaborator
     is_owner = (user == task.work_plan.user)
@@ -632,6 +686,9 @@ def work_plan_task_comment_add(request, pk):
     UPDATED: Now sends notifications to owner and all collaborators
     """
     task = get_object_or_404(WorkPlanTask, pk=pk)
+
+    if _block_if_rescheduled_task(request, task):
+        return redirect(request.META.get('HTTP_REFERER', 'work_plan_list'))
     
     # Permission check
     if not (request.user == task.work_plan.user or 
@@ -660,6 +717,9 @@ def work_plan_task_comment_add(request, pk):
 def work_plan_task_delete(request, pk):
     task = get_object_or_404(WorkPlanTask, pk=pk)
     user = request.user
+
+    if _block_if_rescheduled_task(request, task):
+        return redirect(request.META.get('HTTP_REFERER', 'work_plan_detail'))
     
     # Permission: Owner OR Manager only. Collaborators CANNOT delete.
     is_owner = (user == task.work_plan.user)

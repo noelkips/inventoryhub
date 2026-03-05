@@ -79,18 +79,19 @@ def _attach_display_fields_to_task(task: PPMTask) -> None:
 
 
 def _build_device_log_message(*, period_name: str, no_activity: bool, activities: list[str], reason: str, notes: str) -> str:
-    prefix = f"PPM ({period_name})"
+    # Keep message clean: period is available via ppm_task.period
+    prefix = "PPM"
     if no_activity:
         msg = f"{prefix}: NO activity performed."
         if reason:
-            msg += f" Reason: {reason}"
+            msg += f"\nReason: {reason}"
         if notes:
-            msg += f" | Notes: {notes}"
+            msg += f"\nNotes: {notes}"
         return msg
 
     msg = f"{prefix}: Activities performed: " + (", ".join(activities) if activities else "N/A")
     if notes:
-        msg += f" | Notes: {notes}"
+        msg += f"\nNotes: {notes}"
     return msg
 
 
@@ -118,7 +119,7 @@ def ppm_device_list(request):
         devices = Import.objects.none()
         messages.warning(request, "No active PPM period. Please create and activate a period.")
     else:
-        devices = Import.objects.select_related("centre", "department", "assignee").all()
+        devices = Import.objects.select_related("centre", "department", "assignee").filter(is_active=True)
 
         ppm_task_exists = PPMTask.objects.filter(device=OuterRef("pk"), period=active_period)
         devices = devices.annotate(has_ppm_task=Exists(ppm_task_exists))
@@ -147,6 +148,9 @@ def ppm_device_list(request):
             devices = devices.filter(has_ppm_task=True)
         elif ppm_status_filter == "not_done":
             devices = devices.filter(has_ppm_task=False)
+
+        # Ensure stable ordering for pagination
+        devices = devices.order_by("serial_number", "pk")
 
     from django.core.paginator import Paginator
     paginator = Paginator(devices, items_per_page)
@@ -203,6 +207,8 @@ def ppm_task_create(request, device_id):
 
     try:
         device = get_object_or_404(Import, id=device_id)
+        if not getattr(device, "is_active", True):
+            return JsonResponse({"success": False, "error": "This device is currently under repair and is inactive. PPM actions are blocked."}, status=400)
         active_period = PPMPeriod.objects.filter(is_active=True).first()
         if not active_period:
             return JsonResponse({"success": False, "error": "No active PPM period."}, status=400)
@@ -279,20 +285,25 @@ def ppm_task_create(request, device_id):
                 ppm_task.activities.set(activities_ids)
 
             # ✅ DEVICE LOG (this is where your earlier crash likely was)
-            # DeviceLog fields: device, user, message, created_at, ppm_task, ppm_attempt
+            # DeviceLog fields: device, user, message, created_at, ppm_task
             try:
-                if no_activity:
-                    msg = f"PPM marked as NOT DONE for period '{active_period.name}'. Reason: {reason}"
-                else:
+                acts = []
+                if not no_activity:
                     acts = list(PPMActivity.objects.filter(id__in=activities_ids).values_list("name", flat=True))
-                    msg = f"PPM {'created' if is_new else 'updated'} for period '{active_period.name}'. Activities: {', '.join(acts)}"
+
+                msg = _build_device_log_message(
+                    period_name=active_period.name,
+                    no_activity=bool(no_activity),
+                    activities=acts,
+                    reason=reason,
+                    notes=notes,
+                )
 
                 DeviceLog.objects.create(
                     device=device,
                     user=request.user,
                     message=msg,
                     ppm_task=ppm_task,
-                    ppm_attempt=None,
                 )
             except Exception as log_err:
                 # don’t break saving if logging fails

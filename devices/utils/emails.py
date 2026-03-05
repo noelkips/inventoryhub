@@ -11,10 +11,51 @@ IS_TEST_ENVIRONMENT = settings.DEBUG or (
     hasattr(settings, 'DB_NAME_CONFIG') and settings.DB_NAME_CONFIG == 'ufdxwals_it_test_db'
 )
 
-TEST_EMAIL_RECIPIENT = 'noel.langat@mohiafrica.org'
+TEST_EMAIL_RECIPIENT = getattr(settings, "TEST_EMAIL_RECIPIENT", "noel.langat@mohiafrica.org")
+
+def _create_in_app_notifications_for_recipients(*, subject, recipient_list, message=None, related_object=None):
+    """
+    Best-effort: if an email recipient matches a CustomUser, create an in-app notification.
+    Keeps the notification short (subject + optional first line).
+    """
+    try:
+        from devices.models import CustomUser, Notification
+        from django.contrib.contenttypes.models import ContentType
+    except Exception:
+        return
+
+    if not recipient_list:
+        return
+
+    short_message = str(subject or "New message").strip()
+    if message:
+        first_line = str(message).strip().splitlines()[0].strip()
+        if first_line and first_line.lower() != short_message.lower():
+            short_message = f"{short_message} — {first_line}"
+    short_message = short_message[:240]
+
+    users = CustomUser.objects.filter(email__in=[e for e in recipient_list if e])
+
+    content_type = None
+    object_id = None
+    if related_object is not None:
+        try:
+            content_type = ContentType.objects.get_for_model(related_object.__class__)
+            object_id = getattr(related_object, 'pk', None)
+        except Exception:
+            content_type = None
+            object_id = None
+
+    for user in users:
+        Notification.objects.create(
+            user=user,
+            message=short_message,
+            content_type=content_type,
+            object_id=object_id,
+        )
 
 
-def send_custom_email(subject, message, recipient_list, attachment=None):
+def send_custom_email(subject, message, recipient_list, attachment=None, *, also_notify=True, related_object=None):
     """
     Legacy plain-text email sender with test-mode redirection.
     In test mode, all emails are redirected to TEST_EMAIL_RECIPIENT.
@@ -44,6 +85,13 @@ def send_custom_email(subject, message, recipient_list, attachment=None):
 
         email.send(fail_silently=False)
         print(f"Email sent successfully to {final_recipient_list}")
+        if also_notify:
+            _create_in_app_notifications_for_recipients(
+                subject=subject,
+                recipient_list=recipient_list,
+                message=message,
+                related_object=related_object,
+            )
         return True
     except Exception as e:
         print(f"Error sending email: {e}")

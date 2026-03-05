@@ -1,10 +1,13 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
     <title>Dashboard - MOHI IT</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
 
     <style>
         .bg-primary { background-color: #143C50; }
@@ -70,6 +73,76 @@
             </div>
 
             <div class="flex items-center space-x-4">
+                <!-- Notifications -->
+                <div class="relative">
+                    <button
+                        id="notificationsDropdown"
+                        class="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/15 transition focus:outline-none"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        aria-label="Notifications"
+                        type="button"
+                    >
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        {% if unread_count|default:0|add:0 > 0 %}
+                        <span
+                            id="notificationBadge"
+                            class="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-5 h-5 px-1 text-[11px] font-bold text-white bg-red-600 rounded-full"
+                        >
+                            {{ unread_count }}
+                        </span>
+                        {% else %}
+                        <span id="notificationBadge" class="hidden"></span>
+                        {% endif %}
+                    </button>
+
+                    <div id="notificationsMenu" class="hidden absolute right-0 mt-2 w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
+                        <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                            <div class="font-semibold text-gray-800">Notifications</div>
+                            <form action="{% url 'clear_all_notifications' %}" method="POST" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" class="text-xs font-semibold text-accent hover:underline">Mark all as read</button>
+                            </form>
+                        </div>
+
+                        <div id="notificationsList" class="max-h-96 overflow-y-auto">
+                            {% for notification in recent_notifications %}
+                            <div class="px-4 py-3 border-b border-gray-50 {% if not notification.is_read %}bg-blue-50{% else %}bg-white{% endif %}" data-notification-id="{{ notification.pk }}">
+                                <a href="{% url 'notifications_view' %}" class="block text-sm text-gray-800 hover:text-gray-900">
+                                    {{ notification.message|truncatechars:120 }}
+                                </a>
+                                <div class="mt-1 flex items-center justify-between gap-3">
+                                    <div class="text-xs text-gray-500">{{ notification.created_at|date:"M d, Y H:i" }}</div>
+                                    <div class="flex items-center gap-2">
+                                        {% if not notification.is_read %}
+                                        <form action="{% url 'mark_notification_read' notification.pk %}" method="POST" class="inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="text-xs text-accent hover:underline">Read</button>
+                                        </form>
+                                        {% endif %}
+                                        <form action="{% url 'delete_notification' notification.pk %}" method="POST" class="inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="text-xs text-gray-600 hover:text-error hover:underline">Remove</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="px-6 py-10 text-center text-sm text-gray-500">
+                                No notifications yet.
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <a href="{% url 'notifications_view' %}" class="block text-center px-4 py-3 text-sm font-semibold text-accent hover:bg-gray-50">
+                            Open notification centre
+                        </a>
+                    </div>
+                </div>
+
                 <div class="relative">
                     <button 
                         id="accountDropdown" 
@@ -85,6 +158,9 @@
                     <div id="accountMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
                         <a href="{% url 'profile' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-200">See Profile</a>
                         <a href="{% url 'change_password' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-200">Change Password</a>
+                        {% if user.is_superuser %}
+                        <a href="/admin/" class="block px-4 py-2 text-gray-700 hover:bg-gray-200">Admin Interface</a>
+                        {% endif %}
                         <a href="{% url 'logout' %}" class="block px-4 py-2 text-error hover:bg-gray-200">Logout</a>
                     </div>
                 </div>
@@ -121,35 +197,19 @@
                         </svg>
                     </a>
                     <ul id="manageDevicesDropdown" class="ml-8 space-y-1 pt-1 hidden text-sm">
-                        <li><a href="{% url 'import_add' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                        {% if user.is_superuser %}
+                        {% endif %}
+                        <li><a href="{% url 'repair_report' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                             </svg>
-                            Add Device
+                            Repair Reports
                         </a></li>
                         <li><a href="{% url 'display_approved_imports' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                             </svg>
-                            View Devices
-                        </a></li>
-                        <li><a href="{% url 'display_unapproved_imports' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            Unapproved
-                        </a></li>
-                        <li><a href="{% url 'display_disposed_imports' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                            </svg>
-                            Disposed
-                        </a></li>
-                        <li><a href="{% url 'employee_list' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.858M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.858M7 20H2v-2a3 3 0 015.356-1.858M7 20v-2c0-.656.126-1.283.356-1.858"></path>
-                            </svg>
-                            Employees
+                            All Devices
                         </a></li>
                     </ul>
                 </li>
@@ -234,18 +294,6 @@
                             </svg>
                             PPM History
                         </a></li>
-                        <li><a href="{% url 'manage_activities' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                            </svg>
-                            Manage Activities
-                        </a></li>
-                        <li><a href="{% url 'manage_periods' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
-                            Manage Periods
-                        </a></li>
                         <li><a href="{% url 'ppm_report' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
@@ -291,32 +339,52 @@
                     </ul>
                 </li>
 
+                {% endif %}
+
+                {% if user.is_superuser or user.is_trainer %}
                 <li>
-                    <a href="/admin/" class="flex items-center hover:bg-green px-4 py-2 rounded transition">
-                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <a href="#" class="flex items-center justify-between hover:bg-green px-4 py-2 rounded transition" id="systemSettingsToggle">
+                        <span class="flex items-center">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8v-2m0 2a2 2 0 100 4m0-4a2 2 0 110 4m12-6v-2m0 2a2 2 0 100 4m0-4a2 2 0 110 4M6 8H4m2 0a2 2 0 100 4m0-4a2 2 0 110 4m14 0h-2m2 0a2 2 0 100 4m0-4a2 2 0 110 4M8 6v2m0-2a2 2 0 100 4m0-4a2 2 0 110 4m8 10v2m0-2a2 2 0 100 4m0-4a2 2 0 110 4"></path>
+                            </svg>
+                            <span>System Settings</span>
+                        </span>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
-                        <span>Admin Interface</span>
                     </a>
+                    <ul id="systemSettingsDropdown" class="ml-8 space-y-1 pt-1 hidden text-sm">
+                        {% if user.is_superuser %}
+                        <li><a href="{% url 'manage_activities' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                            </svg>
+                            Manage PPM Activities
+                        </a></li>
+                        <li><a href="{% url 'manage_periods' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            Manage PPM Periods
+                        </a></li>
+                        <li><a href="{% url 'manage_configuration_types' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m2 9H7a2 2 0 01-2-2V5a2 2 0 012-2h10a2 2 0 012 2v14a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Manage Config Checklist
+                        </a></li>
+                        {% endif %}
+                        <li><a href="{% url 'employee_list' %}" class="flex items-center hover:bg-green px-3 py-1.5 rounded">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.858M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.858M7 20H2v-2a3 3 0 015.356-1.858M7 20v-2c0-.656.126-1.283.356-1.858"></path>
+                            </svg>
+                            Manage Employees
+                        </a></li>
+                    </ul>
                 </li>
                 {% endif %}
 
-                <li>
-                    <a href="{% url 'notifications_view' %}" class="flex items-center hover:bg-green px-4 py-2 rounded relative transition">
-                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-                        </svg>
-                        <span>Notifications</span>
-                        {% if unread_count > 0 %}
-                        <span id="notificationBadge" class="absolute top-1 left-16 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-red-600 rounded-full">
-                            {{ unread_count }}
-                        </span>
-                        {% endif %}
-                    </a>
-                </li>
             </ul>
         </nav>
     </aside>
@@ -378,6 +446,7 @@
         // Secondary menu toggles (Device Mgmt, IT Ops, PPM, Users)
         const toggleIds = [
             'manageDevicesToggle',
+            'systemSettingsToggle',
             'itOperationsToggle',
             'ppmManagementToggle',
             'manageUsersToggle'
@@ -401,7 +470,9 @@
         // Click outside → close all dropdowns
         const allDropdowns = [
             'accountMenu',
+            'notificationsMenu',
             'manageDevicesDropdown',
+            'systemSettingsDropdown',
             'itOperationsDropdown',
             'ppmManagementDropdown',
             'manageUsersDropdown'
@@ -417,6 +488,8 @@
                 let triggerId;
                 if (menuId === 'accountMenu') {
                     triggerId = 'accountDropdown';
+                } else if (menuId === 'notificationsMenu') {
+                    triggerId = 'notificationsDropdown';
                 } else {
                     triggerId = menuId.replace('Dropdown', 'Toggle');
                 }
@@ -435,13 +508,152 @@
             }
         });
 
-        // Hide notification badge when clicking the notifications link
-        document.querySelectorAll('a[href*="notifications"]').forEach(link => {
-            link.addEventListener('click', () => {
-                const badge = document.getElementById('notificationBadge');
-                if (badge) badge.style.display = 'none';
+        // Notifications dropdown
+        const notificationsDropdown = document.getElementById('notificationsDropdown');
+        const notificationsMenu = document.getElementById('notificationsMenu');
+        if (notificationsDropdown && notificationsMenu) {
+            notificationsDropdown.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                notificationsMenu.classList.toggle('hidden');
             });
-        });
+        }
+
+        // =============================================
+        // Notifications: realtime updates (SSE) + actions
+        // =============================================
+        const notificationsApiUrl = "{% url 'notifications_api' %}";
+        const notificationsStreamUrl = "{% url 'notifications_stream' %}";
+
+        const notificationBadge = document.getElementById('notificationBadge');
+        const notificationsList = document.getElementById('notificationsList');
+
+        const getCookie = (name) => {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        };
+
+        const setBadgeCount = (count) => {
+            if (!notificationBadge) return;
+            if (count > 0) {
+                notificationBadge.textContent = count;
+                notificationBadge.classList.remove('hidden');
+            } else {
+                notificationBadge.textContent = '';
+                notificationBadge.classList.add('hidden');
+            }
+        };
+
+        const escapeHtml = (str) => {
+            const div = document.createElement('div');
+            div.textContent = str ?? '';
+            return div.innerHTML;
+        };
+
+        const renderNotifications = (payload) => {
+            if (!payload) return;
+            const items = payload.items || [];
+            setBadgeCount(payload.unread_count || 0);
+            if (!notificationsList) return;
+
+            if (!items.length) {
+                notificationsList.innerHTML = '<div class="px-6 py-10 text-center text-sm text-gray-500">No notifications yet.</div>';
+                return;
+            }
+
+            notificationsList.innerHTML = items.map((n) => {
+                const bgClass = n.is_read ? 'bg-white' : 'bg-blue-50';
+                const readButton = n.is_read ? '' : `
+                    <form action="/notifications/${n.id}/mark-read/" method="POST" class="inline js-notif-form">
+                        <button type="submit" class="text-xs text-accent hover:underline">Read</button>
+                    </form>
+                `;
+                return `
+                    <div class="px-4 py-3 border-b border-gray-50 ${bgClass}" data-notification-id="${n.id}">
+                        <a href="${escapeHtml(n.url || '{% url 'notifications_view' %}')}" class="block text-sm text-gray-800 hover:text-gray-900">
+                            ${escapeHtml(n.message || '')}
+                        </a>
+                        <div class="mt-1 flex items-center justify-between gap-3">
+                            <div class="text-xs text-gray-500">${escapeHtml(n.created_at_display || '')}</div>
+                            <div class="flex items-center gap-2">
+                                ${readButton}
+                                <form action="/notifications/${n.id}/delete/" method="POST" class="inline js-notif-form">
+                                    <button type="submit" class="text-xs text-gray-600 hover:text-error hover:underline">Remove</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        const fetchNotifications = async () => {
+            try {
+                const resp = await fetch(notificationsApiUrl, { headers: { 'Accept': 'application/json' } });
+                if (!resp.ok) return;
+                const data = await resp.json();
+                renderNotifications(data);
+            } catch (_) {
+                // ignore
+            }
+        };
+
+        // Intercept dropdown actions (mark read / remove / mark all)
+        if (notificationsMenu) {
+            notificationsMenu.addEventListener('submit', async (e) => {
+                const form = e.target;
+                if (!(form instanceof HTMLFormElement)) return;
+
+                e.preventDefault();
+                const action = form.getAttribute('action');
+                if (!action) return;
+
+                try {
+                    const resp = await fetch(action, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': getCookie('csrftoken') || '',
+                        },
+                    });
+                    if (resp.ok) {
+                        await fetchNotifications();
+                    }
+                } catch (_) {
+                    // ignore
+                }
+            });
+        }
+
+        // Refresh when user opens the dropdown
+        if (notificationsDropdown) {
+            notificationsDropdown.addEventListener('click', () => {
+                fetchNotifications();
+            });
+        }
+
+        // Try SSE first; fallback to polling
+        let pollingTimer = null;
+        try {
+            const es = new EventSource(notificationsStreamUrl);
+            es.addEventListener('notifications', (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    renderNotifications(data);
+                } catch (_) {
+                    // ignore
+                }
+            });
+            es.addEventListener('error', () => {
+                if (pollingTimer) return;
+                pollingTimer = setInterval(fetchNotifications, 15000);
+            });
+        } catch (_) {
+            pollingTimer = setInterval(fetchNotifications, 15000);
+        }
     });
 
 

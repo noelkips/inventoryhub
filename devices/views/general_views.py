@@ -110,7 +110,9 @@ def handle_uploaded_file(file, user, centre, department, category):
         serial_number_index = headers.index('serial_number')
         
         import_instances = []
-        admins = CustomUser.objects.filter(is_superuser=True, is_trainer=False)
+        admins = CustomUser.objects.filter(is_trainer=False).filter(
+            Q(is_superuser=True) | Q(is_it_manager=True) | Q(is_senior_it_officer=True)
+        )
 
         for row in reader:
             if not any(row):  # Skip empty rows
@@ -397,7 +399,9 @@ def import_add(request):
                     
                     # Create notification for trainers
                     if request.user.is_trainer:
-                        admins = CustomUser.objects.filter(is_superuser=True, is_trainer=False)
+                        admins = CustomUser.objects.filter(is_trainer=False).filter(
+                            Q(is_superuser=True) | Q(is_it_manager=True) | Q(is_senior_it_officer=True)
+                        )
                         for admin in admins:
                             Notification.objects.create(
                                 user=admin,
@@ -543,7 +547,9 @@ def import_update(request, pk):
                     import_instance.save()
                     
                     # Notify admins
-                    admins = CustomUser.objects.filter(is_superuser=True, is_trainer=False)
+                    admins = CustomUser.objects.filter(is_trainer=False).filter(
+                        Q(is_superuser=True) | Q(is_it_manager=True) | Q(is_senior_it_officer=True)
+                    )
                     for admin in admins:
                         Notification.objects.create(
                             user=admin,

@@ -39,11 +39,19 @@ urlpatterns = [
     path('import/approve/<int:pk>/', views.import_approve, name='import_approve'),
     path('import/reject/<int:pk>/', views.import_reject, name='import_reject'),  # New: Added reject URL
     path('import/approve_all/', views.import_approve_all, name='import_approve_all'),
-    path('import/download-template/', views.download_csv_template, name='download_csv_template'),
-    path('devices/<int:device_id>/clear/', views.clear_user, name='clear_user'),
-    path('devices/<int:device_id>/download_clearance/', views.download_clearance_form, name='download_clearance_form'),
-    path('dispose/<int:device_id>/', views.dispose_device, name='dispose_device'),
-    path('import/history/<int:pk>/', views.device_history, name='device_history'),
+    path('import/download-template/', views.download_csv_template, name='download_csv_template'), 
+    path('devices/<int:device_id>/clear/', views.clear_user, name='clear_user'), 
+    path('devices/<int:device_id>/download_clearance/', views.download_clearance_form, name='download_clearance_form'), 
+    path('dispose/<int:device_id>/', views.dispose_device, name='dispose_device'), 
+    path('import/history/<int:pk>/', views.device_history, name='device_history'), 
+    path('devices/<int:pk>/repairs/', views.device_repairs, name='device_repairs'),
+    path('devices/<int:pk>/repairs/create/', views.device_repair_create, name='device_repair_create'),
+    path('devices/<int:pk>/repairs/<int:repair_id>/close/', views.device_repair_close, name='device_repair_close'),
+    path('devices/<int:pk>/configuration/start/', views.start_device_configuration, name='start_device_configuration'),
+    path('devices/<int:pk>/configuration/', views.device_configuration, name='device_configuration'),
+    path('configuration/types/', views.manage_configuration_types, name='manage_configuration_types'),
+    path('configuration/types/<int:type_id>/edit/', views.configuration_type_edit, name='configuration_type_edit'),
+    path('configuration/types/<int:type_id>/delete/', views.configuration_type_delete, name='configuration_type_delete'),
 
     path('dispose/add/', views.dispose_add, name='dispose_add'),
     path('dispose/template/', views.download_dispose_template, name='download_dispose_template'),
@@ -52,6 +60,8 @@ urlpatterns = [
     path('device/<int:pk>/sign-issuance/', views.sign_issuance, name='sign_issuance'),
     path('device/<int:pk>/sign-clearance/', views.sign_clearance, name='sign_clearance'),
     path('device/<int:pk>/download-uaf/', views.download_uaf_pdf, name='download_uaf_pdf'),
+    path('device/<int:pk>/download-uploaded-uaf/', views.download_uploaded_uaf_pdf, name='download_uploaded_uaf_pdf'),
+    path('device/<int:pk>/upload-existing-uaf/', views.upload_existing_uaf_pdf, name='upload_existing_uaf_pdf'),
     path('download-past-uaf/<int:agreement_id>/', views.download_past_uaf_pdf, name='download_past_uaf_pdf'),
 
 
@@ -72,8 +82,14 @@ urlpatterns = [
 
   
 
-    # Notifications
-    path('notifications/', views.notifications_view, name='notifications_view'),
-    path('notifications/<int:pk>/mark-read/', views.mark_notification_read, name='mark_notification_read'),
-    path('notifications/clear-all/', views.clear_all_notifications, name='clear_all_notifications'),  # New: Added clear all notifications URL
+    # Notifications 
+    path('notifications/', views.notifications_view, name='notifications_view'), 
+    path('notifications/api/', views.notifications_api, name='notifications_api'),
+    path('notifications/stream/', views.notifications_stream, name='notifications_stream'),
+    path('notifications/<int:pk>/mark-read/', views.mark_notification_read, name='mark_notification_read'), 
+    path('notifications/<int:pk>/delete/', views.delete_notification, name='delete_notification'),
+    path('notifications/clear-all/', views.clear_all_notifications, name='clear_all_notifications'),  # New: Added clear all notifications URL 
+
+    # Repairs
+    path('repairs/report/', views.repair_report, name='repair_report'),
 ]

@@ -1,57 +1,5 @@
 {% extends 'dashboard.html' %}
-{% load static %}
 
 {% block content %}
-<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden">
-        <!-- Header -->
-        <div class="bg-gradient-to-r from-red-600 to-red-800 text-white p-6">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h2 class="text-3xl font-bold">Disposed IT Inventory</h2>
-                    <p class="mt-2 opacity-90">All devices permanently removed from service</p>
-                </div>
-
-                <!-- Add Disposed Device Button -->
-                <a href="{% url 'dispose_add' %}" 
-                   class="mt-4 sm:mt-0 inline-flex items-center gap-3 bg-white text-red-700 font-bold px-6 py-3 rounded-lg hover:bg-red-50 transition-all shadow-lg">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                              d="M12 4v16m8-8H4"></path>
-                    </svg>
-                    Dispose Device
-                </a>
-            </div>
-        </div>
-
-        <div class="p-6">
-
-            <!-- Quick Stats -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
-                <div class="bg-gray-50 p-6 rounded-lg text-center border">
-                    <p class="text-sm text-gray-600 uppercase tracking-wider">Total Disposed</p>
-                    <p class="text-4xl font-bold text-red-600 mt-2">{{ total_devices|default:"0" }}</p>
-                </div>
-                <div class="bg-gray-50 p-6 rounded-lg text-center border">
-                    <p class="text-sm text-gray-600 uppercase tracking-wider">Approved</p>
-                    <p class="text-4xl font-bold text-green-600 mt-2">{{ approved_imports|default:"0" }}</p>
-                </div>
-                <div class="bg-gray-50 p-6 rounded-lg text-center border">
-                    <p class="text-sm text-gray-600 uppercase tracking-wider">Pending Approval</p>
-                    <p class="text-4xl font-bold text-yellow-600 mt-2">{{ unapproved_count|default:"0" }}</p>
-                </div>
-                <div class="bg-gray-50 p-6 rounded-lg text-center border">
-                    <p class="text-sm text-gray-600 uppercase tracking-wider">This Month</p>
-                    <p class="text-4xl font-bold text-blue-600 mt-2">{{ this_month_count|default:"0" }}</p>
-                </div>
-            </div>
-
-            <!-- Disposed Devices Table -->
-            <div>
-                <h3 class="text-xl font-semibold text-gray-800 mb-4">Disposed Devices List</h3>
-                {% include 'import/displaycsv_base.html' %}
-            </div>
-        </div>
-    </div>
-</div>
+{% include 'import/displaycsv_base.html' %}
 {% endblock %}

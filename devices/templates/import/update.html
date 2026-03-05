@@ -125,8 +125,15 @@
                 <!-- Other fields -->
                 <div>
                     <label class="block font-semibold text-[#143C50] mb-2">Device Name</label>
+                    {% if import_instance.category == 'laptop' or import_instance.category == 'system_unit' %}
+                    <input type="text" value="{{ import_instance.device_name|default:'' }}" disabled
+                           class="w-full border border-gray-300 rounded-lg p-3 bg-gray-100 text-gray-700">
+                    <input type="hidden" name="device_name" value="{{ import_instance.device_name|default:'' }}">
+                    <p class="text-xs text-gray-500 mt-1">Auto-generated for Laptop/Desktop/Server.</p>
+                    {% else %}
                     <input type="text" name="device_name" value="{{ import_instance.device_name|default:'' }}"
                            class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
+                    {% endif %}
                 </div>
 
                 <div>

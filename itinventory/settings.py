@@ -182,7 +182,7 @@ LOGOUT_REDIRECT_URL = 'landing_page'
 LOGIN_URL = 'login'  
 # Optional but recommended:
 LOGIN_REDIRECT_URL = 'dashboard'
-SESSION_COOKIE_AGE = 86400  # 24 hours
+SESSION_COOKIE_AGE = 7200  # 2 hours
 SESSION_SAVE_EVERY_REQUEST = True
 # ============================================================================
 # ⭐ SESSION SECURITY CONFIGURATION (2 HOURS AUTO-LOGOUT)
@@ -191,7 +191,7 @@ SESSION_SAVE_EVERY_REQUEST = True
 SESSION_COOKIE_AGE = 7200  
 
 # Session expires when browser is closed
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 # Save session on every request (updates last activity time)
 SESSION_SAVE_EVERY_REQUEST = True
@@ -287,7 +287,10 @@ else:
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 else:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    # Use a redirecting backend so the hosted test DB never emails real users.
+    # When DB_NAME_CONFIG == 'ufdxwals_it_test_db', all emails go to TEST_EMAIL_RECIPIENT
+    # and are CC'd to TEST_EMAIL_CC.
+    EMAIL_BACKEND = 'devices.utils.email_backend.RedirectingSMTPEmailBackend'
     EMAIL_USE_TLS = False
     EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
     EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
@@ -295,6 +298,13 @@ else:
     EMAIL_PORT = 465
     EMAIL_USE_SSL = True
     DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
+
+# Test-site email redirect (only active when DB is ufdxwals_it_test_db via backend)
+TEST_EMAIL_RECIPIENT = os.getenv('TEST_EMAIL_RECIPIENT', 'noel.langat@mohiafrica.org')
+TEST_EMAIL_CC = [
+    os.getenv('TEST_EMAIL_CC_1', 'santana.macharia@mohiafrica.org'),
+    os.getenv('TEST_EMAIL_CC_2', 'itinventory@mohiafrica.org'),
+]
 
 #BACKUP PASSWORD
 DB_BACKUP_ENCRYPTION_PASSWORD = os.getenv('BACKUP_PASSWORD')

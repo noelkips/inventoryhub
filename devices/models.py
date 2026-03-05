@@ -30,6 +30,7 @@ class CustomUser(AbstractUser):
     centre = models.ForeignKey('Centre', on_delete=models.SET_NULL, null=True, blank=True)
     is_it_manager = models.BooleanField(default=False, help_text="IT Manager - receives notifications for staff work plans")
     is_senior_it_officer = models.BooleanField(default=False, help_text="Senior IT Officer - receives notifications for trainer work plans")
+    staff_signature_png = models.TextField(blank=True, null=True, help_text="Optional saved IT signature (base64 PNG data URL)")
     groups = models.ManyToManyField(
         'auth.Group',
         related_name='customuser_set',
@@ -135,6 +136,7 @@ class Import(models.Model):
     added_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='imports_added')
     approved_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='imports_approved')
     is_approved = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True, help_text="If false, the device is inactive (e.g., under repair) and actions are blocked.")
     reason_for_update = models.TextField(blank=True, null=True)
     is_disposed = models.BooleanField(default=False)
     disposal_reason = models.TextField(blank=True, null=True)
@@ -171,6 +173,55 @@ class DeviceLog(models.Model):
     class Meta:
         ordering = ["-created_at"]
 
+
+class DeviceRepair(models.Model):
+    STATUS_IN_PROGRESS = "in_progress"
+    STATUS_COMPLETED = "completed"
+    STATUS_WRITTEN_OFF = "written_off"
+
+    STATUS_CHOICES = [
+        (STATUS_IN_PROGRESS, "In Progress"),
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_WRITTEN_OFF, "Written off"),
+    ]
+
+    device = models.ForeignKey("Import", on_delete=models.CASCADE, related_name="repairs")
+
+    month = models.CharField(max_length=20, blank=True, null=True)
+    date_of_repair = models.DateField(blank=True, null=True)
+
+    centre_department = models.CharField(max_length=255, blank=True, null=True)
+    owner = models.CharField(max_length=255, blank=True, null=True)
+    model = models.CharField(max_length=255, blank=True, null=True)
+    serial_number = models.CharField(max_length=100, blank=True, null=True)
+
+    reported_by = models.CharField(max_length=255, blank=True, null=True)
+    issue_description = models.TextField()
+    repair_action_taken = models.TextField(blank=True, null=True)
+    technician_responsible = models.CharField(max_length=255, blank=True, null=True)
+    cost_kes = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default=STATUS_IN_PROGRESS)
+    notes = models.TextField(blank=True, null=True)
+    external_repair = models.BooleanField(default=False)
+
+    created_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="repairs_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ["-date_of_repair", "-created_at"]
+
+    @property
+    def is_open(self) -> bool:
+        return self.status == self.STATUS_IN_PROGRESS
+
         
 class DeviceAgreement(models.Model):
     device = models.ForeignKey("Import", on_delete=models.CASCADE, related_name='agreements')
@@ -194,6 +245,18 @@ class DeviceAgreement(models.Model):
     clearance_remarks = models.TextField(blank=True, help_text="Optional remarks about device condition on return")
     user_signed_clearance = models.BooleanField(default=False)
     it_approved_clearance = models.BooleanField(default=False)
+
+    # ========== OPTIONAL UPLOADED PDF ==========
+    # For legacy/external UAFs that were signed outside the system.
+    uploaded_uaf_pdf = models.FileField(upload_to="uaf_uploads/%Y/%m/", blank=True, null=True)
+    uploaded_uaf_uploaded_at = models.DateTimeField(blank=True, null=True)
+    uploaded_uaf_uploaded_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="uploaded_uafs",
+    )
 
     is_archived = models.BooleanField(default=False)
 
@@ -250,6 +313,7 @@ class PendingUpdate(models.Model):
     import_record = models.ForeignKey(Import, on_delete=models.CASCADE, related_name='pending_updates')
     centre = models.ForeignKey(Centre, on_delete=models.SET_NULL, null=True, blank=True)
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, default=1)
+    category = models.CharField(max_length=200, choices=Import.CATEGORY_CHOICES, blank=True, null=True)
     device_name = models.CharField(max_length=100, blank=True, null=True)
     system_model = models.CharField(max_length=100, blank=True, null=True)
     processor = models.CharField(max_length=100, blank=True, null=True)
@@ -259,6 +323,13 @@ class PendingUpdate(models.Model):
     assignee_first_name = models.CharField(max_length=50, blank=True, null=True)
     assignee_last_name = models.CharField(max_length=50, blank=True, null=True)
     assignee_email_address = models.EmailField(blank=True, null=True)
+    assignee = models.ForeignKey(
+        'Employee',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='pending_device_updates',
+    )
     device_condition = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=50, blank=True, null=True)
     date = models.DateField(blank=True, null=True)
@@ -274,18 +345,51 @@ class Report(models.Model):
     def __str__(self):
         return "Report"
 
-class Notification(models.Model):
-    user = models.ForeignKey('CustomUser', on_delete=models.CASCADE, related_name='notifications')
-    message = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    is_read = models.BooleanField(default=False)
-    responded_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='responded_notifications')  # New field
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
-    object_id = models.PositiveIntegerField(null=True, blank=True)
-    related_object = GenericForeignKey('content_type', 'object_id')
+class Notification(models.Model): 
+    user = models.ForeignKey('CustomUser', on_delete=models.CASCADE, related_name='notifications') 
+    message = models.TextField() 
+    created_at = models.DateTimeField(auto_now_add=True) 
+    is_read = models.BooleanField(default=False) 
+    responded_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='responded_notifications')  # New field 
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True) 
+    object_id = models.PositiveIntegerField(null=True, blank=True) 
+    related_object = GenericForeignKey('content_type', 'object_id') 
 
     class Meta:
         ordering = ['-created_at']
 
-    def __str__(self):
+    def __str__(self): 
         return f"Notification for {self.user.username}: {self.message}"
+
+
+class DeviceConfigurationType(models.Model):
+    name = models.CharField(max_length=120, unique=True)
+    description = models.TextField(blank=True, null=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    applies_to_laptop = models.BooleanField(default=True)
+    applies_to_desktop = models.BooleanField(default=True)
+    applies_to_server = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
+class DeviceConfiguration(models.Model):
+    device = models.ForeignKey(Import, on_delete=models.CASCADE, related_name='device_configurations')
+    config_type = models.ForeignKey(DeviceConfigurationType, on_delete=models.CASCADE, related_name='device_configurations')
+
+    is_completed = models.BooleanField(default=False)
+    completed_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='completed_device_configurations')
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = [['device', 'config_type']]
+        ordering = ['config_type__sort_order', 'config_type__name']
+
+    def __str__(self):
+        return f"{self.device.serial_number} - {self.config_type.name}"

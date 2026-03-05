@@ -9,6 +9,7 @@ import csv
 import logging
 from django.http import HttpResponse
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 
 from devices.models import Import, Centre, Department, CustomUser, Notification
 
@@ -66,7 +67,9 @@ def handle_dispose_single(request):
             device.save()
 
             if request.user.is_trainer:
-                admins = CustomUser.objects.filter(is_superuser=True)
+                admins = CustomUser.objects.filter(is_trainer=False).filter(
+                    Q(is_superuser=True) | Q(is_it_manager=True) | Q(is_senior_it_officer=True)
+                )
                 for admin in admins:
                     Notification.objects.create(
                         user=admin,
@@ -108,7 +111,9 @@ def handle_dispose_bulk_upload(request):
 
         stats = {'created': 0, 'skipped_existing': 0, 'skipped_validation': 0}
         devices = []
-        admins = CustomUser.objects.filter(is_superuser=True)
+        admins = CustomUser.objects.filter(is_trainer=False).filter(
+            Q(is_superuser=True) | Q(is_it_manager=True) | Q(is_senior_it_officer=True)
+        )
 
         for row in reader:
             if not any(row):

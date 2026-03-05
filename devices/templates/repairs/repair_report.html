@@ -1,0 +1,164 @@
+{% extends "dashboard.html" %}
+{% load static %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+<div class="container mx-auto p-4 lg:p-6">
+    <div class="mb-8">
+        <h1 class="text-4xl font-bold text-primary mb-2">Device Repairs Report</h1>
+        <p class="text-gray-600">Repairs metrics, trends, and exports.</p>
+    </div>
+
+    <div class="bg-gradient-to-r from-blue-800 to-blue-600 p-6 rounded-2xl shadow-xl mb-8">
+        <h3 class="text-white text-lg font-semibold mb-4">Quick Actions</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            <a href="{% url 'dashboard' %}" class="group bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-3 rounded-xl transition flex items-center justify-center text-center shadow-lg">
+                Back to Dashboard
+            </a>
+            <a href="?export=excel&period={{ period }}&status={{ status_filter }}" class="group bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-3 rounded-xl transition flex items-center justify-center text-center shadow-lg">
+                Export Excel
+            </a>
+            <a href="{% url 'display_approved_imports' %}" class="group bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-3 rounded-xl transition flex items-center justify-center text-center shadow-lg">
+                View Devices
+            </a>
+        </div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-2xl shadow-lg border-l-4 border-blue-500">
+            <p class="text-gray-500 text-sm font-medium uppercase tracking-wide mb-1">Total Repairs</p>
+            <p class="text-4xl font-bold text-blue-600 mb-2">{{ total_repairs }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-2xl shadow-lg border-l-4 border-amber-500">
+            <p class="text-gray-500 text-sm font-medium uppercase tracking-wide mb-1">Open</p>
+            <p class="text-4xl font-bold text-amber-600 mb-2">{{ open_repairs }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-2xl shadow-lg border-l-4 border-green-500">
+            <p class="text-gray-500 text-sm font-medium uppercase tracking-wide mb-1">Completed</p>
+            <p class="text-4xl font-bold text-green-600 mb-2">{{ completed_repairs }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-2xl shadow-lg border-l-4 border-gray-500">
+            <p class="text-gray-500 text-sm font-medium uppercase tracking-wide mb-1">Written Off</p>
+            <p class="text-4xl font-bold text-gray-700 mb-2">{{ written_off_repairs }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-2xl shadow-lg border-l-4 border-indigo-500">
+            <p class="text-gray-500 text-sm font-medium uppercase tracking-wide mb-1">Total Cost (KES)</p>
+            <p class="text-3xl font-bold text-indigo-600 mb-2">{{ total_cost }}</p>
+            <p class="text-xs text-gray-500 mt-1">External: {{ external_count }}</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white p-6 rounded-2xl shadow-md mb-8">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Filters</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Period (YYYY-MM)</label>
+                <select class="w-full border border-gray-300 p-2 rounded-lg"
+                        onchange="window.location.href='{% url 'repair_report' %}?period='+this.value+'&status={{ status_filter }}'">
+                    <option value="">All</option>
+                    {% for p in period_options %}
+                        <option value="{{ p }}" {% if period == p %}selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <select class="w-full border border-gray-300 p-2 rounded-lg"
+                        onchange="window.location.href='{% url 'repair_report' %}?status='+this.value+'&period={{ period }}'">
+                    <option value="">All</option>
+                    <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>In Progress</option>
+                    <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="written_off" {% if status_filter == 'written_off' %}selected{% endif %}>Written off</option>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button onclick="window.location.href='{% url 'repair_report' %}'" class="w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition duration-200">
+                    Clear
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-2xl shadow-md" style="height: 360px;">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Repairs per Month</h3>
+            <canvas id="repairsCountChart"></canvas>
+        </div>
+        <div class="bg-white p-6 rounded-2xl shadow-md" style="height: 360px;">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Repair Cost per Month (KES)</h3>
+            <canvas id="repairsCostChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Recent list -->
+    <div class="bg-white rounded-2xl shadow-md overflow-hidden mb-8">
+        <div class="p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Recent Repairs (latest 200)</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-600 text-sm">
+                            <th class="py-3 px-4 border text-left">Date</th>
+                            <th class="py-3 px-4 border text-left">Device</th>
+                            <th class="py-3 px-4 border text-left">Centre/Dept</th>
+                            <th class="py-3 px-4 border text-left">Status</th>
+                            <th class="py-3 px-4 border text-left">Cost</th>
+                            <th class="py-3 px-4 border text-left">Issue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in repairs %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="py-2 px-4 border text-sm">{{ r.date_of_repair|date:"d M Y"|default:"—" }}</td>
+                            <td class="py-2 px-4 border text-sm">
+                                <a href="{% url 'device_detail' r.device_id %}" class="text-accent hover:underline font-semibold">
+                                    {{ r.serial_number|default:r.device.serial_number|default:"(No serial)" }}
+                                </a>
+                            </td>
+                            <td class="py-2 px-4 border text-sm">{{ r.centre_department|default:"—" }}</td>
+                            <td class="py-2 px-4 border text-sm">{{ r.get_status_display }}</td>
+                            <td class="py-2 px-4 border text-sm">{{ r.cost_kes|default:"—" }}</td>
+                            <td class="py-2 px-4 border text-sm">{{ r.issue_description|truncatechars:80 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="py-8 text-center text-gray-500">No repairs found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ chart_labels|json_script:"repair_chart_labels" }}
+{{ chart_counts|json_script:"repair_chart_counts" }}
+{{ chart_costs|json_script:"repair_chart_costs" }}
+
+<script type="text/javascript">
+    const labels = JSON.parse(document.getElementById('repair_chart_labels').textContent);
+    const counts = JSON.parse(document.getElementById('repair_chart_counts').textContent);
+    const costs = JSON.parse(document.getElementById('repair_chart_costs').textContent);
+
+    new Chart(document.getElementById('repairsCountChart'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{ label: 'Repairs', data: counts, backgroundColor: '#288CC8' }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    new Chart(document.getElementById('repairsCostChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{ label: 'Cost (KES)', data: costs, borderColor: '#143C50', backgroundColor: 'rgba(20,60,80,0.1)' }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+</script>
+{% endblock %}

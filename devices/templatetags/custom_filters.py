@@ -10,3 +10,12 @@ def get_category_value(display_name):
         if label == display_name:
             return value
     return ''  # fallback
+
+
+@register.filter
+def get_item(mapping, key):
+    """Safely get mapping[key] in templates."""
+    try:
+        return mapping.get(key)
+    except Exception:
+        return None

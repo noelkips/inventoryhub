@@ -127,12 +127,20 @@
 
                         <div>
                             <label class="block font-semibold text-[#143C50] mb-1.5">Category *</label>
-                            <select name="category" required class="w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-[#288CC8]">
+                            <select id="categorySelect" name="category" required class="w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-[#288CC8]">
                                 <option value="">— Select —</option>
                                 {% for val, lbl in category_choices %}
                                 <option value="{{ val }}">{{ lbl }}</option>
                                 {% endfor %}
                             </select>
+                        </div>
+
+                        <div id="serverToggleWrap" class="md:col-span-3 hidden">
+                            <label class="inline-flex items-center gap-2 font-semibold text-[#143C50]">
+                                <input type="checkbox" name="is_server" value="1" class="h-4 w-4 accent-[#288CC8]">
+                                This System Unit is a Server (auto-generates `XXXX-S-MOHI`)
+                            </label>
+                            <p class="text-sm text-gray-500 mt-1">If unchecked, it will be treated as a Desktop (auto-generates `XXXX-D-MOHI`).</p>
                         </div>
 
                         <div class="md:col-span-3">
@@ -158,7 +166,11 @@
                         </div>
 
                         <!-- Device fields -->
-                        <div><label class="block font-semibold text-[#143C50] mb-1.5">Device Name</label><input type="text" name="device_name" class="w-full border border-gray-300 rounded p-2.5"></div>
+                        <div>
+                            <label class="block font-semibold text-[#143C50] mb-1.5">Device Name (Asset Tag)</label>
+                            <input id="deviceNameInput" type="text" name="device_name" class="w-full border border-gray-300 rounded p-2.5" placeholder="Auto-generated for Laptop/Desktop/Server">
+                            <p id="deviceNameAutoHint" class="text-sm text-gray-500 mt-1 hidden">Auto-generated for Laptop, Desktop and Server.</p>
+                        </div>
                         <div><label class="block font-semibold text-[#143C50] mb-1.5">System Model</label><input type="text" name="system_model" class="w-full border border-gray-300 rounded p-2.5"></div>
                         <div><label class="block font-semibold text-[#143C50] mb-1.5">Processor</label><input type="text" name="processor" class="w-full border border-gray-300 rounded p-2.5"></div>
                         <div><label class="block font-semibold text-[#143C50] mb-1.5">RAM (GB)</label><input type="text" name="ram_gb" class="w-full border border-gray-300 rounded p-2.5"></div>
@@ -283,6 +295,40 @@
             document.getElementById('assignee_id').value = '';
         }
     });
+
+    // Auto-generated device name (asset tag) for Laptop/Desktop/Server
+    const categorySelect = document.getElementById('categorySelect');
+    const deviceNameInput = document.getElementById('deviceNameInput');
+    const deviceNameAutoHint = document.getElementById('deviceNameAutoHint');
+    const serverToggleWrap = document.getElementById('serverToggleWrap');
+
+    const updateDeviceNameBehavior = () => {
+        const category = categorySelect?.value || '';
+        const isAuto = (category === 'laptop' || category === 'system_unit');
+
+        if (deviceNameInput) {
+            deviceNameInput.disabled = isAuto;
+            if (isAuto) {
+                deviceNameInput.value = '';
+                deviceNameInput.placeholder = 'Auto-generated after save';
+                deviceNameInput.classList.add('bg-gray-100');
+            } else {
+                deviceNameInput.placeholder = 'Enter device name (optional)';
+                deviceNameInput.classList.remove('bg-gray-100');
+            }
+        }
+
+        if (deviceNameAutoHint) {
+            deviceNameAutoHint.classList.toggle('hidden', !isAuto);
+        }
+
+        if (serverToggleWrap) {
+            serverToggleWrap.classList.toggle('hidden', category !== 'system_unit');
+        }
+    };
+
+    categorySelect?.addEventListener('change', updateDeviceNameBehavior);
+    updateDeviceNameBehavior();
 
     // Close modals when clicking outside content
     document.addEventListener('click', function(e) {

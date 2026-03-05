@@ -110,11 +110,16 @@
 
                 <div>
                     <label class="text-xs font-bold text-gray-500 uppercase mb-1">Collaborators</label>
-                    <select name="collaborators" id="edit_collaborators" multiple class="w-full border border-gray-300 rounded-lg p-2 text-sm h-20 bg-gray-50">
+                    <input type="text" id="edit_collab_search" placeholder="Search collaborators..." class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-accent outline-none">
+                    <div id="edit_collab_list" class="mt-2 max-h-28 overflow-y-auto rounded-lg border border-gray-300 bg-gray-50 p-2 space-y-1 custom-scrollbar">
                         {% for u in potential_collaborators %}
-                        <option value="{{ u.id }}">{{ u.first_name }} {{ u.last_name }}</option>
+                        <label data-collab-name="{{ u.get_full_name|lower }}" class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-white transition cursor-pointer">
+                            <input type="checkbox" name="collaborators" value="{{ u.id }}" class="w-4 h-4 text-accent rounded border-gray-300 focus:ring-accent">
+                            <span class="text-xs text-gray-700 font-semibold">{{ u.first_name }} {{ u.last_name }}</span>
+                        </label>
                         {% endfor %}
-                    </select>
+                    </div>
+                    <p id="edit_collab_empty" class="hidden text-[10px] text-gray-400 mt-1">No matching collaborators.</p>
                 </div>
 
                 <div>
@@ -195,11 +200,14 @@
                 document.getElementById('edit_centre').value = data.centre || '';
                 document.getElementById('edit_department').value = data.department || '';
                 
-                // Collaborators (Multi-select logic)
-                const collabSelect = document.getElementById('edit_collaborators');
-                Array.from(collabSelect.options).forEach(option => {
-                    option.selected = data.collaborators.includes(parseInt(option.value));
+                // Collaborators (checkbox list)
+                const collabBoxes = document.querySelectorAll('#edit_collab_list input[name="collaborators"]');
+                collabBoxes.forEach(cb => {
+                    cb.checked = data.collaborators.includes(parseInt(cb.value));
                 });
+                const editSearch = document.getElementById('edit_collab_search');
+                if (editSearch) editSearch.value = '';
+                applyCollaboratorFilterModal();
 
                 // Run toggle logic based on fetched 'is_leave' status
                 toggleEditLeave();
@@ -226,6 +234,33 @@
             container.classList.remove('opacity-50', 'pointer-events-none');
         }
     }
+
+    function applyCollaboratorFilterModal() {
+        const input = document.getElementById('edit_collab_search');
+        const container = document.getElementById('edit_collab_list');
+        const emptyEl = document.getElementById('edit_collab_empty');
+        if (!input || !container) return;
+
+        const query = (input.value || '').trim().toLowerCase();
+        const labels = Array.from(container.querySelectorAll('[data-collab-name]'));
+        let visibleCount = 0;
+
+        labels.forEach(label => {
+            const name = (label.dataset.collabName || '').toLowerCase();
+            const checkbox = label.querySelector('input[type="checkbox"]');
+            const checked = !!(checkbox && checkbox.checked);
+            const matches = !query || name.includes(query);
+            const show = matches || checked;
+            label.classList.toggle('hidden', !show);
+            if (show) visibleCount += 1;
+        });
+
+        if (emptyEl) {
+            emptyEl.classList.toggle('hidden', visibleCount !== 0);
+        }
+    }
+
+    document.getElementById('edit_collab_search')?.addEventListener('input', applyCollaboratorFilterModal);
     
     // Close modals on Escape key
     document.addEventListener('keydown', function(event) {

@@ -4,21 +4,54 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import HttpResponse, FileResponse
+from django.views.decorators.http import require_POST
+from django.core.files.base import ContentFile
+from django.utils.text import get_valid_filename
 from io import BytesIO
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.utils import ImageReader
 from reportlab.lib.units import inch
 import base64
+from pypdf import PdfReader, PdfWriter
 from ..models import CustomUser, Import, DeviceAgreement
 from ..utils import send_custom_email
+from ..utils.signatures import normalize_signature_data_url
+
+
+def _compress_pdf_bytes(pdf_bytes: bytes) -> bytes:
+    """
+    Best-effort PDF compression using pypdf.
+    If anything fails, returns the original bytes.
+    """
+    try:
+        reader = PdfReader(BytesIO(pdf_bytes))
+        writer = PdfWriter()
+        for page in reader.pages:
+            writer.add_page(page)
+        try:
+            writer.compress_content_streams()
+        except Exception:
+            # Older PDFs may not support this cleanly; ignore.
+            pass
+        out = BytesIO()
+        writer.write(out)
+        compressed = out.getvalue()
+        if compressed and len(compressed) < len(pdf_bytes):
+            return compressed
+    except Exception:
+        return pdf_bytes
+    return pdf_bytes
 
 
 @login_required
 def sign_issuance(request, pk):
     """Handle issuance signing - both IT staff and employee sign"""
     device = get_object_or_404(Import, pk=pk)
+    if not getattr(device, "is_active", True):
+        messages.warning(request, "This device is currently under repair and is inactive. UAF actions are blocked.")
+        return redirect("device_detail", pk=device.pk)
 
     if not device.assignee:
         messages.error(request, "Device must have an assignee before signing UAF.")
@@ -50,16 +83,20 @@ def sign_issuance(request, pk):
             return redirect('sign_issuance', pk=pk)
 
         if not it_sig:
-            messages.error(request, "Please draw the IT staff signature.")
-            return redirect('sign_issuance', pk=pk)
+            saved_it_sig = (getattr(request.user, "staff_signature_png", "") or "").strip()
+            if saved_it_sig:
+                it_sig = saved_it_sig
+            else:
+                messages.error(request, "Please draw the IT staff signature (or set it in your profile).")
+                return redirect('sign_issuance', pk=pk)
 
         if not agree:
             messages.error(request, "You must agree to the terms.")
             return redirect('sign_issuance', pk=pk)
 
         # Save both signatures
-        agreement.issuance_user_signature_png = user_sig
-        agreement.issuance_it_signature_png = it_sig
+        agreement.issuance_user_signature_png = normalize_signature_data_url(user_sig)
+        agreement.issuance_it_signature_png = normalize_signature_data_url(it_sig)
         agreement.issuance_date = timezone.now()
         agreement.issuance_it_user = request.user
         agreement.user_signed_issuance = True
@@ -95,6 +132,11 @@ def sign_issuance(request, pk):
         'agreement': agreement,
         'category_display': category_display,
         'signing_type': 'issuance',
+        'saved_it_signature_png': (
+            (lambda s: (s if not s or s.startswith("data:") else f"data:image/png;base64,{s}"))(
+                (getattr(request.user, "staff_signature_png", "") or "").strip()
+            )
+        ),
     }
     return render(request, 'import/sign_uaf.html', context)
 
@@ -103,6 +145,9 @@ def sign_issuance(request, pk):
 def sign_clearance(request, pk):
     """Handle clearance signing - ONLY employee signs when returning device"""
     device = get_object_or_404(Import, pk=pk)
+    if not getattr(device, "is_active", True):
+        messages.warning(request, "This device is currently under repair and is inactive. UAF actions are blocked.")
+        return redirect("device_detail", pk=device.pk)
 
     if not device.assignee:
         messages.error(request, "No assignee found for this device.")
@@ -133,8 +178,20 @@ def sign_clearance(request, pk):
             messages.error(request, "Please draw your signature.")
             return redirect('sign_clearance', pk=pk)
 
+        saved_it_sig = (getattr(request.user, "staff_signature_png", "") or "").strip()
+
         # Save employee signature and clearance info
-        agreement.clearance_user_signature_png = user_sig
+        agreement.clearance_user_signature_png = normalize_signature_data_url(user_sig)
+        if saved_it_sig:
+            agreement.clearance_it_signature_png = normalize_signature_data_url(saved_it_sig)
+
+        # If the issuance UAF was uploaded (legacy/external), replicate signatures so the system-generated
+        # "complete" PDF has both issuance + clearance signatures filled.
+        if agreement.uploaded_uaf_pdf and not (agreement.issuance_user_signature_png or "").strip():
+            agreement.issuance_user_signature_png = normalize_signature_data_url(user_sig)
+        if agreement.uploaded_uaf_pdf and saved_it_sig and not (agreement.issuance_it_signature_png or "").strip():
+            agreement.issuance_it_signature_png = normalize_signature_data_url(saved_it_sig)
+
         agreement.clearance_date = timezone.now()
         agreement.clearance_it_user = request.user  # IT user processing the clearance
         agreement.user_signed_clearance = True
@@ -200,6 +257,11 @@ MOHI IT Department
         'agreement': agreement,
         'category_display': category_display,
         'signing_type': 'clearance',
+        'saved_it_signature_png': (
+            (lambda s: (s if not s or s.startswith("data:") else f"data:image/png;base64,{s}"))(
+                (getattr(request.user, "staff_signature_png", "") or "").strip()
+            )
+        ),
     }
     return render(request, 'import/sign_uaf.html', context)
 
@@ -242,6 +304,125 @@ def download_uaf_pdf(request, pk):
     response = HttpResponse(pdf_buffer.read(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
+
+
+@login_required
+def download_uploaded_uaf_pdf(request, pk):
+    """Download or view an uploaded legacy/external UAF PDF for this device (if present)."""
+    device = get_object_or_404(Import, pk=pk)
+
+    # Permission check (match device_detail/device_history)
+    if request.user.is_trainer and device.centre != request.user.centre:
+        messages.error(request, "You can only view devices from your own centre.")
+        return redirect("display_approved_imports")
+
+    # Prefer current assignee agreement, else most recent agreement
+    agreement = None
+    if device.assignee:
+        agreement = (
+            DeviceAgreement.objects.filter(device=device, employee=device.assignee, is_archived=False)
+            .order_by("-issuance_date", "-id")
+            .first()
+        )
+    if not agreement:
+        agreement = DeviceAgreement.objects.filter(device=device).order_by("-issuance_date", "-id").first()
+
+    if not agreement or not agreement.uploaded_uaf_pdf:
+        messages.error(request, "No uploaded UAF PDF found for this device.")
+        return redirect("device_detail", pk=device.pk)
+
+    inline = (request.GET.get("inline") or "").strip() in {"1", "true", "yes"}
+    disposition = "inline" if inline else "attachment"
+    filename = f"UAF_{device.serial_number or device.pk}_uploaded.pdf"
+
+    resp = FileResponse(agreement.uploaded_uaf_pdf.open("rb"), content_type="application/pdf")
+    resp["Content-Disposition"] = f'{disposition}; filename="{filename}"'
+    return resp
+
+
+@login_required
+@require_POST
+def upload_existing_uaf_pdf(request, pk):
+    """
+    Upload a signed UAF PDF that was completed outside the system.
+    - Accepts PDFs < 1MB
+    - Compresses further (best-effort)
+    - Marks the current agreement as signed so clearance can proceed
+    """
+    device = get_object_or_404(Import, pk=pk)
+
+    if not getattr(device, "is_active", True):
+        messages.warning(request, "This device is currently under repair and is inactive. UAF actions are blocked.")
+        return redirect("device_detail", pk=device.pk)
+
+    # Limit to staff who can manage devices (consistent with the UI actions)
+    if not (request.user.is_superuser or getattr(request.user, "is_trainer", False)):
+        messages.error(request, "You do not have permission to upload UAF documents.")
+        return redirect("device_detail", pk=device.pk)
+
+    if request.user.is_trainer and device.centre != request.user.centre:
+        messages.error(request, "You can only update records for your own centre.")
+        return redirect("display_approved_imports")
+
+    if not device.assignee:
+        messages.error(request, "Device must have an assignee before attaching a UAF.")
+        return redirect("device_detail", pk=device.pk)
+
+    upload = request.FILES.get("uaf_pdf")
+    if not upload:
+        messages.error(request, "Please select a PDF file to upload.")
+        return redirect("device_detail", pk=device.pk)
+
+    if upload.size and upload.size > 1024 * 1024:
+        messages.error(request, "File too large. Please upload a PDF smaller than 1MB.")
+        return redirect("device_detail", pk=device.pk)
+
+    name_lower = (upload.name or "").lower()
+    if not name_lower.endswith(".pdf"):
+        messages.error(request, "Invalid file type. Please upload a PDF.")
+        return redirect("device_detail", pk=device.pk)
+
+    raw_bytes = upload.read()
+    if not raw_bytes:
+        messages.error(request, "Uploaded file is empty.")
+        return redirect("device_detail", pk=device.pk)
+
+    compressed_bytes = _compress_pdf_bytes(raw_bytes)
+    final_bytes = compressed_bytes if len(compressed_bytes) <= len(raw_bytes) else raw_bytes
+
+    # Double-check final size
+    if len(final_bytes) > 1024 * 1024:
+        messages.error(request, "Uploaded PDF is too large after processing. Please upload a smaller file (<1MB).")
+        return redirect("device_detail", pk=device.pk)
+
+    agreement, _ = DeviceAgreement.objects.get_or_create(
+        device=device,
+        employee=device.assignee,
+        defaults={"issuance_it_user": request.user},
+    )
+
+    filename = get_valid_filename(f"UAF_{device.serial_number or device.pk}_{agreement.pk}.pdf")
+    agreement.uploaded_uaf_pdf.save(filename, ContentFile(final_bytes), save=False)
+    agreement.uploaded_uaf_uploaded_at = timezone.now()
+    agreement.uploaded_uaf_uploaded_by = request.user
+
+    # Mark issuance as completed (legacy doc), so workflows like clearance can proceed
+    if not agreement.user_signed_issuance:
+        agreement.user_signed_issuance = True
+    if not agreement.it_approved_issuance:
+        agreement.it_approved_issuance = True
+    if not agreement.issuance_date:
+        agreement.issuance_date = timezone.now()
+    if not agreement.issuance_it_user:
+        agreement.issuance_it_user = request.user
+    agreement.save()
+
+    if not device.uaf_signed:
+        device.uaf_signed = True
+        device.save(update_fields=["uaf_signed"])
+
+    messages.success(request, "Uploaded UAF saved successfully.")
+    return redirect("device_detail", pk=device.pk)
 
 @login_required
 def download_past_uaf_pdf(request, agreement_id):
@@ -422,15 +603,14 @@ def generate_uaf_pdf(device, agreement, buffer, category_display, include_cleara
     
     c.setFont("Helvetica", 7)
     c.drawString(col2_x, row1_y, "Employee/Staff Member:")
-    c.drawString(col2_x, row1_y, "Employee/Staff Member:")
     # Add small vertical padding so signature won't overlap surrounding text
     row1_y -= 4
 
-    # Draw a small white background rectangle behind the signature area to ensure clear separation
+    # Draw a white background rectangle behind the signature area to ensure clear separation
     sig_rect_x = col2_x - 3
-    sig_rect_y = row1_y - 32 - 3
-    sig_rect_w = 100 + 6
-    sig_rect_h = 45 + 6
+    sig_rect_y = row1_y - 30 - 3
+    sig_rect_w = 110 + 6
+    sig_rect_h = 40 + 6
     c.setFillColorRGB(1, 1, 1)
     c.rect(sig_rect_x, sig_rect_y, sig_rect_w, sig_rect_h, fill=1, stroke=0)
     c.setFillColorRGB(0, 0, 0)
@@ -441,7 +621,7 @@ def generate_uaf_pdf(device, agreement, buffer, category_display, include_cleara
             sig_data = agreement.issuance_user_signature_png.split(',')[1] if ',' in agreement.issuance_user_signature_png else agreement.issuance_user_signature_png
             sig_bytes = base64.b64decode(sig_data)
             sig_image = ImageReader(BytesIO(sig_bytes))
-            c.drawImage(sig_image, col2_x, row1_y - 32, width=100, height=45, 
+            c.drawImage(sig_image, col2_x, row1_y - 30, width=110, height=40,
                        preserveAspectRatio=True, mask='auto')
         except:
             pass
@@ -482,7 +662,7 @@ def generate_uaf_pdf(device, agreement, buffer, category_display, include_cleara
     row2_y -= 13
     
     c.setFont("Helvetica", 7)
-    c.drawString(col2_x, row2_y, "I.T Department Staff:")
+  
     
     # IT Staff signature
     if agreement.issuance_it_signature_png:
@@ -490,7 +670,7 @@ def generate_uaf_pdf(device, agreement, buffer, category_display, include_cleara
             sig_data = agreement.issuance_it_signature_png.split(',')[1] if ',' in agreement.issuance_it_signature_png else agreement.issuance_it_signature_png
             sig_bytes = base64.b64decode(sig_data)
             sig_image = ImageReader(BytesIO(sig_bytes))
-            c.drawImage(sig_image, col2_x, row2_y - 32, width=100, height=35, 
+            c.drawImage(sig_image, col2_x, row2_y - 28, width=110, height=34,
                        preserveAspectRatio=True, mask='auto')
         except:
             pass
@@ -515,39 +695,52 @@ def generate_uaf_pdf(device, agreement, buffer, category_display, include_cleara
         clearance_it_full = f"{clearance_it_first} {clearance_it_last}"
         
         # ===== GROUPED: STAFF RETURNING & IT WITNESS =====
-        clearance_box_height = 75
+        # Give this section more vertical room so signatures never overlap borders/text.
+        clearance_box_height = 110
         box_width = width - 100
         
         c.setStrokeColorRGB(0, 0.4, 0)  # Dark green
-        c.setLineWidth(1.5)
+        c.setLineWidth(2)
         c.rect(50, y - clearance_box_height, box_width, clearance_box_height)
         
         # Left column - Staff Member Signature
         col1_x = 60
         col2_x = width / 2 + 20
-        
-        sig_y = y - 15
+
+        box_bottom = y - clearance_box_height
+
+        # Left column layout (fixed signature box)
+        left_header_y = y - 16
         c.setFont("Helvetica-Bold", 9)
-        c.drawString(col1_x, sig_y, "STAFF SIGNATURE (Returning Device)")
-        sig_y -= 12
-        
+        c.drawString(col1_x, left_header_y, "STAFF SIGNATURE (Returning Device)")
+
         c.setFont("Helvetica", 7)
-        c.drawString(col1_x, sig_y, "Staff Member:")
-        sig_y -= 15
-        
-        c.setFont("Helvetica", 7)
-        c.drawString(col1_x, sig_y, "  ")
-        
-        # Employee clearance signature
-        
-        
+        c.drawString(col1_x, left_header_y - 14, "Staff Member:")
+
+        staff_sig_w = 120
+        staff_sig_h = 38
+        staff_sig_x = col1_x
+        staff_sig_y = box_bottom + 14
+
+        # White background for the signature area
+        c.setFillColorRGB(1, 1, 1)
+        c.rect(staff_sig_x - 2, staff_sig_y - 2, staff_sig_w + 4, staff_sig_h + 4, fill=1, stroke=0)
+        c.setFillColorRGB(0, 0, 0)
+
         if agreement.clearance_user_signature_png:
             try:
                 sig_data = agreement.clearance_user_signature_png.split(',')[1] if ',' in agreement.clearance_user_signature_png else agreement.clearance_user_signature_png
                 sig_bytes = base64.b64decode(sig_data)
                 sig_image = ImageReader(BytesIO(sig_bytes))
-                c.drawImage(sig_image, col1_x, sig_y - 40, width=150, height=60, 
-                           preserveAspectRatio=True, mask='auto')
+                c.drawImage(
+                    sig_image,
+                    staff_sig_x,
+                    staff_sig_y,
+                    width=staff_sig_w,
+                    height=staff_sig_h,
+                    preserveAspectRatio=True,
+                    mask='auto',
+                )
             except:
                 pass
         
@@ -565,7 +758,38 @@ def generate_uaf_pdf(device, agreement, buffer, category_display, include_cleara
         sig_y -= 10
         c.drawString(col2_x, sig_y, f"Department: I.T Department")
         sig_y -= 10
-        c.drawString(col2_x, sig_y, f"Date: {clearance_date}")
+
+        c.setFont("Helvetica", 7)
+        c.drawString(col2_x, sig_y, "Signature:")
+
+        it_sig_w = 120
+        it_sig_h = 34
+        it_sig_x = col2_x
+        it_sig_y = box_bottom + 16
+
+        c.setFillColorRGB(1, 1, 1)
+        c.rect(it_sig_x - 2, it_sig_y - 2, it_sig_w + 4, it_sig_h + 4, fill=1, stroke=0)
+        c.setFillColorRGB(0, 0, 0)
+
+        if getattr(agreement, "clearance_it_signature_png", None):
+            try:
+                sig_data = agreement.clearance_it_signature_png.split(',')[1] if ',' in agreement.clearance_it_signature_png else agreement.clearance_it_signature_png
+                sig_bytes = base64.b64decode(sig_data)
+                sig_image = ImageReader(BytesIO(sig_bytes))
+                c.drawImage(
+                    sig_image,
+                    it_sig_x,
+                    it_sig_y,
+                    width=it_sig_w,
+                    height=it_sig_h,
+                    preserveAspectRatio=True,
+                    mask='auto',
+                )
+            except:
+                pass
+
+        c.setFont("Helvetica", 8)
+        c.drawString(col2_x, box_bottom + 6, f"Date: {clearance_date}")
         
         y -= (clearance_box_height + 15)
 

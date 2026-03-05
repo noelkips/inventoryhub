@@ -264,12 +264,16 @@
 
                     <div>
                         <label class="block text-sm font-bold text-gray-600 uppercase mb-2">Collaborators</label>
-                        <select name="collaborators" multiple class="w-full rounded-lg border-gray-300 bg-gray-50 px-4 py-3 text-base h-32 custom-scrollbar">
+                        <input type="text" id="add_collab_search" placeholder="Search collaborators..." class="w-full rounded-lg border-gray-300 bg-gray-50 px-4 py-3 text-base focus:ring-2 focus:ring-accent outline-none">
+                        <div id="add_collab_list" class="mt-2 max-h-40 overflow-y-auto rounded-lg border border-gray-300 bg-gray-50 p-2 space-y-1 custom-scrollbar">
                             {% for user in potential_collaborators %}
-                            <option value="{{ user.id }}">{{ user.get_full_name }}</option>
+                            <label data-collab-name="{{ user.get_full_name|lower }}" class="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-white transition cursor-pointer">
+                                <input type="checkbox" name="collaborators" value="{{ user.id }}" class="w-5 h-5 text-accent rounded border-gray-300 focus:ring-accent">
+                                <span class="text-sm text-gray-700 font-semibold">{{ user.get_full_name }}</span>
+                            </label>
                             {% endfor %}
-                        </select>
-                        <p class="text-xs text-gray-400 mt-2">Hold Ctrl/Cmd to select multiple</p>
+                        </div>
+                        <p id="add_collab_empty" class="hidden text-xs text-gray-400 mt-2">No matching collaborators.</p>
                     </div>
 
                     <div>
@@ -347,6 +351,9 @@
         document.getElementById('addTaskModal').classList.remove('hidden');
         document.getElementById('add_is_leave').checked = false;
         toggleAddLeave();
+        const search = document.getElementById('add_collab_search');
+        if (search) search.value = '';
+        applyCalendarCollaboratorFilter();
     }
 
     function closeAddTaskModal() {
@@ -366,5 +373,33 @@
             taskName.setAttribute('required', '');
         }
     }
+
+    function applyCalendarCollaboratorFilter() {
+        const input = document.getElementById('add_collab_search');
+        const container = document.getElementById('add_collab_list');
+        const emptyEl = document.getElementById('add_collab_empty');
+        if (!input || !container) return;
+
+        const query = (input.value || '').trim().toLowerCase();
+        const labels = Array.from(container.querySelectorAll('[data-collab-name]'));
+        let visibleCount = 0;
+
+        labels.forEach(label => {
+            const name = (label.dataset.collabName || '').toLowerCase();
+            const checkbox = label.querySelector('input[type="checkbox"]');
+            const checked = !!(checkbox && checkbox.checked);
+            const matches = !query || name.includes(query);
+            const show = matches || checked;
+            label.classList.toggle('hidden', !show);
+            if (show) visibleCount += 1;
+        });
+
+        if (emptyEl) {
+            emptyEl.classList.toggle('hidden', visibleCount !== 0);
+        }
+    }
+
+    document.getElementById('add_collab_search')?.addEventListener('input', applyCalendarCollaboratorFilter);
+    applyCalendarCollaboratorFilter();
 </script>
 {% endblock %}

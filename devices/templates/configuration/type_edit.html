@@ -1,0 +1,58 @@
+{% extends "dashboard.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mx-auto p-4 lg:p-6 min-h-screen">
+    <a href="{% url 'manage_configuration_types' %}" class="text-accent hover:underline text-sm">&larr; Back</a>
+    <h1 class="text-3xl font-bold text-primary mt-2 mb-6">Edit Configuration Item</h1>
+
+    <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 max-w-2xl">
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Name *</label>
+                <input name="name" required value="{{ t.name }}" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-accent" />
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Description</label>
+                <textarea name="description" rows="3" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-accent">{{ t.description|default:"" }}</textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Sort Order</label>
+                    <input name="sort_order" type="number" value="{{ t.sort_order }}" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-accent" />
+                </div>
+                <div class="flex items-end">
+                    <label class="inline-flex items-center gap-2 text-sm font-semibold text-gray-700">
+                        <input name="is_active" type="checkbox" class="h-4 w-4 accent-accent" {% if t.is_active %}checked{% endif %} />
+                        Active
+                    </label>
+                </div>
+            </div>
+            <div>
+                <div class="text-sm font-semibold text-gray-700 mb-1">Applies To</div>
+                <div class="flex flex-wrap gap-3">
+                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                        <input name="applies_to_laptop" type="checkbox" class="h-4 w-4 accent-accent" {% if t.applies_to_laptop %}checked{% endif %} />
+                        Laptop
+                    </label>
+                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                        <input name="applies_to_desktop" type="checkbox" class="h-4 w-4 accent-accent" {% if t.applies_to_desktop %}checked{% endif %} />
+                        Desktop
+                    </label>
+                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                        <input name="applies_to_server" type="checkbox" class="h-4 w-4 accent-accent" {% if t.applies_to_server %}checked{% endif %} />
+                        Server
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 pt-2">
+                <button type="submit" class="bg-accent text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition">Save</button>
+                <a href="{% url 'manage_configuration_types' %}" class="text-sm font-semibold text-gray-700 hover:underline">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

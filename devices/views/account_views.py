@@ -21,7 +21,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction
 from django.db.models import Q, F, Case, When, IntegerField, Count
 from django.db.models.functions import TruncMonth
-from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect, StreamingHttpResponse
 from django.template.loader import get_template
 from django.urls import reverse
 from django.utils import timezone
@@ -29,9 +29,10 @@ from datetime import timedelta, datetime
 from io import TextIOWrapper
 
 # Models
-from devices.models import CustomUser, DeviceAgreement, DeviceUserHistory, Employee, Import, Centre, Notification, PendingUpdate, Department
+from devices.models import CustomUser, DeviceAgreement, DeviceRepair, DeviceUserHistory, Employee, Import, Centre, Notification, PendingUpdate, Department
 from devices.utils.devices_utils import generate_pdf_buffer
 from devices.utils.emails import send_custom_email, send_custom_email, send_device_assignment_email
+from devices.utils.signatures import normalize_signature_data_url
 from it_operations.models import BackupRegistry, WorkPlan, IncidentReport, MissionCriticalAsset, WorkPlanTask
 from devices.forms import ClearanceForm
 from ppm.models import PPMTask, PPMPeriod, PPMActivity
@@ -39,6 +40,8 @@ from ppm.models import PPMTask, PPMPeriod, PPMActivity
 # Third-party & Standard Library
 import csv
 import logging
+import json
+import time
 from io import BytesIO
 
 # Excel (openpyxl)
@@ -170,27 +173,24 @@ def password_reset_confirm(request, uidb64=None, token=None):
 
 @login_required
 def notifications_view(request):
-    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
-    # For admins, exclude notifications already responded to unless it's an unresponded approval request
-    if request.user.is_superuser and not request.user.is_trainer:
-        content_types = [ContentType.objects.get_for_model(Import), ContentType.objects.get_for_model(PendingUpdate)]
-        notifications = notifications.exclude(
-            responded_by__isnull=False
-        ).filter(
-            content_type__in=content_types,
-            is_read=False
-        ) | notifications.filter(
-            responded_by__isnull=True,
-            content_type__in=content_types,
-            is_read=False
-        )
-    return render(request, 'notifications.html', {'notifications': notifications})
+    qs = Notification.objects.filter(user=request.user).order_by('-created_at')
+    unread_count = qs.filter(is_read=False).count()
+
+    unread_only = str(request.GET.get('unread', '')).strip().lower() in {'1', 'true', 'yes', 'y', 'on'}
+    if unread_only:
+        qs = qs.filter(is_read=False)
+
+    return render(request, 'notifications.html', {'notifications': qs, 'unread_count': unread_count})
 
 
 @login_required
 def clear_all_notifications(request):
     if request.method == 'POST':
         Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        if wants_json:
+            return JsonResponse({'ok': True})
+
         messages.success(request, "All notifications cleared.")
         return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/dashboard/'))
     return HttpResponseRedirect('/dashboard/')
@@ -204,6 +204,8 @@ def profile(request):
         email = request.POST.get('email')
         first_name = request.POST.get('first_name')
         last_name = request.POST.get('last_name')
+        staff_signature_png = (request.POST.get('staff_signature_png') or '').strip()
+        clear_signature = (request.POST.get('clear_signature') == 'on')
         user = request.user
         errors = []
 
@@ -224,10 +226,24 @@ def profile(request):
             user.email = email
             user.first_name = first_name
             user.last_name = last_name
+            if clear_signature:
+                user.staff_signature_png = ''
+            elif staff_signature_png:
+                user.staff_signature_png = normalize_signature_data_url(staff_signature_png)
             user.save()
             messages.success(request, "Profile updated successfully.")
             return redirect('profile')
-    return render(request, 'accounts/profile.html', {'user': request.user, 'centres': Centre.objects.all()})
+
+    staff_signature_preview = (getattr(request.user, "staff_signature_png", "") or "").strip()
+    if staff_signature_preview and not staff_signature_preview.startswith("data:"):
+        # Backwards compatibility if only raw base64 was stored.
+        staff_signature_preview = f"data:image/png;base64,{staff_signature_preview}"
+
+    return render(request, 'accounts/profile.html', {
+        'user': request.user,
+        'centres': Centre.objects.all(),
+        'staff_signature_preview': staff_signature_preview,
+    })
 
 
 
@@ -278,12 +294,106 @@ device_name_CATEGORIES = {
 @login_required
 def mark_notification_read(request, pk):
     notification = get_object_or_404(Notification, pk=pk, user=request.user)
-    if request.method == 'POST':
-        notification.is_read = True
-        notification.save()
-        messages.success(request, "Notification marked as read.")
-        return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/dashboard/'))
-    return HttpResponseRedirect('/dashboard/')
+    if request.method != 'POST':
+        return HttpResponseRedirect('/dashboard/')
+
+    notification.is_read = True
+    notification.save(update_fields=['is_read'])
+
+    wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    if wants_json:
+        return JsonResponse({'ok': True})
+
+    messages.success(request, "Notification marked as read.")
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/dashboard/'))
+
+
+@login_required
+@require_POST
+def delete_notification(request, pk):
+    Notification.objects.filter(pk=pk, user=request.user).delete()
+
+    wants_json = 'application/json' in (request.headers.get('Accept') or '') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    if wants_json:
+        return JsonResponse({'ok': True})
+
+    messages.success(request, "Notification removed.")
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/dashboard/'))
+
+
+@login_required
+@require_safe
+def notifications_api(request):
+    try:
+        limit = int(request.GET.get('limit', 8))
+    except ValueError:
+        limit = 8
+    limit = max(1, min(limit, 25))
+
+    qs = Notification.objects.filter(user=request.user).order_by('-created_at')
+    unread_count = qs.filter(is_read=False).count()
+    notifications_url = reverse('notifications_view')
+
+    items = []
+    for n in qs[:limit]:
+        items.append({
+            'id': n.pk,
+            'message': n.message,
+            'created_at': n.created_at.isoformat(),
+            'created_at_display': n.created_at.strftime('%b %d, %Y %H:%M'),
+            'is_read': n.is_read,
+            'url': notifications_url,
+        })
+
+    return JsonResponse({'unread_count': unread_count, 'items': items})
+
+
+@login_required
+@require_safe
+def notifications_stream(request):
+    user_id = request.user.id
+    try:
+        poll_seconds = float(request.GET.get('poll', 3))
+    except ValueError:
+        poll_seconds = 3
+    poll_seconds = max(1.0, min(poll_seconds, 10.0))
+
+    def event_stream():
+        last_state = None
+        notifications_url = reverse('notifications_view')
+        # Keep the connection alive; client will reconnect if needed
+        while True:
+            qs = Notification.objects.filter(user_id=user_id).order_by('-created_at')
+            unread_count = qs.filter(is_read=False).count()
+            latest_id = qs.values_list('id', flat=True).first() or 0
+            state = (unread_count, latest_id)
+
+            if state != last_state:
+                payload = {
+                    'unread_count': unread_count,
+                    'items': [
+                        {
+                            'id': n.pk,
+                            'message': n.message,
+                            'created_at': n.created_at.isoformat(),
+                            'created_at_display': n.created_at.strftime('%b %d, %Y %H:%M'),
+                            'is_read': n.is_read,
+                            'url': notifications_url,
+                        }
+                        for n in qs[:8]
+                    ],
+                }
+                yield f"event: notifications\ndata: {json.dumps(payload)}\n\n"
+                last_state = state
+            else:
+                yield "event: ping\ndata: {}\n\n"
+
+            time.sleep(poll_seconds)
+
+    resp = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    resp['Cache-Control'] = 'no-cache'
+    resp['X-Accel-Buffering'] = 'no'
+    return resp
 
 
 
@@ -299,6 +409,7 @@ def dashboard_view(request):
     if user.is_trainer and user.centre:
         device_query = Import.objects.filter(centre=user.centre)
         ppm_query = PPMTask.objects.filter(device__centre=user.centre)
+        repair_query = DeviceRepair.objects.filter(device__centre=user.centre)
         incident_query = IncidentReport.objects.filter(reported_by=user)
         workplan_query = WorkPlan.objects.filter(user=user)
         asset_query = MissionCriticalAsset.objects.all()
@@ -307,6 +418,7 @@ def dashboard_view(request):
     elif can_switch_dashboard_scope and dashboard_stats_scope == 'personal':
         device_query = Import.objects.filter(added_by=user)
         ppm_query = PPMTask.objects.filter(created_by=user)
+        repair_query = DeviceRepair.objects.filter(created_by=user)
         incident_query = IncidentReport.objects.filter(reported_by=user)
         workplan_query = WorkPlan.objects.filter(user=user)
         asset_query = MissionCriticalAsset.objects.none()
@@ -315,6 +427,7 @@ def dashboard_view(request):
     elif user.is_superuser and not user.is_trainer:
         device_query = Import.objects.all()
         ppm_query = PPMTask.objects.all()
+        repair_query = DeviceRepair.objects.all()
         incident_query = IncidentReport.objects.all()
         workplan_query = WorkPlan.objects.all()
         asset_query = MissionCriticalAsset.objects.all()
@@ -323,6 +436,7 @@ def dashboard_view(request):
     elif user.is_staff and not user.is_trainer:
         device_query = Import.objects.all()
         ppm_query = PPMTask.objects.all()
+        repair_query = DeviceRepair.objects.all()
         incident_query = IncidentReport.objects.all()
         workplan_query = WorkPlan.objects.all()
         asset_query = MissionCriticalAsset.objects.all()
@@ -331,6 +445,7 @@ def dashboard_view(request):
     else:
         device_query = Import.objects.none()
         ppm_query = PPMTask.objects.none()
+        repair_query = DeviceRepair.objects.none()
         incident_query = IncidentReport.objects.none()
         workplan_query = WorkPlan.objects.none()
         asset_query = MissionCriticalAsset.objects.none()
@@ -377,12 +492,17 @@ def dashboard_view(request):
     devices_by_category = sorted(devices_by_category, key=lambda x: x['count'], reverse=True)
 
     # Dashboard spotlight category counts (scope-aware because device_query is already scoped)
-    laptop_count = active_device_query.filter(category='laptop').count()
-    desktop_count = active_device_query.filter(category='system_unit').count()
-    gadget_count = active_device_query.filter(category='gadget').count()
-    starlink_count = active_device_query.filter(
-        Q(device_name__icontains='starlink') | Q(system_model__icontains='starlink')
+    laptop_count = active_device_query.filter(category='laptop').count() 
+    desktop_count = active_device_query.filter(category='system_unit').count() 
+    gadget_count = active_device_query.filter(category='gadget').count() 
+    ipad_count = active_device_query.filter(
+        Q(device_name__icontains='ipad') | Q(system_model__icontains='ipad')
     ).count()
+    # Count only Starlink routers (exclude kits/dishes/etc.) 
+    starlink_count = active_device_query.filter( 
+        (Q(device_name__icontains='starlink') | Q(system_model__icontains='starlink')) & 
+        (Q(device_name__icontains='router') | Q(system_model__icontains='router')) 
+    ).count() 
 
     all_category_counts = []
     raw_category_map = {item['category']: item['count'] for item in category_counts if item['category']}
@@ -395,7 +515,9 @@ def dashboard_view(request):
     if unknown_count:
         all_category_counts.append({'key': 'unknown', 'label': 'Unknown', 'count': unknown_count})
 
-    device_status_breakdown = device_query.filter(is_disposed=False).values('status').annotate(count=Count('id')).order_by('-count')
+    # Keep dashboard chart clicks consistent with the default "Filtered Devices" view
+    # (approved + not disposed, unless the user explicitly clears filters).
+    device_status_breakdown = active_device_query.values('status').annotate(count=Count('id')).order_by('-count')
     device_condition_breakdown = device_query.filter(is_approved=True, is_disposed=False).values('device_condition').annotate(count=Count('id')).order_by('-count')
 
     all_centres = Centre.objects.all()
@@ -410,6 +532,13 @@ def dashboard_view(request):
     thirty_days_ago = timezone.now().date() - timedelta(days=30)
     recent_devices_count = device_query.filter(date__gte=thirty_days_ago).count()
     recent_devices = device_query.order_by('-date')[:10]
+
+    total_repairs = repair_query.count()
+    open_repairs_count = repair_query.filter(status=DeviceRepair.STATUS_IN_PROGRESS).count()
+    repairs_last_30_days = repair_query.filter(date_of_repair__gte=thirty_days_ago).count()
+    repair_status_breakdown = list(
+        repair_query.values('status').annotate(count=Count('id')).order_by('status')
+    )
 
     # PPM Logic remains unchanged...
     total_ppm_tasks = 0
@@ -557,15 +686,15 @@ def dashboard_view(request):
 
     def _monthly_counts(qs, date_field):
         raw = (
-            qs.annotate(month=TruncMonth(date_field))
-              .values('month')
+            qs.annotate(month_bucket=TruncMonth(date_field))
+              .values('month_bucket')
               .annotate(count=Count('id'))
-              .order_by('month')
+              .order_by('month_bucket')
         )
         count_map = {}
         for item in raw:
-            if item['month']:
-                month_value = item['month']
+            if item['month_bucket']:
+                month_value = item['month_bucket']
                 month_key = month_value.date() if hasattr(month_value, 'date') else month_value
                 count_map[month_key] = item['count']
         return [count_map.get(anchor, 0) for anchor in month_anchors]
@@ -595,6 +724,10 @@ def dashboard_view(request):
         {'month': label, 'count': count}
         for label, count in zip(month_labels, _monthly_counts(incident_query, 'date_of_report'))
     ]
+    repairs_monthly = [
+        {'month': label, 'count': count}
+        for label, count in zip(month_labels, _monthly_counts(repair_query, 'date_of_repair'))
+    ]
 
     workplan_submission_pending = max(total_trainers_count - submitted_work_plans, 0)
 
@@ -606,19 +739,25 @@ def dashboard_view(request):
         'approved_devices': approved_devices,
         'pending_approvals': pending_approvals,
         'disposed_devices': disposed_devices,
+        'total_repairs': total_repairs,
+        'open_repairs_count': open_repairs_count,
+        'repairs_last_30_days': repairs_last_30_days,
+        'repair_status_breakdown': repair_status_breakdown,
         'recent_devices_count': recent_devices_count,
         'recent_devices': recent_devices,
         'device_status_breakdown': device_status_breakdown,
         'devices_by_centre': devices_by_centre,
         'devices_by_category': devices_by_category,  # ← Updated key
-        'device_condition_breakdown': device_condition_breakdown,
-        'laptop_count': laptop_count,
-        'desktop_count': desktop_count,
-        'starlink_count': starlink_count,
-        'gadget_count': gadget_count,
-        'all_category_counts': all_category_counts,
-        'devices_monthly': devices_monthly,
-        'ppm_completed_monthly': ppm_completed_monthly,
+        'device_condition_breakdown': device_condition_breakdown, 
+        'laptop_count': laptop_count, 
+        'desktop_count': desktop_count, 
+        'starlink_count': starlink_count, 
+        'gadget_count': gadget_count, 
+        'ipad_count': ipad_count,
+        'all_category_counts': all_category_counts, 
+        'devices_monthly': devices_monthly, 
+        'ppm_completed_monthly': ppm_completed_monthly, 
+        'repairs_monthly': repairs_monthly,
 
         'total_ppm_tasks': total_ppm_tasks,
         'devices_with_ppm': devices_with_ppm,
@@ -668,9 +807,11 @@ def dashboard_view(request):
 
 
 @login_required
-def filtered_list_view(request, list_type):
-    user = request.user
-    params = request.GET
+def filtered_list_view(request, list_type): 
+    user = request.user 
+    params = request.GET 
+    def _is_truthy(value):
+        return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
 
     user_scope = "none"
     if user.is_superuser:
@@ -691,7 +832,7 @@ def filtered_list_view(request, list_type):
     all_centres = Centre.objects.all().order_by('name')
     all_departments = Department.objects.all().order_by('name')
 
-    if list_type == 'devices':
+    if list_type == 'devices': 
         context['page_title'] = 'Filtered Devices'
         context['all_centres'] = all_centres
         context['all_departments'] = all_departments
@@ -709,12 +850,19 @@ def filtered_list_view(request, list_type):
         else:
             qs = Import.objects.none()
 
-        filters = Q(is_approved=True)
+        clear = _is_truthy(params.get('clear'))
+        filters = Q()
 
-        # Disposed filter
-        if params.get('is_disposed'):
-            filters &= Q(is_disposed=True)
-        else:
+        # Approval filter (default: approved only unless "clear=1")
+        if params.get('is_approved') is not None:
+            filters &= Q(is_approved=_is_truthy(params.get('is_approved')))
+        elif not clear:
+            filters &= Q(is_approved=True)
+
+        # Disposed filter (default: not disposed unless "clear=1")
+        if params.get('is_disposed') is not None:
+            filters &= Q(is_disposed=_is_truthy(params.get('is_disposed')))
+        elif not clear:
             filters &= Q(is_disposed=False)
 
         # Centre filter
@@ -725,17 +873,35 @@ def filtered_list_view(request, list_type):
         if params.get('department_id'):
             filters &= Q(department_id=params.get('department_id'))
         
-        # Status filter
+        # Status filter 
         if params.get('status'):
-            filters &= Q(status=params.get('status'))
-        
-        # Condition filter
+            if params.get('status') == 'Unknown':
+                filters &= (Q(status__isnull=True) | Q(status=''))
+            else:
+                filters &= Q(status=params.get('status'))
+         
+        # Condition filter 
         if params.get('device_condition'):
-            filters &= Q(device_condition=params.get('device_condition'))
+            if params.get('device_condition') == 'Unknown':
+                filters &= (Q(device_condition__isnull=True) | Q(device_condition=''))
+            else:
+                filters &= Q(device_condition=params.get('device_condition'))
 
-        # NEW: Category filter (replaces old device_name string matching)
+        # Category filter (supports "unknown" from dashboard tiles)
         if params.get('category'):
-            filters &= Q(category=params.get('category'))
+            if params.get('category') == 'unknown':
+                filters &= (Q(category__isnull=True) | Q(category=''))
+            else:
+                filters &= Q(category=params.get('category'))
+
+        # Dashboard shortcut: Starlink routers only
+        if _is_truthy(params.get('starlink_router')):
+            filters &= (
+                (Q(device_name__icontains='starlink') | Q(system_model__icontains='starlink')) &
+                (Q(device_name__icontains='router') | Q(system_model__icontains='router'))
+            )
+        if _is_truthy(params.get('ipad')):
+            filters &= (Q(device_name__icontains='ipad') | Q(system_model__icontains='ipad'))
 
         filtered_qs = qs.filter(filters).select_related('centre', 'department', 'assignee', 'assignee__centre', 'assignee__department').order_by('-pk')
 

@@ -2,6 +2,10 @@
 {% load static %}
 
 {% block content %}
+<script type="text/javascript">
+    function openModal(modalId) { document.getElementById(modalId).classList.remove('hidden'); }
+    function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
+</script>
 <div class="container mx-auto px-4 py-8">
     <div class="bg-white shadow-xl rounded-xl overflow-hidden border border-gray-300">
         <!-- Header -->
@@ -10,11 +14,75 @@
                 <div>
                     <h1 class="text-3xl font-bold">Device Details</h1>
                     <p class="mt-2 text-lg opacity-90">Serial: <strong>{{ device.serial_number|default:"N/A" }}</strong></p>
+                    {% if not device.is_active %}
+                        <div class="mt-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-200 text-amber-900">
+                            Under Repair (Inactive)
+                        </div>
+                    {% endif %}
+                    <!-- Tabs -->
+                    <div class="mt-4 inline-flex rounded-lg bg-white/20 p-1">
+                        <a href="{% url 'device_detail' device.pk %}"
+                           class="px-4 py-2 rounded-md text-sm font-semibold bg-white text-[#143C50]">
+                            Details
+                        </a>
+                        <a href="{% url 'device_history' device.pk %}"
+                           class="px-4 py-2 rounded-md text-sm font-semibold text-white hover:bg-white/10 transition">
+                            History
+                        </a>
+                    </div>
                 </div>
-                <a href="{% url 'display_approved_imports' %}" 
-                   class="bg-white text-[#143C50] px-6 py-2 rounded-lg hover:bg-gray-100 transition font-medium">
-                    Back to List
-                </a>
+
+                <!-- ✅ ADDED: Device Configuration links (ONLY CHANGE) -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <a href="{% url 'device_repairs' device.pk %}"
+                       class="bg-white text-[#143C50] px-4 py-2 rounded-lg hover:bg-gray-100 transition font-medium">
+                        Repairs
+                    </a>
+
+                    <button type="button" onclick="openModal('repairModal')"
+                            class="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition font-medium">
+                        Start Repair
+                    </button>
+
+                    {% if device.is_active %}
+                        {% if supports_configuration %}
+                            {% if configuration_types_exist %}
+                                <a href="{% url 'start_device_configuration' device.pk %}"
+                                   class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-medium">
+                                    Start Configuration
+                                </a>
+
+                                <a href="{% url 'device_configuration' device.pk %}"
+                                   class="bg-white text-[#143C50] px-4 py-2 rounded-lg hover:bg-gray-100 transition font-medium">
+                                    Device Configuration
+                                </a>
+                            {% else %}
+                                <span class="bg-white/20 text-white px-4 py-2 rounded-lg font-medium">
+                                    Checklist not set up
+                                </span>
+                                {% if user.is_superuser %}
+                                    <a href="{% url 'manage_configuration_types' %}"
+                                       class="bg-white text-[#143C50] px-4 py-2 rounded-lg hover:bg-gray-100 transition font-medium">
+                                        Manage Checklist
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+                        {% else %}
+                            <span class="bg-white/20 text-white px-4 py-2 rounded-lg font-medium">
+                                Configuration not available
+                            </span>
+                        {% endif %}
+                    {% else %}
+                        <span class="bg-white/20 text-white px-4 py-2 rounded-lg font-medium">
+                            Device inactive (under repair)
+                        </span>
+                    {% endif %}
+
+                    <a href="{% url 'display_approved_imports' %}"
+                       class="bg-white text-[#143C50] px-6 py-2 rounded-lg hover:bg-gray-100 transition font-medium">
+                        Back to List
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -78,7 +146,7 @@
                         <dt class="font-medium text-gray-700">Assignee</dt>
                         <dd>
                             {% if device.assignee %}
-                                {{ device.assignee.full_name }} 
+                                {{ device.assignee.full_name }}
                                 <span class="text-gray-500">({{ device.assignee.staff_number|default:"No ID" }})</span>
                             {% else %}
                                 <span class="text-gray-600">Unassigned</span>
@@ -105,6 +173,12 @@
 
                 <!-- UAF Actions -->
                 <div class="mt-6 space-y-3">
+                    {% if not device.is_active %}
+                        <div class="bg-amber-50 border-2 border-amber-200 rounded-lg p-4">
+                            <div class="text-sm font-semibold text-amber-900">Device Under Repair</div>
+                            <div class="text-xs text-amber-800 mt-1">Actions are disabled while this device is inactive.</div>
+                        </div>
+                    {% else %}
                     {% if device.assignee %}
                         <!-- Device has an assignee -->
                         {% if not device.uaf_signed %}
@@ -116,6 +190,13 @@
                                 </svg>
                                 Sign Issuance UAF
                             </a>
+
+                            {% if can_edit %}
+                            <button type="button" onclick="openModal('uploadUAFModal')"
+                                    class="block w-full bg-slate-700 hover:bg-slate-800 text-white text-center py-3 rounded-lg transition font-medium shadow-md">
+                                Upload Existing UAF (PDF)
+                            </button>
+                            {% endif %}
                         {% else %}
                             <!-- Download UAF and Clear Device Options -->
                             <a href="{% url 'download_uaf_pdf' device.pk %}"
@@ -125,6 +206,20 @@
                                 </svg>
                                 Download Current UAF
                             </a>
+
+                            {% if current_agreement and current_agreement.uploaded_uaf_pdf %}
+                            <a href="{% url 'download_uploaded_uaf_pdf' device.pk %}"
+                               class="block bg-slate-600 hover:bg-slate-700 text-white text-center py-3 rounded-lg transition font-medium shadow-md">
+                                Download Uploaded UAF
+                            </a>
+                            {% else %}
+                                {% if can_edit %}
+                                <button type="button" onclick="openModal('uploadUAFModal')"
+                                        class="block w-full bg-slate-700 hover:bg-slate-800 text-white text-center py-3 rounded-lg transition font-medium shadow-md">
+                                    Upload Existing UAF (PDF)
+                                </button>
+                                {% endif %}
+                            {% endif %}
 
                             <!-- Sign Clearance Form -->
                             <a href="{% url 'sign_clearance' device.pk %}"
@@ -183,6 +278,7 @@
                             </a>
                         {% endif %}
                     {% endif %}
+                    {% endif %}
                 </div>
             </div>
 
@@ -236,6 +332,105 @@
                 View Full Change History & Past UAF Agreements
             </a>
         </div>
+    </div>
+</div>
+
+<!-- Start Repair Modal -->
+<div id="repairModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 text-left overflow-y-auto p-4">
+    <div class="bg-white p-4 sm:p-6 rounded-lg shadow-lg w-full max-w-2xl mx-auto my-8 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-start justify-between gap-3 mb-4">
+            <h3 class="text-lg font-bold text-gray-800">Start Repair</h3>
+            <button type="button" onclick="closeModal('repairModal')" class="text-2xl leading-none text-gray-600 hover:text-gray-900">&times;</button>
+        </div>
+
+        <form method="post" action="{% url 'device_repair_create' device.pk %}" class="space-y-4">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Date of Repair *</label>
+                    <input type="date" name="date_of_repair" required class="w-full border border-gray-300 rounded-lg p-2.5" />
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Reported By</label>
+                    <input name="reported_by" class="w-full border border-gray-300 rounded-lg p-2.5" placeholder="Name" />
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Technician Responsible</label>
+                    <input name="technician_responsible" class="w-full border border-gray-300 rounded-lg p-2.5" placeholder="Name" />
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Cost (KES)</label>
+                    <input name="cost_kes" class="w-full border border-gray-300 rounded-lg p-2.5" placeholder="0.00" />
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Status</label>
+                    <select name="status" class="w-full border border-gray-300 rounded-lg p-2.5">
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="written_off">Written off</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Issue Description *</label>
+                <textarea name="issue_description" rows="3" required class="w-full border border-gray-300 rounded-lg p-2.5"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Repair Action Taken</label>
+                <textarea name="repair_action_taken" rows="3" class="w-full border border-gray-300 rounded-lg p-2.5"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Notes</label>
+                <textarea name="notes" rows="2" class="w-full border border-gray-300 rounded-lg p-2.5"></textarea>
+            </div>
+            <div>
+                <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" name="external_repair" class="h-4 w-4 accent-[#288CC8]" />
+                    External repair
+                </label>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" onclick="closeModal('repairModal')" class="bg-gray-200 text-gray-800 px-5 py-2.5 rounded-lg hover:bg-gray-300 transition font-medium">
+                    Cancel
+                </button>
+                <button type="submit" class="bg-[#288CC8] text-white px-6 py-2.5 rounded-lg hover:bg-[#143C50] transition font-semibold">
+                    Save Repair
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Upload Existing UAF Modal -->
+<div id="uploadUAFModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 text-left overflow-y-auto p-4">
+    <div class="bg-white p-4 sm:p-6 rounded-lg shadow-lg w-full max-w-xl mx-auto my-8 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-start justify-between gap-3 mb-4">
+            <h3 class="text-lg font-bold text-gray-800">Upload Existing UAF (PDF)</h3>
+            <button type="button" onclick="closeModal('uploadUAFModal')" class="text-2xl leading-none text-gray-600 hover:text-gray-900">&times;</button>
+        </div>
+
+        <div class="text-sm text-gray-600 mb-4">
+            Upload a signed UAF that was completed outside the system. Max size: <strong>1MB</strong>. The system will compress it further.
+        </div>
+
+        <form method="post" action="{% url 'upload_existing_uaf_pdf' device.pk %}" enctype="multipart/form-data" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">UAF PDF *</label>
+                <input type="file" name="uaf_pdf" accept="application/pdf" required class="w-full border border-gray-300 rounded-lg p-2.5" />
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" onclick="closeModal('uploadUAFModal')" class="bg-gray-200 text-gray-800 px-5 py-2.5 rounded-lg hover:bg-gray-300 transition font-medium">
+                    Cancel
+                </button>
+                <button type="submit" class="bg-[#288CC8] text-white px-6 py-2.5 rounded-lg hover:bg-[#143C50] transition font-semibold">
+                    Upload
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}

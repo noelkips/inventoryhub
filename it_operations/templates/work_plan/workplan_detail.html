@@ -141,7 +141,7 @@
                         <div class="space-y-4 normal-fields transition-opacity duration-200">
 
                             <!-- Date -->
-                            <div>
+                            <div id="single_date_container">
                                 <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Date</label>
                                 <select name="date" required id="date_select" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:ring-2 focus:ring-accent focus:border-accent outline-none transition">
                                     {% for day in week_days %}
@@ -156,6 +156,38 @@
                                         {% endwith %}
                                     {% endfor %}
                                 </select>
+                            </div>
+
+                            <!-- Recurring / Continuous Toggle -->
+                            <label class="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl cursor-pointer hover:bg-blue-100 transition">
+                                <input type="checkbox" name="is_recurring" id="is_recurring_checkbox" onchange="toggleRecurringMode()" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer">
+                                <div>
+                                    <span class="text-sm font-bold text-blue-800 block">Recurring / Continuous task</span>
+                                    <span class="text-xs text-blue-600">Select multiple dates; we will replicate the task across those days.</span>
+                                </div>
+                            </label>
+
+                            <!-- Recurring Dates -->
+                            <div id="recurring_dates_container" class="hidden">
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Select Dates</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    {% for day in week_days %}
+                                        {% with day_str=day|date:"Y-m-d" %}
+                                            {% if day_str in leave_dates %}
+                                                <label class="flex items-center gap-2 px-3 py-2 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-800 opacity-60 cursor-not-allowed">
+                                                    <input type="checkbox" class="recurring-date-checkbox" name="dates" value="{{ day_str }}" disabled data-disabled-by-leave="1">
+                                                    <span class="text-xs font-semibold">{{ day|date:"D, M d" }} — On Leave</span>
+                                                </label>
+                                            {% else %}
+                                                <label class="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 hover:bg-white transition">
+                                                    <input type="checkbox" class="recurring-date-checkbox" name="dates" value="{{ day_str }}" disabled>
+                                                    <span class="text-xs font-semibold">{{ day|date:"D, M d" }}</span>
+                                                </label>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% endfor %}
+                                </div>
+                                <p class="text-[10px] text-gray-400 mt-1">Dates marked as "On Leave" cannot be selected for normal tasks.</p>
                             </div>
 
                             <!-- Task Name -->
@@ -190,12 +222,17 @@
                             <!-- Collaborators -->
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Collaborators</label>
-                                <select name="collaborators" multiple class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm h-24 custom-scrollbar focus:ring-2 focus:ring-accent outline-none">
+                                <input type="text" id="add_collab_search" placeholder="Search collaborators..."
+                                    class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:ring-2 focus:ring-accent focus:border-accent outline-none transition">
+                                <div id="add_collab_list" class="mt-2 max-h-28 overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-2 space-y-1 custom-scrollbar">
                                     {% for user in potential_collaborators %}
-                                    <option value="{{ user.id }}">{{ user.get_full_name }}</option>
+                                    <label data-collab-name="{{ user.get_full_name|lower }}" class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white transition cursor-pointer">
+                                        <input type="checkbox" name="collaborators" value="{{ user.id }}" class="w-4 h-4 text-accent rounded border-gray-300 focus:ring-accent">
+                                        <span class="text-xs text-gray-700 font-semibold">{{ user.get_full_name }}</span>
+                                    </label>
                                     {% endfor %}
-                                </select>
-                                <p class="text-[10px] text-gray-400 mt-1">Hold Ctrl / Cmd to select multiple.</p>
+                                </div>
+                                <p id="add_collab_empty" class="hidden text-[10px] text-gray-400 mt-1">No matching collaborators.</p>
                             </div>
 
                             <!-- Resources & Outcome -->
@@ -482,8 +519,13 @@ function toggleLeaveMode() {
     const isChecked = document.getElementById('is_leave_checkbox').checked;
     const container = document.querySelector('.normal-fields');
     const inputs = container.querySelectorAll('input, select, textarea');
+    const recurringToggle = document.getElementById('is_recurring_checkbox');
 
     if (isChecked) {
+        if (recurringToggle) {
+            recurringToggle.checked = false;
+            toggleRecurringMode();
+        }
         container.classList.add('opacity-50', 'pointer-events-none');
         inputs.forEach(i => {
             if (i.id !== 'date_select') i.disabled = true;
@@ -494,6 +536,41 @@ function toggleLeaveMode() {
         inputs.forEach(i => {
             i.disabled = false;
             if (i.name === 'task_name') i.setAttribute('required', '');
+        });
+        toggleRecurringMode();
+    }
+}
+
+function toggleRecurringMode() {
+    const recurringToggle = document.getElementById('is_recurring_checkbox');
+    const recurring = !!(recurringToggle && recurringToggle.checked);
+
+    const singleContainer = document.getElementById('single_date_container');
+    const recurringContainer = document.getElementById('recurring_dates_container');
+    const dateSelect = document.getElementById('date_select');
+    const dateCheckboxes = document.querySelectorAll('.recurring-date-checkbox');
+
+    if (recurring) {
+        singleContainer?.classList.add('hidden');
+        recurringContainer?.classList.remove('hidden');
+        if (dateSelect) {
+            dateSelect.required = false;
+            dateSelect.disabled = true;
+        }
+        dateCheckboxes.forEach(cb => {
+            const disabledByLeave = cb.dataset.disabledByLeave === '1';
+            cb.disabled = disabledByLeave ? true : false;
+        });
+    } else {
+        singleContainer?.classList.remove('hidden');
+        recurringContainer?.classList.add('hidden');
+        if (dateSelect) {
+            dateSelect.disabled = false;
+            dateSelect.required = true;
+        }
+        dateCheckboxes.forEach(cb => {
+            cb.checked = false;
+            cb.disabled = true;
         });
     }
 }
@@ -539,12 +616,14 @@ function openEditModal(id) {
             document.getElementById('edit_centre').value = data.centre || '';
             document.getElementById('edit_department').value = data.department || '';
 
-            const collabSelect = document.getElementById('edit_collaborators');
-            if (collabSelect) {
-                Array.from(collabSelect.options).forEach(option => {
-                    option.selected = data.collaborators.includes(parseInt(option.value));
-                });
-            }
+            const collabBoxes = document.querySelectorAll('#edit_collab_list input[name=\"collaborators\"]');
+            collabBoxes.forEach(cb => {
+                cb.checked = data.collaborators.includes(parseInt(cb.value));
+            });
+
+            const editSearch = document.getElementById('edit_collab_search');
+            if (editSearch) editSearch.value = '';
+            applyCollaboratorFilter('edit_collab_search', 'edit_collab_list', 'edit_collab_empty');
 
             toggleEditLeave();
             loader.classList.add('hidden');
@@ -567,8 +646,43 @@ function toggleEditLeave() {
     }
 }
 
+function applyCollaboratorFilter(searchInputId, listContainerId, emptyStateId) {
+    const input = document.getElementById(searchInputId);
+    const container = document.getElementById(listContainerId);
+    const emptyEl = document.getElementById(emptyStateId);
+    if (!input || !container) return;
+
+    const query = (input.value || '').trim().toLowerCase();
+    const labels = Array.from(container.querySelectorAll('[data-collab-name]'));
+    let visibleCount = 0;
+
+    labels.forEach(label => {
+        const name = (label.dataset.collabName || '').toLowerCase();
+        const checkbox = label.querySelector('input[type=\"checkbox\"]');
+        const checked = !!(checkbox && checkbox.checked);
+        const matches = !query || name.includes(query);
+        const show = matches || checked;
+        label.classList.toggle('hidden', !show);
+        if (show) visibleCount += 1;
+    });
+
+    if (emptyEl) {
+        emptyEl.classList.toggle('hidden', visibleCount !== 0);
+    }
+}
+
+function setupCollaboratorFilter(searchInputId, listContainerId, emptyStateId) {
+    const input = document.getElementById(searchInputId);
+    if (!input) return;
+    input.addEventListener('input', () => applyCollaboratorFilter(searchInputId, listContainerId, emptyStateId));
+    applyCollaboratorFilter(searchInputId, listContainerId, emptyStateId);
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     toggleLeaveMode();
+    toggleRecurringMode();
+    setupCollaboratorFilter('add_collab_search', 'add_collab_list', 'add_collab_empty');
+    setupCollaboratorFilter('edit_collab_search', 'edit_collab_list', 'edit_collab_empty');
 });
 </script>
 {% endblock %}
