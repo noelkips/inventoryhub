@@ -19,14 +19,14 @@ class Command(BaseCommand):
         # ---------------------------------------------------------
         # CONFIG
         # ---------------------------------------------------------
-        task_dates = [date(2026, 2, 16), date(2026, 2, 17), date(2026, 2, 18), date(2026, 2, 19), date(2026, 2, 20)]  # 19th and 20th February 2026
+        task_dates = [date(2026, 2, 15))]  # 19th and 20th February 2026
         tasks_per_day = 1 # Total 10 tasks across the two days
 
         # ---------------------------------------------------------
         # TARGET USER
         # ---------------------------------------------------------
         try:
-            john_mwangi = User.objects.get(email="samuel.kamande@mohiafrica.org")
+            john_mwangi = User.objects.get(email="noel.langat@mohiafrica.org")
         except User.DoesNotExist:
             self.stdout.write(self.style.ERROR(
                 "User Mwangi@mohiafrica.org not found."
