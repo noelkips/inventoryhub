@@ -5,6 +5,23 @@
 <script type="text/javascript">
     function openModal(modalId) { document.getElementById(modalId).classList.remove('hidden'); }
     function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
+    function toggleRepairEdit(repairId) {
+        const row = document.getElementById(`edit-row-${repairId}`);
+        if (row) {
+            row.classList.toggle('hidden');
+        }
+    }
+    function toggleIssueDetails(repairId) {
+        const preview = document.getElementById(`issue-preview-${repairId}`);
+        const full = document.getElementById(`issue-full-${repairId}`);
+        const trigger = document.getElementById(`issue-toggle-${repairId}`);
+        if (preview && full && trigger) {
+            const isHidden = full.classList.contains('hidden');
+            preview.classList.toggle('hidden', isHidden);
+            full.classList.toggle('hidden', !isHidden);
+            trigger.textContent = isHidden ? 'Show Less' : 'Show Full';
+        }
+    }
 </script>
 
 <div class="container mx-auto px-4 py-8">
@@ -32,8 +49,8 @@
         <div class="p-6">
             {% if not device.is_active %}
             <div class="mb-6 p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900">
-                <div class="font-semibold">Device is inactive (Under Repair)</div>
-                <div class="text-sm mt-1">Actions like editing/assigning/PPM/configuration are blocked until open repairs are completed.</div>
+                <div class="font-semibold">Device is inactive (under repair)</div>
+                <div class="text-sm mt-1">Actions like editing, assigning, PPM, and configuration stay blocked until all open repairs are completed.</div>
             </div>
             {% endif %}
 
@@ -47,16 +64,26 @@
             </div>
             {% endif %}
 
+            <div class="mb-5 flex flex-wrap gap-3">
+                <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                    <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">Open Repairs</div>
+                    <div class="mt-1 text-2xl font-bold text-gray-900">{{ open_repairs|length }}</div>
+                </div>
+                <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                    <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">Current Device Owner</div>
+                    <div class="mt-1 text-sm font-semibold text-gray-900">{{ device.assignee.full_name|default:"Unassigned" }}</div>
+                </div>
+            </div>
+
             <div class="overflow-x-auto">
                 <table class="min-w-full bg-white border border-gray-200 rounded-lg overflow-hidden">
                     <thead class="bg-gray-50">
                         <tr>
                             <th class="py-3 px-4 border text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Period</th>
                             <th class="py-3 px-4 border text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                            <th class="py-3 px-4 border text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Logged By</th>
+                            <th class="py-3 px-4 border text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Logged By / Assigned</th>
                             <th class="py-3 px-4 border text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Issue</th>
-                            <th class="py-3 px-4 border text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Technician</th>
-                            <th class="py-3 px-4 border text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cost (KES)</th>
+                            <th class="py-3 px-4 border text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Technician / Cost (KES)</th>
                             <th class="py-3 px-4 border text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">External</th>
                             <th class="py-3 px-4 border text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                         </tr>
@@ -64,53 +91,158 @@
                     <tbody class="divide-y divide-gray-100">
                         {% for r in repairs %}
                         <tr class="{% if r.status == 'in_progress' %}bg-amber-50{% else %}bg-white{% endif %} hover:bg-gray-50 transition">
-                            <td class="py-3 px-4 border text-sm">
-                                <div class="font-semibold text-gray-900">{{ r.month|default:"—" }}</div>
-                                <div class="text-xs text-gray-500 mt-0.5">{{ r.date_of_repair|date:"d M Y"|default:"—" }}</div>
+                            <td class="py-3 px-4 border text-sm align-top">
+                                <div class="font-semibold text-gray-900">{{ r.month|default:"-" }}</div>
+                                <div class="text-xs text-gray-500 mt-0.5">{{ r.date_of_repair|date:"d M Y"|default:"-" }}</div>
                             </td>
-                            <td class="py-3 px-4 border text-sm">
+                            <td class="py-3 px-4 border text-sm align-top">
                                 {% if r.status == 'in_progress' %}
                                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">In Progress</span>
                                 {% elif r.status == 'completed' %}
                                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">Completed</span>
                                 {% else %}
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-700">Written off</span>
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-700">Written Off</span>
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4 border text-sm">
-                                {{ r.created_by.get_full_name|default:r.created_by.username|default:"—" }}
-                            </td>
-                            <td class="py-3 px-4 border text-sm">
-                                <div class="text-gray-900">{{ r.issue_description|truncatechars:120 }}</div>
-                                {% if r.notes %}
-                                    <div class="text-xs text-gray-500 mt-1">{{ r.notes|truncatechars:120 }}</div>
+                            <td class="py-3 px-4 border text-sm align-top">
+                                {{ r.created_by.get_full_name|default:r.created_by.username|default:"-" }}
+                                <div class="mt-1 text-xs text-gray-500">{{ r.created_at|date:"d M Y H:i" }}</div>
+                                <div class="font-medium text-gray-900">{{ r.assigned_to.get_full_name|default:r.assigned_to.username|default:"-" }}</div>
+                                {% if r.updated_at and r.status == 'in_progress' %}
+                                <div class="mt-1 text-xs text-gray-500">Updated {{ r.updated_at|date:"d M Y H:i" }}</div>
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4 border text-sm">{{ r.technician_responsible|default:"—" }}</td>
-                            <td class="py-3 px-4 border text-sm">{{ r.cost_kes|default:"—" }}</td>
-                            <td class="py-3 px-4 border text-sm">
+                            <td class="py-3 px-4 border text-sm align-top">
+                                <div id="issue-preview-{{ r.pk }}">
+                                    <div class="text-gray-900">{{ r.issue_description|truncatechars:120 }}</div>
+                                    {% if r.repair_action_taken %}
+                                        <div class="mt-1 text-xs text-blue-700">Action: {{ r.repair_action_taken|truncatechars:120 }}</div>
+                                    {% endif %}
+                                    {% if r.notes %}
+                                        <div class="mt-1 text-xs text-gray-500">{{ r.notes|truncatechars:140 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div id="issue-full-{{ r.pk }}" class="hidden space-y-2">
+                                    <div class="text-gray-900 whitespace-pre-wrap break-words">{{ r.issue_description }}</div>
+                                    {% if r.repair_action_taken %}
+                                        <div class="text-xs text-blue-700 whitespace-pre-wrap break-words">Action: {{ r.repair_action_taken }}</div>
+                                    {% endif %}
+                                    {% if r.notes %}
+                                        <div class="text-xs text-gray-500 whitespace-pre-wrap break-words">{{ r.notes }}</div>
+                                    {% endif %}
+                                </div>
+                                {% if r.issue_description or r.repair_action_taken or r.notes %}
+                                <button type="button"
+                                        id="issue-toggle-{{ r.pk }}"
+                                        onclick="toggleIssueDetails('{{ r.pk }}')"
+                                        class="mt-2 text-xs font-semibold text-[#288CC8] hover:text-[#143C50]">
+                                    Show Full
+                                </button>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 border text-sm align-top">
+                                <div class="text-gray-900">{{ r.technician_responsible|default:"-" }}</div>
+                                <div class="mt-1 text-xs text-gray-500">KES {{ r.cost_kes|default:"-" }}</div>
+                            </td>
+                            <td class="py-3 px-4 border text-sm align-top">
                                 {% if r.external_repair %}
                                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">Yes</span>
                                 {% else %}
                                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700">No</span>
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4 border text-center text-sm">
+                            <td class="py-3 px-4 border text-center text-sm align-top">
                                 {% if r.status == 'in_progress' %}
+                                <div class="flex flex-col gap-2 items-center">
+                                    <button type="button"
+                                            onclick="toggleRepairEdit('{{ r.pk }}')"
+                                            class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-semibold">
+                                        Edit / Handover
+                                    </button>
                                     <form method="post" action="{% url 'device_repair_close' device.pk r.pk %}">
                                         {% csrf_token %}
                                         <button class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-semibold">
                                             Mark Completed
                                         </button>
                                     </form>
+                                </div>
                                 {% else %}
-                                    —
+                                    -
                                 {% endif %}
                             </td>
                         </tr>
+                        {% if r.status == 'in_progress' %}
+                        <tr id="edit-row-{{ r.pk }}" class="hidden bg-blue-50/50">
+                            <td colspan="7" class="border px-4 py-4">
+                                <form method="post" action="{% url 'device_repair_edit' device.pk r.pk %}" class="space-y-4">
+                                    {% csrf_token %}
+                                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-semibold text-gray-700 mb-1">Reported By</label>
+                                            <input name="reported_by" value="{{ r.reported_by|default:'' }}" class="w-full border border-gray-300 rounded-lg p-2.5" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-semibold text-gray-700 mb-1">Assigned To</label>
+                                            <select name="assigned_to" class="w-full border border-gray-300 rounded-lg p-2.5">
+                                                {% for user_option in repair_assignees %}
+                                                <option value="{{ user_option.pk }}" {% if r.assigned_to_id == user_option.pk %}selected{% endif %}>
+                                                    {{ user_option.get_full_name|default:user_option.username }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-semibold text-gray-700 mb-1">Technician Responsible</label>
+                                            <input name="technician_responsible" value="{{ r.technician_responsible|default:'' }}" class="w-full border border-gray-300 rounded-lg p-2.5" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-semibold text-gray-700 mb-1">Cost (KES)</label>
+                                            <input name="cost_kes" value="{{ r.cost_kes|default:'' }}" class="w-full border border-gray-300 rounded-lg p-2.5" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-semibold text-gray-700 mb-1">Status</label>
+                                            <select name="status" class="w-full border border-gray-300 rounded-lg p-2.5">
+                                                <option value="in_progress" {% if r.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                                <option value="completed" {% if r.status == 'completed' %}selected{% endif %}>Completed</option>
+                                                <option value="written_off" {% if r.status == 'written_off' %}selected{% endif %}>Written Off</option>
+                                            </select>
+                                        </div>
+                                        <div class="flex items-end">
+                                            <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                                <input type="checkbox" name="external_repair" class="h-4 w-4 accent-[#288CC8]" {% if r.external_repair %}checked{% endif %} />
+                                                External repair
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-1">Issue Description *</label>
+                                        <textarea name="issue_description" rows="3" required class="w-full border border-gray-300 rounded-lg p-2.5">{{ r.issue_description|default:'' }}</textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-1">Repair Action Taken</label>
+                                        <textarea name="repair_action_taken" rows="3" class="w-full border border-gray-300 rounded-lg p-2.5">{{ r.repair_action_taken|default:'' }}</textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-1">Notes</label>
+                                        <textarea name="notes" rows="3" class="w-full border border-gray-300 rounded-lg p-2.5">{{ r.notes|default:'' }}</textarea>
+                                    </div>
+
+                                    <div class="flex justify-end gap-3">
+                                        <button type="button" onclick="toggleRepairEdit('{{ r.pk }}')" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition font-medium">
+                                            Cancel
+                                        </button>
+                                        <button type="submit" class="bg-[#288CC8] text-white px-5 py-2 rounded-lg hover:bg-[#143C50] transition font-semibold">
+                                            Save Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endif %}
                         {% empty %}
                         <tr>
-                            <td colspan="8" class="py-10 text-center text-gray-500">No repairs logged for this device.</td>
+                            <td colspan="7" class="py-10 text-center text-gray-500">No repairs logged for this device.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -120,7 +252,6 @@
     </div>
 </div>
 
-<!-- Start Repair Modal -->
 <div id="repairModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 text-left overflow-y-auto p-4">
     <div class="bg-white p-4 sm:p-6 rounded-lg shadow-lg w-full max-w-2xl mx-auto my-8 max-h-[90vh] overflow-y-auto">
         <div class="flex items-start justify-between gap-3 mb-4">
@@ -140,6 +271,16 @@
                     <input name="reported_by" class="w-full border border-gray-300 rounded-lg p-2.5" placeholder="Name" />
                 </div>
                 <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Assigned To</label>
+                    <select name="assigned_to" class="w-full border border-gray-300 rounded-lg p-2.5">
+                        {% for user_option in repair_assignees %}
+                        <option value="{{ user_option.pk }}" {% if user_option.pk == request.user.pk %}selected{% endif %}>
+                            {{ user_option.get_full_name|default:user_option.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Technician Responsible</label>
                     <input name="technician_responsible" class="w-full border border-gray-300 rounded-lg p-2.5" placeholder="Name" />
                 </div>
@@ -152,7 +293,7 @@
                     <select name="status" class="w-full border border-gray-300 rounded-lg p-2.5">
                         <option value="in_progress">In Progress</option>
                         <option value="completed">Completed</option>
-                        <option value="written_off">Written off</option>
+                        <option value="written_off">Written Off</option>
                     </select>
                 </div>
             </div>

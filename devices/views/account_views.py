@@ -69,6 +69,17 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
 
+def _notification_target_url(notification):
+    if notification.content_type and notification.related_object:
+        if notification.content_type.model == 'import':
+            return reverse('device_detail', args=[notification.related_object.pk])
+        if notification.content_type.model == 'pendingupdate' and getattr(notification.related_object, 'import_record', None):
+            return reverse('device_detail', args=[notification.related_object.import_record.pk])
+        if notification.content_type.model == 'devicerepair' and getattr(notification.related_object, 'device_id', None):
+            return reverse('device_repairs', args=[notification.related_object.device_id])
+    return reverse('notifications_view')
+
+
 def landing_page(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
@@ -179,6 +190,9 @@ def notifications_view(request):
     unread_only = str(request.GET.get('unread', '')).strip().lower() in {'1', 'true', 'yes', 'y', 'on'}
     if unread_only:
         qs = qs.filter(is_read=False)
+
+    for notification in qs:
+        notification.target_url = _notification_target_url(notification)
 
     return render(request, 'notifications.html', {'notifications': qs, 'unread_count': unread_count})
 
@@ -332,8 +346,6 @@ def notifications_api(request):
 
     qs = Notification.objects.filter(user=request.user).order_by('-created_at')
     unread_count = qs.filter(is_read=False).count()
-    notifications_url = reverse('notifications_view')
-
     items = []
     for n in qs[:limit]:
         items.append({
@@ -342,7 +354,7 @@ def notifications_api(request):
             'created_at': n.created_at.isoformat(),
             'created_at_display': n.created_at.strftime('%b %d, %Y %H:%M'),
             'is_read': n.is_read,
-            'url': notifications_url,
+            'url': _notification_target_url(n),
         })
 
     return JsonResponse({'unread_count': unread_count, 'items': items})
@@ -360,7 +372,6 @@ def notifications_stream(request):
 
     def event_stream():
         last_state = None
-        notifications_url = reverse('notifications_view')
         # Keep the connection alive; client will reconnect if needed
         while True:
             qs = Notification.objects.filter(user_id=user_id).order_by('-created_at')
@@ -378,7 +389,7 @@ def notifications_stream(request):
                             'created_at': n.created_at.isoformat(),
                             'created_at_display': n.created_at.strftime('%b %d, %Y %H:%M'),
                             'is_read': n.is_read,
-                            'url': notifications_url,
+                            'url': _notification_target_url(n),
                         }
                         for n in qs[:8]
                     ],
@@ -494,10 +505,10 @@ def dashboard_view(request):
     # Dashboard spotlight category counts (scope-aware because device_query is already scoped)
     laptop_count = active_device_query.filter(category='laptop').count() 
     desktop_count = active_device_query.filter(category='system_unit').count() 
-    gadget_count = active_device_query.filter(category='gadget').count() 
-    ipad_count = active_device_query.filter(
-        Q(device_name__icontains='ipad') | Q(system_model__icontains='ipad')
-    ).count()
+    smart_phone_count = active_device_query.filter(category='smart_phone').count()
+    desk_phone_count = active_device_query.filter(category='desk_phone').count()
+    ipad_count = active_device_query.filter(category='ipad').count()
+    tablet_count = active_device_query.filter(category='tablet').count()
     # Count only Starlink routers (exclude kits/dishes/etc.) 
     starlink_count = active_device_query.filter( 
         (Q(device_name__icontains='starlink') | Q(system_model__icontains='starlink')) & 
@@ -752,8 +763,10 @@ def dashboard_view(request):
         'laptop_count': laptop_count, 
         'desktop_count': desktop_count, 
         'starlink_count': starlink_count, 
-        'gadget_count': gadget_count, 
+        'smart_phone_count': smart_phone_count,
+        'desk_phone_count': desk_phone_count,
         'ipad_count': ipad_count,
+        'tablet_count': tablet_count,
         'all_category_counts': all_category_counts, 
         'devices_monthly': devices_monthly, 
         'ppm_completed_monthly': ppm_completed_monthly, 
@@ -901,7 +914,11 @@ def filtered_list_view(request, list_type):
                 (Q(device_name__icontains='router') | Q(system_model__icontains='router'))
             )
         if _is_truthy(params.get('ipad')):
-            filters &= (Q(device_name__icontains='ipad') | Q(system_model__icontains='ipad'))
+            filters &= (
+                Q(category='ipad') |
+                Q(device_name__icontains='ipad') |
+                Q(system_model__icontains='ipad')
+            )
 
         filtered_qs = qs.filter(filters).select_related('centre', 'department', 'assignee', 'assignee__centre', 'assignee__department').order_by('-pk')
 

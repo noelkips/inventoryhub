@@ -87,7 +87,10 @@ class Import(models.Model):
         ('printer', 'Printer'),
         ('n_computing', 'N Computing'),
         ('projector', 'projector'),
-        ('gadget', 'Gadget'),
+        ('smart_phone', 'Smart Phones'),
+        ('desk_phone', 'Desk Phones'),
+        ('ipad', 'iPads'),
+        ('tablet', 'Tablets'),
         ('access_point', 'Access Point'),
         ('power_backup_equipment', 'Power & Backup Equipment'),
         ('other', 'Other'),
@@ -210,6 +213,14 @@ class DeviceRepair(models.Model):
         null=True,
         blank=True,
         related_name="repairs_created",
+    )
+    assigned_to = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="repairs_assigned",
+        help_text="Current IT officer responsible for continuing this repair.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

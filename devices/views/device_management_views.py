@@ -995,14 +995,96 @@ def device_repairs(request, pk):
         messages.error(request, "You can only view devices from your own centre.")
         return redirect("display_approved_imports")
 
-    repairs = DeviceRepair.objects.filter(device=device).select_related("created_by").order_by("-created_at")
+    repair_assignees = (
+        CustomUser.objects.filter(is_active=True)
+        .filter(Q(is_trainer=False) | Q(pk=request.user.pk) | Q(repairs_assigned__device=device))
+        .distinct()
+        .order_by("first_name", "last_name", "username")
+    )
+    repairs = DeviceRepair.objects.filter(device=device).select_related("created_by", "assigned_to").order_by("-created_at")
     open_repairs = repairs.filter(status=DeviceRepair.STATUS_IN_PROGRESS)
 
     return render(request, "import/device_repairs.html", {
         "device": device,
         "repairs": repairs,
         "open_repairs": open_repairs,
+        "repair_assignees": repair_assignees,
     })
+
+
+def _get_repair_assignee(assigned_to_id):
+    if not assigned_to_id:
+        return None
+    return CustomUser.objects.filter(
+        pk=assigned_to_id,
+        is_active=True,
+        is_trainer=False,
+    ).first()
+
+
+def _sync_device_repair_state(device):
+    has_open_repairs = DeviceRepair.objects.filter(
+        device=device,
+        status=DeviceRepair.STATUS_IN_PROGRESS,
+    ).exists()
+    has_written_off_repair = DeviceRepair.objects.filter(
+        device=device,
+        status=DeviceRepair.STATUS_WRITTEN_OFF,
+    ).exists()
+    target_is_active = not has_open_repairs and not has_written_off_repair
+    if device.is_active != target_is_active:
+        device.is_active = target_is_active
+        device.save(update_fields=["is_active"])
+
+
+def _notify_repair_assignment(*, repair, assigned_by, is_reassignment):
+    assigned_to = repair.assigned_to
+    if not assigned_to or not assigned_to.id:
+        return
+    if assigned_by and assigned_to.pk == assigned_by.pk and not is_reassignment:
+        return
+
+    action = "reassigned" if is_reassignment else "assigned"
+    sender_name = assigned_by.get_full_name() if assigned_by else "System"
+    device_label = repair.device.serial_number or repair.device.system_model or repair.device.device_name or f"Device {repair.device_id}"
+    notification_message = f"{sender_name} has {action} repair for {device_label} to you. Open the repair page to continue."
+
+    Notification.objects.create(
+        user=assigned_to,
+        message=notification_message,
+        content_type=ContentType.objects.get_for_model(DeviceRepair),
+        object_id=repair.pk,
+    )
+
+    if assigned_to.email:
+        subject = f"Repair {'Handover' if is_reassignment else 'Assignment'}: {device_label}"
+        message = (
+            f"Hello {assigned_to.get_full_name()},\n\n"
+            f"{sender_name} has {action} a repair to you.\n\n"
+            f"Device: {device_label}\n"
+            f"Status: {dict(DeviceRepair.STATUS_CHOICES).get(repair.status, repair.status)}\n"
+            f"Issue: {repair.issue_description}\n"
+            f"Technician: {repair.technician_responsible or assigned_to.get_full_name()}\n\n"
+            f"Open the device repairs page in the system to continue working on it.\n"
+        )
+        send_custom_email(
+            subject,
+            message,
+            [assigned_to.email],
+            also_notify=False,
+            related_object=repair,
+        )
+
+
+def _build_handover_note(previous_assignee, new_assignee, actor):
+    current_time = timezone.now()
+    if timezone.is_aware(current_time):
+        current_time = timezone.localtime(current_time)
+    timestamp = current_time.strftime("%Y-%m-%d %H:%M")
+    previous_name = previous_assignee.get_full_name() if previous_assignee else "Unassigned"
+    new_name = new_assignee.get_full_name() if new_assignee else "Unassigned"
+    actor_name = actor.get_full_name() if actor else "System"
+    return f"[{timestamp}] Repair handed over from {previous_name} to {new_name} by {actor_name}."
 
 
 @login_required
@@ -1034,6 +1116,7 @@ def device_repair_create(request, pk):
     issue_description = (request.POST.get("issue_description") or "").strip()
     repair_action_taken = (request.POST.get("repair_action_taken") or "").strip()
     technician_responsible = (request.POST.get("technician_responsible") or "").strip()
+    assigned_to = _get_repair_assignee(request.POST.get("assigned_to"))
     notes = (request.POST.get("notes") or "").strip()
     external_repair = (request.POST.get("external_repair") in {"on", "true", "1", True})
     status = (request.POST.get("status") or DeviceRepair.STATUS_IN_PROGRESS).strip()
@@ -1060,6 +1143,10 @@ def device_repair_create(request, pk):
     else:
         owner = "Unassigned"
 
+    if assigned_to is None:
+        assigned_to = request.user
+
+    technician_name = technician_responsible or assigned_to.get_full_name()
     repair = DeviceRepair.objects.create(
         device=device,
         month=month or None,
@@ -1071,28 +1158,102 @@ def device_repair_create(request, pk):
         reported_by=reported_by or None,
         issue_description=issue_description,
         repair_action_taken=repair_action_taken or None,
-        technician_responsible=technician_responsible or None,
+        technician_responsible=technician_name or None,
         cost_kes=cost_kes,
         status=status if status in dict(DeviceRepair.STATUS_CHOICES) else DeviceRepair.STATUS_IN_PROGRESS,
         notes=notes or None,
         external_repair=bool(external_repair),
         created_by=request.user,
+        assigned_to=assigned_to,
         completed_at=timezone.now() if status == DeviceRepair.STATUS_COMPLETED else None,
     )
 
-    if repair.status == DeviceRepair.STATUS_IN_PROGRESS:
-        if device.is_active:
-            device.is_active = False
-            device.save(update_fields=["is_active"])
-    elif repair.status == DeviceRepair.STATUS_COMPLETED:
-        if not DeviceRepair.objects.filter(device=device, status=DeviceRepair.STATUS_IN_PROGRESS).exists():
-            device.is_active = True
-            device.save(update_fields=["is_active"])
-    else:
-        device.is_active = False
-        device.save(update_fields=["is_active"])
+    _sync_device_repair_state(device)
+    if assigned_to and assigned_to.pk != request.user.pk:
+        _notify_repair_assignment(repair=repair, assigned_by=request.user, is_reassignment=False)
 
     messages.success(request, "Repair record saved.")
+    return redirect("device_repairs", pk=device.pk)
+
+
+@login_required
+@require_POST
+def device_repair_edit(request, pk, repair_id):
+    device = get_object_or_404(
+        Import.objects.select_related("assignee", "department", "centre"),
+        pk=pk,
+    )
+    repair = get_object_or_404(DeviceRepair.objects.select_related("assigned_to"), pk=repair_id, device_id=device.pk)
+
+    if request.user.is_trainer and device.centre != request.user.centre:
+        messages.error(request, "You can only update records for your own centre.")
+        return redirect("display_approved_imports")
+
+    if repair.status != DeviceRepair.STATUS_IN_PROGRESS:
+        messages.error(request, "Only repairs in progress can be edited.")
+        return redirect("device_repairs", pk=device.pk)
+
+    reported_by = (request.POST.get("reported_by") or "").strip()
+    issue_description = (request.POST.get("issue_description") or "").strip()
+    repair_action_taken = (request.POST.get("repair_action_taken") or "").strip()
+    technician_responsible = (request.POST.get("technician_responsible") or "").strip()
+    notes = (request.POST.get("notes") or "").strip()
+    external_repair = (request.POST.get("external_repair") in {"on", "true", "1", True})
+    status = (request.POST.get("status") or DeviceRepair.STATUS_IN_PROGRESS).strip()
+    assigned_to = _get_repair_assignee(request.POST.get("assigned_to")) or repair.assigned_to or request.user
+
+    if not issue_description:
+        messages.error(request, "Issue description is required.")
+        return redirect("device_repairs", pk=device.pk)
+
+    cost_val = (request.POST.get("cost_kes") or "").strip()
+    cost_kes = None
+    if cost_val:
+        try:
+            cost_kes = Decimal(cost_val)
+        except (InvalidOperation, ValueError):
+            messages.error(request, "Invalid cost value.")
+            return redirect("device_repairs", pk=device.pk)
+
+    previous_assignee = repair.assigned_to
+    assignee_changed = (previous_assignee.pk if previous_assignee else None) != assigned_to.pk
+    combined_notes = notes
+    if assignee_changed:
+        handover_note = _build_handover_note(previous_assignee, assigned_to, request.user)
+        combined_notes = f"{combined_notes}\n{handover_note}".strip() if combined_notes else handover_note
+
+    repair.reported_by = reported_by or None
+    repair.issue_description = issue_description
+    repair.repair_action_taken = repair_action_taken or None
+    repair.technician_responsible = technician_responsible or assigned_to.get_full_name() or None
+    repair.cost_kes = cost_kes
+    repair.notes = combined_notes or None
+    repair.external_repair = bool(external_repair)
+    repair.assigned_to = assigned_to
+    repair.status = status if status in dict(DeviceRepair.STATUS_CHOICES) else DeviceRepair.STATUS_IN_PROGRESS
+    repair.completed_at = timezone.now() if repair.status == DeviceRepair.STATUS_COMPLETED else None
+    repair.save(
+        update_fields=[
+            "reported_by",
+            "issue_description",
+            "repair_action_taken",
+            "technician_responsible",
+            "cost_kes",
+            "notes",
+            "external_repair",
+            "assigned_to",
+            "status",
+            "completed_at",
+            "updated_at",
+        ]
+    )
+
+    _sync_device_repair_state(device)
+
+    if assignee_changed and assigned_to and assigned_to.pk != request.user.pk:
+        _notify_repair_assignment(repair=repair, assigned_by=request.user, is_reassignment=True)
+
+    messages.success(request, "Repair record updated.")
     return redirect("device_repairs", pk=device.pk)
 
 
@@ -1110,10 +1271,7 @@ def device_repair_close(request, pk, repair_id):
     repair.completed_at = timezone.now()
     repair.save(update_fields=["status", "completed_at", "updated_at"])
 
-    if not DeviceRepair.objects.filter(device=device, status=DeviceRepair.STATUS_IN_PROGRESS).exists():
-        if not device.is_active:
-            device.is_active = True
-            device.save(update_fields=["is_active"])
+    _sync_device_repair_state(device)
 
     messages.success(request, "Repair marked as completed.")
     return redirect("device_repairs", pk=device.pk)

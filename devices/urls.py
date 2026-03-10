@@ -46,6 +46,7 @@ urlpatterns = [
     path('import/history/<int:pk>/', views.device_history, name='device_history'), 
     path('devices/<int:pk>/repairs/', views.device_repairs, name='device_repairs'),
     path('devices/<int:pk>/repairs/create/', views.device_repair_create, name='device_repair_create'),
+    path('devices/<int:pk>/repairs/<int:repair_id>/edit/', views.device_repair_edit, name='device_repair_edit'),
     path('devices/<int:pk>/repairs/<int:repair_id>/close/', views.device_repair_close, name='device_repair_close'),
     path('devices/<int:pk>/configuration/start/', views.start_device_configuration, name='start_device_configuration'),
     path('devices/<int:pk>/configuration/', views.device_configuration, name='device_configuration'),

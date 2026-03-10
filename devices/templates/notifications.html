@@ -54,11 +54,13 @@
                             </div>
 
                             <div class="mt-2 flex flex-wrap gap-3 text-sm">
-                                {% if notification.content_type and notification.content_type.model == 'import' and notification.related_object %}
-                                    <a href="{% url 'device_detail' notification.related_object.pk %}" class="text-accent hover:underline font-semibold">Open Device</a>
-                                {% elif notification.content_type and notification.content_type.model == 'pendingupdate' and notification.related_object and notification.related_object.import_record %}
-                                    <a href="{% url 'device_detail' notification.related_object.import_record.pk %}" class="text-accent hover:underline font-semibold">Open Device</a>
-                                {% endif %}
+                                <a href="{{ notification.target_url }}" class="text-accent hover:underline font-semibold">
+                                    {% if notification.content_type and notification.content_type.model == 'devicerepair' %}
+                                        Open Repair
+                                    {% else %}
+                                        Open Item
+                                    {% endif %}
+                                </a>
                             </div>
                         </div>
 
@@ -106,4 +108,3 @@
     </div>
 </div>
 {% endblock %}
-
