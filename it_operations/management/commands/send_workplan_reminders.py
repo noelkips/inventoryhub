@@ -7,6 +7,7 @@
 
 
 import calendar
+from collections import defaultdict
 from datetime import date, timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -54,55 +55,72 @@ class Command(BaseCommand):
         if overdue_tasks.exists():
             self.stdout.write(f"Found {overdue_tasks.count()} overdue pending (non-leave) tasks.")
 
+            recipient_to_tasks = defaultdict(list)  # email -> list[(task, link)]
             for task in overdue_tasks:
-                recipients = set()
+                involved_emails = set()
+
                 owner = task.work_plan.user
-                if owner.email:
-                    recipients.add(owner.email)
+                if owner and owner.email:
+                    involved_emails.add(owner.email)
+
                 for collab in task.collaborators.all():
                     if collab.email:
-                        recipients.add(collab.email)
+                        involved_emails.add(collab.email)
 
-                if not recipients:
+                if not involved_emails:
                     continue
 
                 task_link = f"{base_url}{reverse('work_plan_detail', kwargs={'pk': task.work_plan.pk})}#task-{task.pk}"
+                for email in involved_emails:
+                    recipient_to_tasks[email].append((task, task_link))
+
+            if recipient_to_tasks:
+                self.stdout.write(f"Preparing combined overdue reminders for {len(recipient_to_tasks)} recipient(s).")
+
+            for email, items in recipient_to_tasks.items():
+                items.sort(key=lambda x: (x[0].date or date.max, x[0].pk))
+
+                task_lines = []
+                for idx, (task, task_link) in enumerate(items, start=1):
+                    centre_name = task.centre.name if task.centre else 'N/A'
+                    dept_name = task.department.name if task.department else 'N/A'
+                    due_str = task.date.strftime('%d %b %Y') if task.date else 'N/A'
+                    week_str = f"{task.work_plan.week_start_date.strftime('%d %b %Y')} - {task.work_plan.week_end_date.strftime('%d %b %Y')}"
+                    task_lines.append(
+                        f"{idx}. {task.task_name} | Due: {due_str} | Week: {week_str} | Centre: {centre_name} | Dept: {dept_name}\n"
+                        f"   Link: {task_link}"
+                    )
 
                 message = f"""
 Dear Team Member,
 
-REMINDER: Overdue Pending Task (7+ days past due date)
+REMINDER: Overdue Pending Tasks (7+ days past due date)
 
-Task: {task.task_name}
-Due Date: {task.date.strftime('%d %b %Y')}
-Week: {task.work_plan.week_start_date.strftime('%d %b %Y')} - {task.work_plan.week_end_date.strftime('%d %b %Y')}
-Centre: {task.centre.name if task.centre else 'N/A'}
-Department: {task.department.name if task.department else 'N/A'}
+You have {len(items)} overdue pending task(s). Please update the status or take action on each item below:
 
-Please update the status or take action.
+{chr(10).join(task_lines)}
 
-Direct link to task: {task_link}
-Work Plan link: {base_url}{reverse('work_plan_list')}
+Work Plan list: {base_url}{reverse('work_plan_list')}
 
 Thank you.
 
 IT Operations System
                 """.strip()
 
-                subject = f"[OVERDUE REMINDER] Pending Task: {task.task_name} ({task.date.strftime('%d %b %Y')})"
+                subject = f"[OVERDUE REMINDER] {len(items)} Pending Task(s) Overdue"
 
                 if not dry_run:
                     success = send_custom_email(
                         subject=subject,
                         message=message,
-                        recipient_list=list(recipients)
+                        recipient_list=[email]
                     )
                     if success:
                         sent_count += 1
                 else:
                     self.stdout.write(
                         self.style.NOTICE(
-                            f"[DRY-RUN] Would send overdue reminder to {', '.join(recipients)} for task '{task.task_name}'"
+                            f"[DRY-RUN] Would send 1 combined overdue reminder to {email} ({len(items)} task(s))"
                         )
                     )
 

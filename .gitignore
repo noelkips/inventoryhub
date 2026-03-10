@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+__pysche__/
 *.py[cod]
 *$py.class
 .git/

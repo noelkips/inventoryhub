@@ -297,7 +297,12 @@ else:
     EMAIL_HOST = os.getenv('EMAIL_HOST')
     EMAIL_PORT = 465
     EMAIL_USE_SSL = True
-    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
+    EMAIL_FROM_NAME = os.getenv('EMAIL_FROM_NAME', 'MOHI IT Department')
+    _DEFAULT_FROM_EMAIL_RAW = os.getenv('DEFAULT_FROM_EMAIL')
+    if _DEFAULT_FROM_EMAIL_RAW and '<' not in _DEFAULT_FROM_EMAIL_RAW:
+        DEFAULT_FROM_EMAIL = f"{EMAIL_FROM_NAME} <{_DEFAULT_FROM_EMAIL_RAW}>"
+    else:
+        DEFAULT_FROM_EMAIL = _DEFAULT_FROM_EMAIL_RAW
 
 # Test-site email redirect (only active when DB is ufdxwals_it_test_db via backend)
 TEST_EMAIL_RECIPIENT = os.getenv('TEST_EMAIL_RECIPIENT', 'noel.langat@mohiafrica.org')

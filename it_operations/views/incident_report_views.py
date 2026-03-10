@@ -13,6 +13,7 @@ from django.http import HttpResponse
 
 # --- DateTime Imports ---
 from datetime import datetime
+import logging
 
 # --- ReportLab Imports for PDF Generation ---
 import io
@@ -34,6 +35,7 @@ from ..models import IncidentReport
 
 # --- Global Variables ---
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 # --- Custom Colors ---
 DARK_BLUE = colors.HexColor('#143C50')
@@ -66,6 +68,21 @@ def _format_text_as_list(text, style):
     return [list_flowable]
 
 # ============ INCIDENT REPORT VIEWS ============
+
+def _parse_datetime_local_to_field(value):
+    """
+    Parses HTML <input type="datetime-local"> value ('%Y-%m-%dT%H:%M').
+
+    - If USE_TZ=True: returns timezone-aware datetime in current timezone.
+    - If USE_TZ=False: returns naive datetime (required for SQLite when USE_TZ=False).
+    """
+    if not value:
+        return None
+
+    naive_dt = datetime.strptime(value, '%Y-%m-%dT%H:%M')
+    if settings.USE_TZ:
+        return timezone.make_aware(naive_dt, timezone.get_current_timezone())
+    return naive_dt
 
 @login_required
 def incident_report_list(request):
@@ -117,19 +134,17 @@ def incident_report_create(request):
     if request.method == 'POST':
         try:
             date_incident_str = request.POST.get('date_of_incident')
-            aware_date_incident = None
-            if date_incident_str:
-                try:
-                    naive_dt = datetime.strptime(date_incident_str, '%Y-%m-%dT%H:%M')
-                    aware_date_incident = timezone.make_aware(naive_dt, timezone.get_current_timezone())
-                except ValueError:
-                    messages.error(request, "Invalid date format. Date was not saved.")
+            try:
+                date_of_incident = _parse_datetime_local_to_field(date_incident_str)
+            except ValueError:
+                date_of_incident = None
+                messages.error(request, "Invalid date format. Date was not saved.")
             
             report = IncidentReport(
                 reported_by=request.user,
                 reporter_title_role=request.POST.get('reporter_title_role'),
                 incident_type=request.POST.get('incident_type'),
-                date_of_incident=aware_date_incident,
+                date_of_incident=date_of_incident,
                 location=request.POST.get('location'),
                 specific_area=request.POST.get('specific_area'),
                 description=request.POST.get('description'),
@@ -196,7 +211,7 @@ Please see attached PDF.
             return redirect('incident_report_detail', pk=report.pk)
 
         except Exception as e:
-            print(f"CRITICAL ERROR in Incident Create: {e}")
+            logger.exception("CRITICAL ERROR in Incident Create")
             messages.error(request, f"Error creating report: {e}")
             return redirect('incident_report_create')
 
@@ -219,19 +234,18 @@ def incident_report_update(request, pk):
     if request.method == 'POST':
         try:
             date_incident_str = request.POST.get('date_of_incident')
-            aware_date_incident = report.date_of_incident
             if date_incident_str:
                 try:
-                    naive_dt = datetime.strptime(date_incident_str, '%Y-%m-%dT%H:%M')
-                    aware_date_incident = timezone.make_aware(naive_dt, timezone.get_current_timezone())
+                    date_of_incident = _parse_datetime_local_to_field(date_incident_str)
                 except ValueError:
+                    date_of_incident = report.date_of_incident
                     messages.warning(request, "Invalid date format. Keeping original date.")
             else:
-                aware_date_incident = None
+                date_of_incident = None
 
             report.reporter_title_role = request.POST.get('reporter_title_role')
             report.incident_type = request.POST.get('incident_type')
-            report.date_of_incident = aware_date_incident
+            report.date_of_incident = date_of_incident
             report.location = request.POST.get('location')
             report.specific_area = request.POST.get('specific_area')
             report.description = request.POST.get('description')
@@ -314,7 +328,7 @@ Please review the attached PDF for the latest changes.
             return redirect('incident_report_detail', pk=report.pk)
         
         except Exception as e:
-            print(f"CRITICAL ERROR UPDATING REPORT: {e}")
+            logger.exception("CRITICAL ERROR UPDATING REPORT")
             messages.error(request, f"Error updating report: {e}")
             return redirect('incident_report_update', pk=pk)
 

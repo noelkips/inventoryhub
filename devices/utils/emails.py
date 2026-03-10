@@ -13,6 +13,24 @@ IS_TEST_ENVIRONMENT = settings.DEBUG or (
 
 TEST_EMAIL_RECIPIENT = getattr(settings, "TEST_EMAIL_RECIPIENT", "noel.langat@mohiafrica.org")
 
+def _get_from_email():
+    """
+    Returns a formatted sender like: 'MOHI IT Department <noreply@example.com>'
+    when EMAIL_FROM_NAME is set and DEFAULT_FROM_EMAIL is a plain address.
+    """
+    default_from = getattr(settings, "DEFAULT_FROM_EMAIL", None)
+    if not default_from:
+        return None
+
+    default_from = str(default_from).strip()
+    if "<" in default_from and ">" in default_from:
+        return default_from
+
+    from_name = str(getattr(settings, "EMAIL_FROM_NAME", "") or "").strip()
+    if from_name:
+        return f"{from_name} <{default_from}>"
+    return default_from
+
 def _create_in_app_notifications_for_recipients(*, subject, recipient_list, message=None, related_object=None):
     """
     Best-effort: if an email recipient matches a CustomUser, create an in-app notification.
@@ -76,7 +94,7 @@ def send_custom_email(subject, message, recipient_list, attachment=None, *, also
         email = EmailMessage(
             subject=subject,
             body=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=_get_from_email(),
             to=final_recipient_list,
         )
         if attachment:
@@ -157,7 +175,7 @@ def send_device_assignment_email(device, action='assigned', cleared_by=None):
         email = EmailMultiAlternatives(
             subject=subject,
             body=plain_message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=_get_from_email(),
             to=to_list,
             cc=cc_list,
         )
