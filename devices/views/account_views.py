@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.template.loader import render_to_string
 from django.db.models import Q
 from ..utils import send_custom_email 
@@ -35,13 +36,22 @@ from devices.utils.emails import send_custom_email, send_custom_email, send_devi
 from devices.utils.signatures import normalize_signature_data_url
 from it_operations.models import BackupRegistry, WorkPlan, IncidentReport, MissionCriticalAsset, WorkPlanTask
 from devices.forms import ClearanceForm
+from devices.utils.notification_utils import (
+    build_notification_preview,
+    is_workflow_request_notification,
+    resolve_related_import,
+    sync_notification_state,
+    sync_stale_workflow_notifications,
+)
 from ppm.models import PPMTask, PPMPeriod, PPMActivity
+from devices.utils.inventory_centre_report import build_inventory_workbook, get_inventory_devices
 
 # Third-party & Standard Library
 import csv
 import logging
 import json
 import time
+from urllib.parse import urlparse
 from io import BytesIO
 
 # Excel (openpyxl)
@@ -70,14 +80,81 @@ from django.views.decorators.http import require_POST
 
 
 def _notification_target_url(notification):
+    related_import = resolve_related_import(notification)
+    if related_import:
+        return reverse('device_detail', args=[related_import.pk])
+
     if notification.content_type and notification.related_object:
-        if notification.content_type.model == 'import':
-            return reverse('device_detail', args=[notification.related_object.pk])
-        if notification.content_type.model == 'pendingupdate' and getattr(notification.related_object, 'import_record', None):
-            return reverse('device_detail', args=[notification.related_object.import_record.pk])
         if notification.content_type.model == 'devicerepair' and getattr(notification.related_object, 'device_id', None):
             return reverse('device_repairs', args=[notification.related_object.device_id])
     return reverse('notifications_view')
+
+
+def _notification_target_label(notification):
+    if notification.content_type and notification.content_type.model == 'devicerepair':
+        return 'Open Repair'
+    if notification.content_type and notification.content_type.model in {'import', 'pendingupdate'}:
+        return 'Open Device'
+    return 'Open Related Item'
+
+
+def _notification_action_urls(notification, user):
+    approve_url = None
+    clarify_url = None
+    related_import = resolve_related_import(notification)
+
+    if (
+        user.is_superuser
+        and not user.is_trainer
+        and notification.content_type
+        and related_import
+        and not related_import.is_approved
+        and notification.content_type.model in {'pendingupdate', 'import'}
+    ):
+        approve_url = reverse('import_approve', args=[related_import.pk])
+        clarify_url = reverse('import_reject', args=[related_import.pk])
+
+    return approve_url, clarify_url
+
+
+def _prepare_notification(notification, user):
+    notification = sync_notification_state(notification)
+    related_import = resolve_related_import(notification)
+    notification.detail_url = reverse('notification_detail', args=[notification.pk])
+    notification.target_url = _notification_target_url(notification)
+    notification.target_label = _notification_target_label(notification)
+    notification.has_related_target = notification.target_url != reverse('notifications_view')
+    notification.approve_url, notification.clarify_url = _notification_action_urls(notification, user)
+    notification.can_review_request = bool(notification.approve_url and notification.clarify_url)
+    notification.preview_message = build_notification_preview(notification.message, length=220)
+    notification.dropdown_preview_message = build_notification_preview(notification.message, length=120)
+    notification.is_workflow_request = is_workflow_request_notification(notification)
+    notification.related_import_is_approved = bool(related_import and related_import.is_approved)
+    return notification
+
+
+def _safe_next_url(request, *, default_url, deleted_notification_pk=None):
+    next_url = request.POST.get('next') or request.GET.get('next') or request.META.get('HTTP_REFERER')
+    if not next_url:
+        return default_url
+
+    if not url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return default_url
+
+    if deleted_notification_pk is not None:
+        deleted_path = reverse('notification_detail', args=[deleted_notification_pk])
+        if urlparse(next_url).path == deleted_path:
+            return default_url
+
+    return next_url
+
+
+def _can_download_inventory_centre_report(user):
+    return bool(user.is_authenticated and (user.is_superuser or user.is_it_manager))
 
 
 def landing_page(request):
@@ -184,17 +261,35 @@ def password_reset_confirm(request, uidb64=None, token=None):
 
 @login_required
 def notifications_view(request):
-    qs = Notification.objects.filter(user=request.user).order_by('-created_at')
+    sync_stale_workflow_notifications(request.user)
+    qs = Notification.objects.filter(user=request.user).select_related('content_type', 'responded_by').order_by('is_read', '-created_at')
     unread_count = qs.filter(is_read=False).count()
 
     unread_only = str(request.GET.get('unread', '')).strip().lower() in {'1', 'true', 'yes', 'y', 'on'}
     if unread_only:
         qs = qs.filter(is_read=False)
 
-    for notification in qs:
-        notification.target_url = _notification_target_url(notification)
+    notifications = [_prepare_notification(notification, request.user) for notification in qs]
 
-    return render(request, 'notifications.html', {'notifications': qs, 'unread_count': unread_count})
+    return render(request, 'notifications.html', {'notifications': notifications, 'unread_count': unread_count})
+
+
+@login_required
+@require_safe
+def notification_detail(request, pk):
+    notification = get_object_or_404(Notification, pk=pk, user=request.user)
+    notification = sync_notification_state(notification)
+    if not notification.is_read:
+        notification.is_read = True
+        notification.save(update_fields=['is_read'])
+
+    notification = _prepare_notification(notification, request.user)
+    back_url = reverse('notifications_view')
+
+    return render(request, 'notification_detail.html', {
+        'notification': notification,
+        'back_url': back_url,
+    })
 
 
 @login_required
@@ -319,7 +414,9 @@ def mark_notification_read(request, pk):
         return JsonResponse({'ok': True})
 
     messages.success(request, "Notification marked as read.")
-    return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/dashboard/'))
+    return HttpResponseRedirect(
+        _safe_next_url(request, default_url=reverse('notifications_view'))
+    )
 
 
 @login_required
@@ -332,29 +429,39 @@ def delete_notification(request, pk):
         return JsonResponse({'ok': True})
 
     messages.success(request, "Notification removed.")
-    return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/dashboard/'))
+    return HttpResponseRedirect(
+        _safe_next_url(
+            request,
+            default_url=reverse('notifications_view'),
+            deleted_notification_pk=pk,
+        )
+    )
 
 
 @login_required
 @require_safe
 def notifications_api(request):
+    sync_stale_workflow_notifications(request.user)
     try:
         limit = int(request.GET.get('limit', 8))
     except ValueError:
         limit = 8
     limit = max(1, min(limit, 25))
 
-    qs = Notification.objects.filter(user=request.user).order_by('-created_at')
+    qs = Notification.objects.filter(user=request.user).select_related('content_type', 'responded_by').order_by('is_read', '-created_at')
     unread_count = qs.filter(is_read=False).count()
     items = []
     for n in qs[:limit]:
+        n = _prepare_notification(n, request.user)
         items.append({
             'id': n.pk,
             'message': n.message,
             'created_at': n.created_at.isoformat(),
             'created_at_display': n.created_at.strftime('%b %d, %Y %H:%M'),
             'is_read': n.is_read,
-            'url': _notification_target_url(n),
+            'url': n.detail_url,
+            'target_url': n.target_url,
+            'target_label': n.target_label,
         })
 
     return JsonResponse({'unread_count': unread_count, 'items': items})
@@ -374,25 +481,29 @@ def notifications_stream(request):
         last_state = None
         # Keep the connection alive; client will reconnect if needed
         while True:
-            qs = Notification.objects.filter(user_id=user_id).order_by('-created_at')
+            sync_stale_workflow_notifications(request.user)
+            qs = Notification.objects.filter(user_id=user_id).select_related('content_type', 'responded_by').order_by('is_read', '-created_at')
             unread_count = qs.filter(is_read=False).count()
             latest_id = qs.values_list('id', flat=True).first() or 0
             state = (unread_count, latest_id)
 
             if state != last_state:
+                items = []
+                for n in qs[:8]:
+                    prepared = _prepare_notification(n, request.user)
+                    items.append({
+                        'id': prepared.pk,
+                        'message': prepared.message,
+                        'created_at': prepared.created_at.isoformat(),
+                        'created_at_display': prepared.created_at.strftime('%b %d, %Y %H:%M'),
+                        'is_read': prepared.is_read,
+                        'url': prepared.detail_url,
+                        'target_url': prepared.target_url,
+                        'target_label': prepared.target_label,
+                    })
                 payload = {
                     'unread_count': unread_count,
-                    'items': [
-                        {
-                            'id': n.pk,
-                            'message': n.message,
-                            'created_at': n.created_at.isoformat(),
-                            'created_at_display': n.created_at.strftime('%b %d, %Y %H:%M'),
-                            'is_read': n.is_read,
-                            'url': _notification_target_url(n),
-                        }
-                        for n in qs[:8]
-                    ],
+                    'items': items,
                 }
                 yield f"event: notifications\ndata: {json.dumps(payload)}\n\n"
                 last_state = state
@@ -626,8 +737,10 @@ def dashboard_view(request):
         PendingUpdate.objects.filter(import_record__centre=user.centre).count() if user.centre else 0
     )
 
-    notifications = Notification.objects.filter(user=user).order_by('-created_at')[:5]
-    unread_count = Notification.objects.filter(user=user, is_read=False).count()
+    sync_stale_workflow_notifications(user)
+    notifications_qs = Notification.objects.filter(user=user).select_related('content_type', 'responded_by').order_by('is_read', '-created_at')
+    notifications = notifications_qs[:5]
+    unread_count = notifications_qs.filter(is_read=False).count()
 
     recent_incidents = incident_query.order_by('-date_of_report')[:5]
     open_incidents_count = incident_query.filter(status__in=['Open', 'In Progress']).count()
@@ -746,6 +859,7 @@ def dashboard_view(request):
         'user_scope': user_scope,
         'dashboard_stats_scope': dashboard_stats_scope,
         'can_switch_dashboard_scope': can_switch_dashboard_scope,
+        'can_download_inventory_centre_report': _can_download_inventory_centre_report(user),
         'total_devices': total_devices,
         'approved_devices': approved_devices,
         'pending_approvals': pending_approvals,
@@ -817,6 +931,24 @@ def dashboard_view(request):
     template_name = 'index.html'
 
     return render(request, template_name, context)
+
+
+@login_required
+@require_safe
+def download_inventory_by_centre_report(request):
+    if not _can_download_inventory_centre_report(request.user):
+        return HttpResponseForbidden("Only IT managers can download this report.")
+
+    devices = get_inventory_devices()
+    workbook = build_inventory_workbook(devices, merge_centres=False)
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    filename = f"IT_Inventory_All_Centres_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    workbook.save(response)
+    return response
 
 
 @login_required

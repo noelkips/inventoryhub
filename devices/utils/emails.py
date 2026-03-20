@@ -4,14 +4,15 @@ from django.utils import timezone
 from django.template.loader import render_to_string
 
 # Detect test/environment mode
-# - If DEBUG=True (local dev) → treat as test
-# - If DB_NAME_CONFIG == 'ufdxwals_it_test_db' (staging/test site) → treat as test
-# - Otherwise → production (live site)
+# - If DEBUG=True (local dev) -> treat as test
+# - If DB_NAME_CONFIG == 'ufdxwals_it_test_db' (staging/test site) -> treat as test
+# - Otherwise -> production (live site)
 IS_TEST_ENVIRONMENT = settings.DEBUG or (
-    hasattr(settings, 'DB_NAME_CONFIG') and settings.DB_NAME_CONFIG == 'ufdxwals_it_test_db'
+    hasattr(settings, "DB_NAME_CONFIG") and settings.DB_NAME_CONFIG == "ufdxwals_it_test_db"
 )
 
 TEST_EMAIL_RECIPIENT = getattr(settings, "TEST_EMAIL_RECIPIENT", "noel.langat@mohiafrica.org")
+
 
 def _get_from_email():
     """
@@ -31,10 +32,11 @@ def _get_from_email():
         return f"{from_name} <{default_from}>"
     return default_from
 
+
 def _create_in_app_notifications_for_recipients(*, subject, recipient_list, message=None, related_object=None):
     """
     Best-effort: if an email recipient matches a CustomUser, create an in-app notification.
-    Keeps the notification short (subject + optional first line).
+    Stores the full message so users can open and read the full notification body in-app.
     """
     try:
         from devices.models import CustomUser, Notification
@@ -45,21 +47,23 @@ def _create_in_app_notifications_for_recipients(*, subject, recipient_list, mess
     if not recipient_list:
         return
 
-    short_message = str(subject or "New message").strip()
-    if message:
-        first_line = str(message).strip().splitlines()[0].strip()
-        if first_line and first_line.lower() != short_message.lower():
-            short_message = f"{short_message} — {first_line}"
-    short_message = short_message[:240]
+    notification_subject = str(subject or "New message").strip()
+    notification_body = str(message or "").strip()
+    notification_message = notification_subject
+    if notification_body:
+        if notification_body.lower().startswith(notification_subject.lower()):
+            notification_message = notification_body
+        else:
+            notification_message = f"{notification_subject}\n\n{notification_body}"
 
-    users = CustomUser.objects.filter(email__in=[e for e in recipient_list if e])
+    users = CustomUser.objects.filter(email__in=[email for email in recipient_list if email])
 
     content_type = None
     object_id = None
     if related_object is not None:
         try:
             content_type = ContentType.objects.get_for_model(related_object.__class__)
-            object_id = getattr(related_object, 'pk', None)
+            object_id = getattr(related_object, "pk", None)
         except Exception:
             content_type = None
             object_id = None
@@ -67,7 +71,7 @@ def _create_in_app_notifications_for_recipients(*, subject, recipient_list, mess
     for user in users:
         Notification.objects.create(
             user=user,
-            message=short_message,
+            message=notification_message,
             content_type=content_type,
             object_id=object_id,
         )
@@ -116,39 +120,39 @@ def send_custom_email(subject, message, recipient_list, attachment=None, *, also
         return False
 
 
-def send_device_assignment_email(device, action='assigned', cleared_by=None):
+def send_device_assignment_email(device, action="assigned", cleared_by=None):
     """
     Sends device assignment/clearance notification with test-mode redirection.
     In test mode, email goes only to IT with clear [TEST] marking and original recipient noted.
     """
     if not device.assignee:
-        return  # No assignee → no email needed
+        return  # No assignee -> no email needed
 
     original_recipient = device.assignee.email
     if not original_recipient:
-        print(f"No email for assignee {device.assignee} — skipping notification")
+        print(f"No email for assignee {device.assignee} - skipping notification")
         return
 
-    cc_email = "it@mohiafrica.org" 
+    cc_email = "it@mohiafrica.org"
 
     context = {
-        'action': action,
-        'device': device,
-        'assignee': device.assignee,
-        'issued_by': device.added_by if action == 'assigned' else cleared_by,
-        'issued_at': timezone.now(),
-        'centre': device.centre,
-        'department': device.department,
-        'serial': device.serial_number,
-        'device_name': device.device_name or device.system_model or 'Unknown device',
-        'category': dict(device.CATEGORY_CHOICES).get(device.category, device.category),
+        "action": action,
+        "device": device,
+        "assignee": device.assignee,
+        "issued_by": device.added_by if action == "assigned" else cleared_by,
+        "issued_at": timezone.now(),
+        "centre": device.centre,
+        "department": device.department,
+        "serial": device.serial_number,
+        "device_name": device.device_name or device.system_model or "Unknown device",
+        "category": dict(device.CATEGORY_CHOICES).get(device.category, device.category),
     }
 
-    # Plain text & HTML bodies
-    plain_message = render_to_string('emails/device_notification.txt', context)
-    html_message = render_to_string('emails/device_notification.html', context)
+    # Plain text and HTML bodies
+    plain_message = render_to_string("emails/device_notification.txt", context)
+    html_message = render_to_string("emails/device_notification.html", context)
 
-    subject_prefix = "Device Issued to You" if action == 'assigned' else "Device Cleared / Returned"
+    subject_prefix = "Device Issued to You" if action == "assigned" else "Device Cleared / Returned"
     subject = f"{subject_prefix}: {context['device_name']} ({device.serial_number})"
 
     try:
@@ -163,7 +167,10 @@ def send_device_assignment_email(device, action='assigned', cleared_by=None):
                 f"--- END TEST NOTE ---\n\n"
             )
             plain_message = test_note + plain_message
-            html_message = f"<p><strong>--- THIS IS A TEST EMAIL (original: {original_recipient}) ---</strong></p>" + html_message
+            html_message = (
+                f"<p><strong>--- THIS IS A TEST EMAIL (original: {original_recipient}) ---</strong></p>"
+                + html_message
+            )
 
             to_list = [TEST_EMAIL_RECIPIENT]
             cc_list = []  # No CC in test mode to avoid disturbing others

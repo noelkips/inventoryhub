@@ -1,0 +1,90 @@
+{% extends 'dashboard.html' %}
+{% load static %}
+
+{% block content %}
+<div id="notificationOverlay" class="container mx-auto p-4 lg:p-6 min-h-[75vh] flex items-center justify-center">
+    <div id="notificationCard" class="w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+        <div class="px-6 py-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div>
+                <a href="{{ back_url }}" class="text-accent hover:underline text-sm">&larr; Back to Messages</a>
+                <h1 class="text-3xl font-bold text-primary mt-1">Notification</h1>
+                <p class="text-sm text-gray-600 mt-1">
+                    {{ notification.created_at|date:"M d, Y H:i" }}
+                    {% if notification.responded_by %}
+                        &middot; handled by {{ notification.responded_by.get_full_name|default:notification.responded_by.username }}
+                    {% endif %}
+                </p>
+            </div>
+            <span class="text-xs font-semibold px-3 py-1 rounded-full self-start {% if notification.is_read %}bg-gray-100 text-gray-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                {% if notification.is_read %}Read{% else %}Unread{% endif %}
+            </span>
+        </div>
+
+        {% if messages %}
+            <div class="px-6 pt-5">
+                {% for message in messages %}
+                    <div class="bg-{% if message.tags == 'error' %}error{% else %}accent{% endif %} text-white p-4 rounded-lg mb-2" role="alert">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="px-6 py-6">
+            <div class="text-base leading-7 text-gray-900 whitespace-pre-wrap break-words p-5 rounded-2xl bg-slate-50 border border-slate-200">
+                {{ notification.message }}
+            </div>
+
+            {% if notification.is_workflow_request and notification.related_import_is_approved %}
+                <div class="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                    This request has already been approved, so only the device link is available now.
+                </div>
+            {% endif %}
+
+            <div class="mt-6 flex flex-wrap gap-3">
+                <a href="{{ back_url }}" class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition font-semibold">
+                    Back to Messages
+                </a>
+
+                {% if notification.has_related_target %}
+                    <a href="{{ notification.target_url }}" class="bg-accent text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-semibold">
+                        {{ notification.target_label }}
+                    </a>
+                {% endif %}
+
+                {% if notification.can_review_request %}
+                    <form action="{{ notification.approve_url }}" method="POST">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-semibold">Approve</button>
+                    </form>
+                    <form action="{{ notification.clarify_url }}" method="POST">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-error text-white px-4 py-2 rounded-lg hover:bg-red-700 transition font-semibold">Clarify</button>
+                    </form>
+                {% endif %}
+
+                <form action="{% url 'delete_notification' notification.pk %}" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ back_url }}">
+                    <button type="submit" class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition font-semibold">Remove</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const overlay = document.getElementById('notificationOverlay');
+    const card = document.getElementById('notificationCard');
+    const backUrl = "{{ back_url|escapejs }}";
+    if (!overlay || !card || !backUrl) return;
+
+    overlay.addEventListener('click', function (event) {
+        if (!card.contains(event.target)) {
+            window.location.href = backUrl;
+        }
+    });
+});
+</script>
+{% endblock %}

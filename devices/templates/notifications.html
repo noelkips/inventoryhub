@@ -42,60 +42,44 @@
 
         <div class="divide-y divide-gray-100">
             {% for notification in notifications %}
-                <div class="px-6 py-4 {% if not notification.is_read %}bg-blue-50{% endif %}">
+                <div class="px-6 py-4 border-l-4 {% if not notification.is_read %}bg-blue-50 border-accent{% else %}bg-slate-50 border-transparent{% endif %}">
                     <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                         <div class="min-w-0">
-                            <div class="text-sm text-gray-900 break-words">{{ notification.message }}</div>
-                            <div class="mt-1 text-xs text-gray-500">
+                            <a href="{{ notification.detail_url }}" class="block text-sm break-words hover:text-accent {% if not notification.is_read %}text-gray-900 font-semibold{% else %}text-gray-700{% endif %}">
+                                {{ notification.preview_message }}
+                            </a>
+                            <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                                <span class="inline-flex items-center rounded-full px-2.5 py-1 font-semibold {% if not notification.is_read %}bg-blue-100 text-blue-700{% else %}bg-gray-200 text-gray-700{% endif %}">
+                                    {% if not notification.is_read %}Unread{% else %}Read{% endif %}
+                                </span>
                                 {{ notification.created_at|date:"M d, Y H:i" }}
                                 {% if notification.responded_by %}
                                     &middot; handled by {{ notification.responded_by.get_full_name|default:notification.responded_by.username }}
                                 {% endif %}
                             </div>
 
+                            {% if notification.has_related_target %}
                             <div class="mt-2 flex flex-wrap gap-3 text-sm">
-                                <a href="{{ notification.target_url }}" class="text-accent hover:underline font-semibold">
-                                    {% if notification.content_type and notification.content_type.model == 'devicerepair' %}
-                                        Open Repair
-                                    {% else %}
-                                        Open Item
-                                    {% endif %}
-                                </a>
+                                <a href="{{ notification.target_url }}" class="text-accent hover:underline font-semibold">{{ notification.target_label }}</a>
                             </div>
+                            {% endif %}
                         </div>
 
                         <div class="flex items-center gap-3 shrink-0">
-                            {% if not notification.is_read %}
-                                <form action="{% url 'mark_notification_read' notification.pk %}" method="POST">
+                            {% if notification.can_review_request %}
+                                <form action="{{ notification.approve_url }}" method="POST">
                                     {% csrf_token %}
-                                    <button type="submit" class="text-accent hover:underline text-sm font-semibold">Mark Read</button>
+                                    <button type="submit" class="text-accent hover:underline text-sm font-semibold">Approve</button>
                                 </form>
-                            {% endif %}
-
-                            {% if user.is_superuser and not user.is_trainer %}
-                                {% if notification.content_type and notification.content_type.model == 'pendingupdate' and notification.related_object and notification.related_object.import_record %}
-                                    <form action="{% url 'import_approve' notification.related_object.import_record.pk %}" method="POST">
-                                        {% csrf_token %}
-                                        <button type="submit" class="text-accent hover:underline text-sm font-semibold">Approve</button>
-                                    </form>
-                                    <form action="{% url 'import_reject' notification.related_object.import_record.pk %}" method="POST">
-                                        {% csrf_token %}
-                                        <button type="submit" class="text-error hover:underline text-sm font-semibold">Clarify</button>
-                                    </form>
-                                {% elif notification.content_type and notification.content_type.model == 'import' and notification.related_object %}
-                                    <form action="{% url 'import_approve' notification.related_object.pk %}" method="POST">
-                                        {% csrf_token %}
-                                        <button type="submit" class="text-accent hover:underline text-sm font-semibold">Approve</button>
-                                    </form>
-                                    <form action="{% url 'import_reject' notification.related_object.pk %}" method="POST">
-                                        {% csrf_token %}
-                                        <button type="submit" class="text-error hover:underline text-sm font-semibold">Clarify</button>
-                                    </form>
-                                {% endif %}
+                                <form action="{{ notification.clarify_url }}" method="POST">
+                                    {% csrf_token %}
+                                    <button type="submit" class="text-error hover:underline text-sm font-semibold">Clarify</button>
+                                </form>
                             {% endif %}
 
                             <form action="{% url 'delete_notification' notification.pk %}" method="POST">
                                 {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
                                 <button type="submit" class="text-gray-700 hover:text-error hover:underline text-sm font-semibold">Remove</button>
                             </form>
                         </div>

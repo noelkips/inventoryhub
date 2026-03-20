@@ -1,9 +1,11 @@
 from itinventory import settings
 from .models import Notification
+from .utils.notification_utils import sync_stale_workflow_notifications
 
 def notification_count(request):
     if request.user.is_authenticated:
-        qs = Notification.objects.filter(user=request.user).order_by('-created_at')
+        sync_stale_workflow_notifications(request.user)
+        qs = Notification.objects.filter(user=request.user).order_by('is_read', '-created_at')
         unread_count = qs.filter(is_read=False).count()
         recent_notifications = list(qs[:8])
         return {

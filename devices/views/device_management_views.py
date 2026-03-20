@@ -2373,6 +2373,50 @@ def download_csv_template(request):
     ])
     return response
 
+def _apply_pending_update_to_import(import_instance, pending_update, approved_by):
+    old_assignee = import_instance.assignee
+
+    if pending_update.centre is not None:
+        import_instance.centre = pending_update.centre
+    if pending_update.department is not None:
+        import_instance.department = pending_update.department
+    if getattr(pending_update, "category", None):
+        import_instance.category = pending_update.category
+    if pending_update.device_name is not None:
+        import_instance.device_name = pending_update.device_name
+    if pending_update.system_model is not None:
+        import_instance.system_model = pending_update.system_model
+    if pending_update.processor is not None:
+        import_instance.processor = pending_update.processor
+    if pending_update.ram_gb is not None:
+        import_instance.ram_gb = pending_update.ram_gb
+    if pending_update.hdd_gb is not None:
+        import_instance.hdd_gb = pending_update.hdd_gb
+    if getattr(pending_update, "serial_number", None):
+        import_instance.serial_number = pending_update.serial_number
+    if getattr(pending_update, "assignee", None) is not None:
+        import_instance.assignee = pending_update.assignee
+    if pending_update.assignee_first_name is not None:
+        import_instance.assignee_first_name = pending_update.assignee_first_name
+    if pending_update.assignee_last_name is not None:
+        import_instance.assignee_last_name = pending_update.assignee_last_name
+    if pending_update.assignee_email_address is not None:
+        import_instance.assignee_email_address = pending_update.assignee_email_address
+    if pending_update.device_condition is not None:
+        import_instance.device_condition = pending_update.device_condition
+    if pending_update.status is not None:
+        import_instance.status = pending_update.status
+    if pending_update.date is not None:
+        import_instance.date = pending_update.date
+    if pending_update.reason_for_update is not None:
+        import_instance.reason_for_update = pending_update.reason_for_update
+
+    import_instance.is_approved = True
+    import_instance.approved_by = approved_by
+    import_instance.save()
+    return old_assignee
+
+
 @login_required
 @user_passes_test(lambda u: u.is_superuser and not u.is_trainer)
 def import_approve(request, pk):
@@ -2380,7 +2424,6 @@ def import_approve(request, pk):
     if request.method == 'POST':
         with transaction.atomic():
             pending_update = PendingUpdate.objects.filter(import_record=import_instance).order_by('-created_at').first()
-            old_assignee = import_instance.assignee
 
             def _mark_related_notifications_read(*, pending_update_id=None, trainer_user_id=None):
                 q = Q(
@@ -2404,44 +2447,11 @@ def import_approve(request, pk):
                 # Save pk before deleting
                 pending_update_id = pending_update.pk
                 trainer_user_id = pending_update.updated_by_id
-                # Apply updates
-                if pending_update.centre is not None:
-                    import_instance.centre = pending_update.centre
-                if pending_update.department is not None:
-                    import_instance.department = pending_update.department
-                if getattr(pending_update, "category", None):
-                    import_instance.category = pending_update.category
-                if pending_update.device_name is not None:
-                    import_instance.device_name = pending_update.device_name
-                if pending_update.system_model is not None:
-                    import_instance.system_model = pending_update.system_model
-                if pending_update.processor is not None:
-                    import_instance.processor = pending_update.processor
-                if pending_update.ram_gb is not None:
-                    import_instance.ram_gb = pending_update.ram_gb
-                if pending_update.hdd_gb is not None:
-                    import_instance.hdd_gb = pending_update.hdd_gb
-                if getattr(pending_update, "serial_number", None):
-                    import_instance.serial_number = pending_update.serial_number
-                if getattr(pending_update, "assignee", None) is not None:
-                    import_instance.assignee = pending_update.assignee
-                if pending_update.assignee_first_name is not None:
-                    import_instance.assignee_first_name = pending_update.assignee_first_name
-                if pending_update.assignee_last_name is not None:
-                    import_instance.assignee_last_name = pending_update.assignee_last_name
-                if pending_update.assignee_email_address is not None:
-                    import_instance.assignee_email_address = pending_update.assignee_email_address
-                if pending_update.device_condition is not None:
-                    import_instance.device_condition = pending_update.device_condition
-                if pending_update.status is not None:
-                    import_instance.status = pending_update.status
-                if pending_update.date is not None:
-                    import_instance.date = pending_update.date
-                if pending_update.reason_for_update is not None:
-                    import_instance.reason_for_update = pending_update.reason_for_update
-                import_instance.is_approved = True
-                import_instance.approved_by = request.user
-                import_instance.save()
+                old_assignee = _apply_pending_update_to_import(
+                    import_instance=import_instance,
+                    pending_update=pending_update,
+                    approved_by=request.user,
+                )
                 # Check if assignee changed
                 if import_instance.assignee != old_assignee:
                     # Email to old assignee (cleared)
@@ -2585,25 +2595,12 @@ def import_approve_all(request):
         with transaction.atomic():
             for item in data_on_page:
                 pending_update = PendingUpdate.objects.filter(import_record=item).order_by('-created_at').first()
-                old_assignee = item.assignee
                 if pending_update:
-                    item.centre = pending_update.centre
-                    item.department = pending_update.department
-                    item.category = pending_update.category
-                    item.device_name = pending_update.device_name
-                    item.system_model = pending_update.system_model
-                    item.processor = pending_update.processor
-                    item.ram_gb = pending_update.ram_gb
-                    item.hdd_gb = pending_update.hdd_gb
-                    item.serial_number = pending_update.serial_number
-                    item.assignee = pending_update.assignee
-                    item.device_condition = pending_update.device_condition
-                    item.status = pending_update.status
-                    item.date = pending_update.date if pending_update.date else timezone.now().date()
-                    item.reason_for_update = pending_update.reason_for_update
-                    item.is_approved = True
-                    item.approved_by = request.user
-                    item.save()
+                    old_assignee = _apply_pending_update_to_import(
+                        import_instance=item,
+                        pending_update=pending_update,
+                        approved_by=request.user,
+                    )
                     # Check if assignee changed
                     if pending_update.assignee != old_assignee:
                         # Email to old assignee (cleared)
@@ -2646,7 +2643,7 @@ def import_approve_all(request):
             messages.info(request, "No unapproved devices to approve on this page.")
        
         redirect_url = reverse('display_unapproved_imports')
-        query_params = [f"page= {page_number}", f"items_per_page={items_per_page}"]
+        query_params = [f"page={page_number}", f"items_per_page={items_per_page}"]
         if search_query:
             query_params.append(f"search={search_query}")
         redirect_url += "?" + "&".join(query_params)
@@ -2800,6 +2797,9 @@ def import_update(request, pk):
                     reason = request.POST.get('reason_for_update', '').strip()
                     if not reason:
                         messages.error(request, "Reason for update is required for trainers.")
+                        return redirect('import_update', pk=pk)
+                    if len(reason) < 10:
+                        messages.error(request, "Reason for update must be at least 10 characters for trainers.")
                         return redirect('import_update', pk=pk)
                     PendingUpdate.objects.create(
                         import_record=device,

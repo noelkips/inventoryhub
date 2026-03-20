@@ -95,6 +95,15 @@
                 </svg>
                 <span class="text-sm font-medium">Work Plans</span>
             </a>
+
+            {% if can_download_inventory_centre_report %}
+            <a href="{% url 'download_inventory_by_centre_report' %}" class="group bg-white bg-opacity-20 backdrop-blur-sm hover:bg-opacity-30 text-white px-4 py-3 rounded-xl transition duration-300 flex flex-col items-center justify-center text-center shadow-lg hover:shadow-2xl hover:-translate-y-1 transform">
+                <svg class="w-8 h-8 mb-2 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M3 4a2 2 0 012-2h6a2 2 0 011.414.586l3 3A2 2 0 0116 6v10a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm7 1v3h3L10 5zm1 5a1 1 0 10-2 0v2.586L7.707 11.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 12.586V10z" clip-rule="evenodd"></path>
+                </svg>
+                <span class="text-sm font-medium">Download Inventory Excel</span>
+            </a>
+            {% endif %}
         </div>
     </div>
 

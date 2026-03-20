@@ -74,6 +74,7 @@ urlpatterns = [
     path('check-serial/', views.check_serial, name='check_serial'),
     path('exportpdf/', views.export_to_pdf, name='export_to_pdf'),
     path('exportexcel/', views.export_to_excel, name='export_to_excel'),
+    path('reports/inventory-by-centre/download/', views.download_inventory_by_centre_report, name='download_inventory_by_centre_report'),
 
     # Employee Management
     path('employees/', views.employee_list, name='employee_list'),
@@ -85,6 +86,7 @@ urlpatterns = [
 
     # Notifications 
     path('notifications/', views.notifications_view, name='notifications_view'), 
+    path('notifications/<int:pk>/', views.notification_detail, name='notification_detail'),
     path('notifications/api/', views.notifications_api, name='notifications_api'),
     path('notifications/stream/', views.notifications_stream, name='notifications_stream'),
     path('notifications/<int:pk>/mark-read/', views.mark_notification_read, name='mark_notification_read'), 

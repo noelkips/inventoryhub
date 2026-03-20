@@ -349,6 +349,49 @@ class PendingUpdate(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     pending_clarification = models.BooleanField(default=False)  # New field
 
+    def _sync_from_import_record(self):
+        if not self.import_record_id:
+            return
+
+        current = self.import_record
+
+        if self.centre_id is None:
+            self.centre = current.centre
+        if self.department_id is None:
+            self.department = current.department
+        if not self.category:
+            self.category = current.category
+        if self.device_name is None:
+            self.device_name = current.device_name
+        if self.system_model is None:
+            self.system_model = current.system_model
+        if self.processor is None:
+            self.processor = current.processor
+        if self.ram_gb is None:
+            self.ram_gb = current.ram_gb
+        if self.hdd_gb is None:
+            self.hdd_gb = current.hdd_gb
+        if not self.serial_number:
+            self.serial_number = current.serial_number
+        if self.assignee_id is None:
+            self.assignee = current.assignee
+        if self.assignee_first_name is None:
+            self.assignee_first_name = current.assignee_first_name
+        if self.assignee_last_name is None:
+            self.assignee_last_name = current.assignee_last_name
+        if self.assignee_email_address is None:
+            self.assignee_email_address = current.assignee_email_address
+        if self.device_condition is None:
+            self.device_condition = current.device_condition
+        if self.status is None:
+            self.status = current.status
+        if self.date is None:
+            self.date = current.date
+
+    def save(self, *args, **kwargs):
+        self._sync_from_import_record()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"Pending update for {self.import_record.serial_number} by {self.updated_by}"
     
