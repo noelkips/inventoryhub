@@ -15,55 +15,103 @@
         <span class="text-gray-500">Loading results...</span>
     </div>
 
-    <div class="flex-grow overflow-y-auto bg-white rounded-lg shadow-md border">
-        <table class="min-w-full">
-            <thead class="bg-gray-100 sticky top-0">
-                <tr>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Serial Number</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Hardware</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Centre</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Assignee</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-                {% for device in page_obj %}
-                    <tr class="hover:bg-gray-50">
-                        <td class="py-3 px-4 text-sm font-medium text-primary">{{ device.serial_number|default:"N/A" }}</td>
-                        <td class="py-3 px-4 text-sm text-gray-700">{{ device.hardware|default:"N/A" }}</td>
-                        <td class="py-3 px-4 text-sm text-gray-700">{{ device.centre.name|default:"N/A" }}</td>
-                        <td class="py-3 px-4 text-sm text-gray-700">
-                            {{ device.assignee_first_name|default:"" }} {{ device.assignee_last_name|default:"" }}
-                        </td>
-                        <td class="py-3 px-4">
-                            <span class="inline-block px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">
+    <div class="flex-grow overflow-y-auto rounded-lg border bg-white shadow-md">
+        <div class="space-y-4 p-4 md:hidden">
+            {% for device in page_obj %}
+                <article class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <div class="flex flex-col gap-3">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Serial Number</p>
+                            <p class="break-all text-sm font-semibold text-primary">{{ device.serial_number|default:"N/A" }}</p>
+                        </div>
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Hardware</p>
+                                <p class="break-words text-sm text-gray-700">{{ device.hardware|default:"N/A" }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Centre</p>
+                                <p class="text-sm text-gray-700">{{ device.centre.name|default:"N/A" }}</p>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Assignee</p>
+                                <p class="break-words text-sm text-gray-700">
+                                    {% if device.assignee_first_name or device.assignee_last_name %}
+                                        {{ device.assignee_first_name|default:"" }} {{ device.assignee_last_name|default:"" }}
+                                    {% else %}
+                                        Unassigned
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
                                 {{ device.status|default:"N/A" }}
                             </span>
-                        </td>
-                        <td class="py-3 px-4">
-                            <a href="{% url 'device_history' device.id %}" target="_blank" class="bg-accent text-white px-3 py-1 rounded-lg hover:bg-blue-700 text-xs">
-                                View
-                            </a>
-                        </td>
-                    </tr>
-                {% empty %}
+                        </div>
+                    </div>
+
+                    <a href="{% url 'device_history' device.id %}" target="_blank" class="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-accent px-4 py-2 text-sm text-white hover:bg-blue-700">
+                        View
+                    </a>
+                </article>
+            {% empty %}
+                <div class="rounded-2xl border border-dashed border-gray-300 px-4 py-10 text-center text-gray-500">
+                    No devices found matching your criteria.
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="hidden overflow-x-auto md:block">
+            <table class="min-w-full">
+                <thead class="sticky top-0 bg-gray-100">
                     <tr>
-                        <td colspan="6" class="py-8 text-center text-gray-500">
-                            No devices found matching your criteria.
-                        </td>
+                        <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Serial Number</th>
+                        <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Hardware</th>
+                        <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Centre</th>
+                        <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Assignee</th>
+                        <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                        <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for device in page_obj %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="py-3 px-4 text-sm font-medium text-primary">{{ device.serial_number|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-sm text-gray-700">{{ device.hardware|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-sm text-gray-700">{{ device.centre.name|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-sm text-gray-700">
+                                {{ device.assignee_first_name|default:"" }} {{ device.assignee_last_name|default:"" }}
+                            </td>
+                            <td class="py-3 px-4">
+                                <span class="inline-block px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">
+                                    {{ device.status|default:"N/A" }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4">
+                                <a href="{% url 'device_history' device.id %}" target="_blank" class="bg-accent text-white px-3 py-1 rounded-lg hover:bg-blue-700 text-xs">
+                                    View
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="py-8 text-center text-gray-500">
+                                No devices found matching your criteria.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
     {% if is_paginated %}
-        <nav class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 mt-4 rounded-b-lg">
+        <nav class="mt-4 rounded-b-lg border-t border-gray-200 bg-white px-4 py-3">
             <div class="text-sm text-gray-700">
                 Page <span class="font-medium">{{ page_obj.number }}</span> of <span class="font-medium">{{ paginator.num_pages }}</span>
             </div>
-            <div class="flex-1 flex justify-end space-x-2">
+            <div class="mt-3 flex flex-wrap justify-end gap-2">
                 {% if page_obj.has_previous %}
                     <a href="{{ request.path }}?page={{ page_obj.previous_page_number }}&{{ query_params }}"
                        hx-get="{{ request.path }}?page={{ page_obj.previous_page_number }}&{{ query_params }}"

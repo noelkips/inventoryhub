@@ -183,9 +183,9 @@
                     </div>
                     {% endif %}
 
-                    <div class="mt-6 flex space-x-2">
-                        <button type="submit" class="w-2/3 bg-accent text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors">Apply</button>
-                        <a href="?clear=1" class="w-1/3 text-center bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">Clear</a>
+                    <div class="mt-6 flex flex-col gap-2 sm:flex-row">
+                        <button type="submit" class="w-full rounded-lg bg-accent px-4 py-2 font-semibold text-white transition-colors hover:bg-blue-700 sm:w-2/3">Apply</button>
+                        <a href="?clear=1" class="w-full rounded-lg bg-gray-200 px-4 py-2 text-center text-gray-700 transition-colors hover:bg-gray-300 sm:w-1/3">Clear</a>
                     </div>
                 </form>
             </div>
@@ -278,7 +278,90 @@
             <!--      RESULTS TABLE      -->
             <!-- ======================= -->
             <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div class="overflow-x-auto">
+                {% if list_type == 'devices' %}
+                <div class="space-y-4 p-4 md:hidden">
+                    {% for item in page_obj %}
+                    <article class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <div class="flex flex-col gap-3">
+                            <div class="min-w-0">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Device</p>
+                                <a href="{% url 'device_history' item.id %}" class="break-all text-sm font-semibold text-accent hover:underline">{{ item.serial_number|default:'N/A' }}</a>
+                                {% if item.device_name or item.system_model %}
+                                <p class="mt-2 break-words text-sm text-gray-600">{{ item.device_name|default:item.system_model }}</p>
+                                {% endif %}
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
+                                    {{ item.get_category_display|default:'Uncategorized' }}
+                                </span>
+                                <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                                    Status: {{ item.status|default:'-' }}
+                                </span>
+                                <span class="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                    Condition: {{ item.device_condition|default:'-' }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Centre</p>
+                                <p class="text-sm text-gray-800">{{ item.centre.name|default:'-' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Department</p>
+                                <p class="text-sm text-gray-800">{{ item.department.name|default:'-' }}</p>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Assigned To</p>
+                                {% if item.assignee %}
+                                    <p class="break-words text-sm font-semibold text-gray-900">{{ item.assignee.full_name|default:item.assignee }}</p>
+                                    <p class="mt-1 break-words text-xs text-gray-600">{{ item.assignee.email|default:'No email' }}</p>
+                                    {% if item.assignee.staff_number %}
+                                    <p class="mt-1 text-xs text-gray-500">Staff No: {{ item.assignee.staff_number }}</p>
+                                    {% endif %}
+                                {% else %}
+                                    <p class="break-words text-sm text-gray-700">
+                                        {% if item.assignee_first_name or item.assignee_last_name %}
+                                            {{ item.assignee_first_name|default:'' }} {{ item.assignee_last_name|default:'' }}
+                                        {% else %}
+                                            Unassigned
+                                        {% endif %}
+                                    </p>
+                                    <p class="mt-1 break-words text-xs text-gray-500">{{ item.assignee_email_address|default:'No email' }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <button onclick="openModal(this)"
+                            data-type="device"
+                            data-serial="{{ item.serial_number }}"
+                            data-category="{{ item.get_category_display|default:'N/A' }}"
+                            data-centre="{{ item.centre.name|default:'N/A' }}"
+                            data-department="{{ item.department.name|default:'N/A' }}"
+                            data-status="{{ item.status|default:'N/A' }}"
+                            data-condition="{{ item.device_condition|default:'N/A' }}"
+                            data-assignee="{% if item.assignee %}{{ item.assignee.full_name|default:item.assignee }}{% else %}{{ item.assignee_first_name|default:'' }} {{ item.assignee_last_name|default:'' }}{% endif %}"
+                            data-email="{% if item.assignee and item.assignee.email %}{{ item.assignee.email }}{% else %}{{ item.assignee_email_address|default:'N/A' }}{% endif %}"
+                            data-assignee-staff-number="{% if item.assignee and item.assignee.staff_number %}{{ item.assignee.staff_number }}{% else %}N/A{% endif %}"
+                            data-assignee-designation="{% if item.assignee and item.assignee.designation %}{{ item.assignee.designation }}{% else %}N/A{% endif %}"
+                            data-assignee-department="{% if item.assignee and item.assignee.department %}{{ item.assignee.department.name }}{% else %}{{ item.department.name|default:'N/A' }}{% endif %}"
+                            data-assignee-centre="{% if item.assignee and item.assignee.centre %}{{ item.assignee.centre.name }}{% else %}{{ item.centre.name|default:'N/A' }}{% endif %}"
+                            class="mt-4 inline-flex w-full items-center justify-center rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-200">
+                            View
+                        </button>
+                    </article>
+                    {% empty %}
+                    <div class="rounded-2xl border border-dashed border-gray-300 px-4 py-12 text-center text-gray-500">
+                        <svg class="w-16 h-16 mx-auto text-gray-300" fill="currentColor" viewBox="0 0 20 20"><path d="M9 9a2 2 0 114 0 2 2 0 01-4 0z"></path><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a.002.002 0 00-.001.002v5.004a.001.001 0 00.002.001h.002a.001.001 0 00.001-.002V5.002A.002.002 0 0011 5zm-1 8a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"></path></svg>
+                        <h3 class="mt-2 text-xl font-semibold">No items found</h3>
+                        <p class="mt-1 text-sm">Try adjusting your filters or <a href="?clear=1" class="text-accent font-medium hover:underline">clear all filters</a>.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="{% if list_type == 'devices' %}hidden md:block {% endif %}overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-100">
                             <!-- Device Headers -->

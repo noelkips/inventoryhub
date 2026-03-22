@@ -79,6 +79,41 @@ from django.views.decorators.http import require_POST
 
 
 ASSET_TAG_RE = re.compile(r"^\s*(\d+)-([LDS])-\s*MOHI\s*$", re.IGNORECASE)
+
+
+def _build_assignee_search_query(search_query):
+    search_query = (search_query or "").strip()
+    if not search_query:
+        return Q()
+
+    assignee_query = (
+        Q(assignee__first_name__icontains=search_query) |
+        Q(assignee__last_name__icontains=search_query) |
+        Q(assignee__email__icontains=search_query) |
+        Q(assignee__staff_number__icontains=search_query) |
+        Q(assignee_cache__icontains=search_query) |
+        Q(assignee_first_name__icontains=search_query) |
+        Q(assignee_last_name__icontains=search_query) |
+        Q(assignee_email_address__icontains=search_query)
+    )
+
+    terms = [term for term in re.split(r"\s+", search_query) if term]
+    if len(terms) > 1:
+        tokenized_name_query = Q()
+        for term in terms:
+            tokenized_name_query &= (
+                Q(assignee__first_name__icontains=term) |
+                Q(assignee__last_name__icontains=term) |
+                Q(assignee__email__icontains=term) |
+                Q(assignee__staff_number__icontains=term) |
+                Q(assignee_cache__icontains=term) |
+                Q(assignee_first_name__icontains=term) |
+                Q(assignee_last_name__icontains=term) |
+                Q(assignee_email_address__icontains=term)
+            )
+        assignee_query |= tokenized_name_query
+
+    return assignee_query
 APPROVAL_FIELD_LABELS = (
     ("category", "Category"),
     ("centre", "Centre"),
@@ -640,10 +675,7 @@ def get_list_context(request, initial_queryset, view_name, is_disposed=False):
             Q(ram_gb__icontains=search_query) |
             Q(hdd_gb__icontains=search_query) |
             Q(serial_number__icontains=search_query) |
-            Q(assignee__first_name__icontains=search_query) |
-            Q(assignee__last_name__icontains=search_query) |
-            Q(assignee__email__icontains=search_query) |
-            Q(assignee__staff_number__icontains=search_query) |
+            _build_assignee_search_query(search_query) |
             Q(device_condition__icontains=search_query) |
             Q(status__icontains=search_query) |
             Q(reason_for_update__icontains=search_query) |
@@ -1964,9 +1996,7 @@ def export_to_excel(request):
             Q(ram_gb__icontains=search_query) |
             Q(hdd_gb__icontains=search_query) |
             Q(serial_number__icontains=search_query) |
-            Q(assignee_first_name__icontains=search_query) |
-            Q(assignee_last_name__icontains=search_query) |
-            Q(assignee_email_address__icontains=search_query) |
+            _build_assignee_search_query(search_query) |
             Q(device_condition__icontains=search_query) |
             Q(status__icontains=search_query) |
             Q(reason_for_update__icontains=search_query)
@@ -2133,9 +2163,7 @@ def export_to_pdf(request):
             Q(ram_gb__icontains=search_query) |
             Q(hdd_gb__icontains=search_query) |
             Q(serial_number__icontains=search_query) |
-            Q(assignee_first_name__icontains=search_query) |
-            Q(assignee_last_name__icontains=search_query) |
-            Q(assignee_email_address__icontains=search_query) |
+            _build_assignee_search_query(search_query) |
             Q(device_condition__icontains=search_query) |
             Q(status__icontains=search_query) |
             Q(reason_for_update__icontains=search_query)
@@ -3034,6 +3062,9 @@ def import_delete(request, pk):
         if not delete_reason:
             messages.error(request, "Deletion reason is required before requesting approval.")
             return redirect('display_approved_imports')
+        if len(delete_reason) < 10:
+            messages.error(request, "Deletion reason must be at least 10 characters.")
+            return redirect('display_approved_imports')
 
         deletion_request, _ = DeviceDeletionRequest.objects.update_or_create(
             device=import_instance,
@@ -3730,10 +3761,7 @@ def import_approve_all(request):
             Q(ram_gb__icontains=search_query) |
             Q(hdd_gb__icontains=search_query) |
             Q(serial_number__icontains=search_query) |
-            Q(assignee__first_name__icontains=search_query) |
-            Q(assignee__last_name__icontains=search_query) |
-            Q(assignee__email__icontains=search_query) |
-            Q(assignee__staff_number__icontains=search_query) |
+            _build_assignee_search_query(search_query) |
             Q(device_condition__icontains=search_query) |
             Q(status__icontains=search_query) |
             Q(reason_for_update__icontains=search_query)
