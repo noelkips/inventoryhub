@@ -3485,9 +3485,7 @@ def import_update(request, pk):
                     device.approved_by = None
                     device.save(update_fields=['is_approved', 'approved_by'])
 
-                    admins = CustomUser.objects.filter(is_trainer=False).filter(
-                        Q(is_superuser=True) | Q(is_it_manager=True) | Q(is_senior_it_officer=True)
-                    )
+                    admins = []
                     for admin in admins:
                         Notification.objects.create(
                             user=admin,

@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block content %}
-<div class="container mx-auto p-4 lg:p-6 min-h-screen">
+<div class="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 sm:py-6 min-h-screen">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
             <a href="{% url 'dashboard' %}" class="text-accent hover:underline text-sm">&larr; Back to Dashboard</a>
@@ -16,10 +16,10 @@
             {% endif %}
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex w-full items-center gap-3 md:w-auto">
             <form action="{% url 'clear_all_notifications' %}" method="POST">
                 {% csrf_token %}
-                <button type="submit" class="bg-error text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">Mark All as Read</button>
+                <button type="submit" class="w-full rounded-lg bg-error px-4 py-2 text-white transition hover:bg-red-700 md:w-auto">Mark All as Read</button>
             </form>
         </div>
     </div>
@@ -35,14 +35,14 @@
     {% endif %}
 
     <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div class="flex flex-col gap-3 border-b border-gray-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <h2 class="text-lg font-semibold text-primary">All Notifications</h2>
             <a href="{% url 'notifications_view' %}?unread=1" class="text-sm font-semibold text-accent hover:underline">Show Unread</a>
         </div>
 
         <div class="divide-y divide-gray-100">
             {% for notification in notifications %}
-                <div class="px-6 py-4 border-l-4 {% if not notification.is_read %}bg-blue-50 border-accent{% else %}bg-slate-50 border-transparent{% endif %}">
+                <div class="border-l-4 px-4 py-4 sm:px-6 {% if not notification.is_read %}bg-blue-50 border-accent{% else %}bg-slate-50 border-transparent{% endif %}">
                     <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                         <div class="min-w-0">
                             <a href="{{ notification.detail_url }}" class="block text-sm break-words hover:text-accent {% if not notification.is_read %}text-gray-900 font-semibold{% else %}text-gray-700{% endif %}">
@@ -65,22 +65,22 @@
                             {% endif %}
                         </div>
 
-                        <div class="flex items-center gap-3 shrink-0">
+                        <div class="flex w-full flex-wrap items-center gap-2 shrink-0 md:w-auto md:justify-end">
                             {% if notification.can_review_request %}
-                                <form action="{{ notification.approve_url }}" method="POST">
+                                <form action="{{ notification.approve_url }}" method="POST" class="w-full md:w-auto">
                                     {% csrf_token %}
-                                    <button type="submit" class="text-accent hover:underline text-sm font-semibold">Approve</button>
+                                    <button type="submit" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-semibold text-accent transition hover:bg-blue-50 md:w-auto md:border-0 md:px-0 md:py-0 md:hover:bg-transparent md:hover:underline">Approve</button>
                                 </form>
-                                <form action="{{ notification.clarify_url }}" method="POST">
+                                <form action="{{ notification.clarify_url }}" method="POST" class="w-full md:w-auto">
                                     {% csrf_token %}
-                                    <button type="submit" class="text-error hover:underline text-sm font-semibold">Clarify</button>
+                                    <button type="submit" class="w-full rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-error transition hover:bg-red-50 md:w-auto md:border-0 md:px-0 md:py-0 md:hover:bg-transparent md:hover:underline">Clarify</button>
                                 </form>
                             {% endif %}
 
-                            <form action="{% url 'delete_notification' notification.pk %}" method="POST">
+                            <form action="{% url 'delete_notification' notification.pk %}" method="POST" class="w-full md:w-auto">
                                 {% csrf_token %}
                                 <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                <button type="submit" class="text-gray-700 hover:text-error hover:underline text-sm font-semibold">Remove</button>
+                                <button type="submit" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 hover:text-error md:w-auto md:border-0 md:px-0 md:py-0 md:hover:bg-transparent md:hover:underline">Remove</button>
                             </form>
                         </div>
                     </div>

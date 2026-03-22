@@ -2,12 +2,12 @@
 {% load static %}
 
 {% block content %}
-<div id="notificationOverlay" class="container mx-auto p-4 lg:p-6 min-h-[75vh] flex items-center justify-center">
-    <div id="notificationCard" class="w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
-        <div class="px-6 py-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+<div id="notificationOverlay" class="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-6xl items-start justify-center px-3 py-4 sm:px-6 sm:py-6 lg:items-center">
+    <div id="notificationCard" class="flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl max-h-[calc(100vh-6rem)]">
+        <div class="flex flex-col gap-4 border-b border-gray-100 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6 sm:py-5">
             <div>
                 <a href="{{ back_url }}" class="text-accent hover:underline text-sm">&larr; Back to Messages</a>
-                <h1 class="text-3xl font-bold text-primary mt-1">Notification</h1>
+                <h1 class="mt-1 text-2xl font-bold text-primary sm:text-3xl">Notification</h1>
                 <p class="text-sm text-gray-600 mt-1">
                     {{ notification.created_at|date:"M d, Y H:i" }}
                     {% if notification.responded_by %}
@@ -21,7 +21,7 @@
         </div>
 
         {% if messages %}
-            <div class="px-6 pt-5">
+            <div class="px-4 pt-4 sm:px-6 sm:pt-5">
                 {% for message in messages %}
                     <div class="bg-{% if message.tags == 'error' %}error{% else %}accent{% endif %} text-white p-4 rounded-lg mb-2" role="alert">
                         {{ message }}
@@ -30,8 +30,8 @@
             </div>
         {% endif %}
 
-        <div class="px-6 py-6">
-            <div class="text-base leading-7 text-gray-900 whitespace-pre-wrap break-words p-5 rounded-2xl bg-slate-50 border border-slate-200">
+        <div class="overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-gray-900 whitespace-pre-wrap break-words sm:p-5 sm:text-base">
                 {{ notification.message }}
             </div>
 
@@ -41,32 +41,32 @@
                 </div>
             {% endif %}
 
-            <div class="mt-6 flex flex-wrap gap-3">
-                <a href="{{ back_url }}" class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition font-semibold">
+            <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <a href="{{ back_url }}" class="inline-flex w-full items-center justify-center rounded-lg border border-gray-300 px-4 py-2 font-semibold text-gray-700 transition hover:bg-gray-50 sm:w-auto">
                     Back to Messages
                 </a>
 
                 {% if notification.has_related_target %}
-                    <a href="{{ notification.target_url }}" class="bg-accent text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-semibold">
+                    <a href="{{ notification.target_url }}" class="inline-flex w-full items-center justify-center rounded-lg bg-accent px-4 py-2 font-semibold text-white transition hover:bg-blue-700 sm:w-auto">
                         {{ notification.target_label }}
                     </a>
                 {% endif %}
 
                 {% if notification.can_review_request %}
-                    <form action="{{ notification.approve_url }}" method="POST">
+                    <form action="{{ notification.approve_url }}" method="POST" class="w-full sm:w-auto">
                         {% csrf_token %}
-                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-semibold">Approve</button>
+                        <button type="submit" class="w-full rounded-lg bg-green-600 px-4 py-2 font-semibold text-white transition hover:bg-green-700 sm:w-auto">Approve</button>
                     </form>
-                    <form action="{{ notification.clarify_url }}" method="POST">
+                    <form action="{{ notification.clarify_url }}" method="POST" class="w-full sm:w-auto">
                         {% csrf_token %}
-                        <button type="submit" class="bg-error text-white px-4 py-2 rounded-lg hover:bg-red-700 transition font-semibold">Clarify</button>
+                        <button type="submit" class="w-full rounded-lg bg-error px-4 py-2 font-semibold text-white transition hover:bg-red-700 sm:w-auto">Clarify</button>
                     </form>
                 {% endif %}
 
-                <form action="{% url 'delete_notification' notification.pk %}" method="POST">
+                <form action="{% url 'delete_notification' notification.pk %}" method="POST" class="w-full sm:w-auto">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ back_url }}">
-                    <button type="submit" class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition font-semibold">Remove</button>
+                    <button type="submit" class="w-full rounded-lg border border-gray-300 px-4 py-2 font-semibold text-gray-700 transition hover:bg-gray-50 sm:w-auto">Remove</button>
                 </form>
             </div>
         </div>

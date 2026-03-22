@@ -100,8 +100,8 @@
                         {% endif %}
                     </button>
 
-                    <div id="notificationsMenu" class="hidden absolute right-0 mt-2 w-[calc(100vw-1rem)] max-w-sm sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
-                        <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <div id="notificationsMenu" class="hidden fixed inset-x-3 top-[4.5rem] z-50 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl sm:absolute sm:right-0 sm:left-auto sm:top-auto sm:mt-2 sm:w-96 sm:max-w-sm">
+                        <div class="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
                             <div class="font-semibold text-gray-800">Notifications</div>
                             <form action="{% url 'clear_all_notifications' %}" method="POST" class="inline">
                                 {% csrf_token %}
@@ -109,20 +109,20 @@
                             </form>
                         </div>
 
-                        <div id="notificationsList" class="max-h-96 overflow-y-auto">
+                        <div id="notificationsList" class="max-h-[calc(100vh-11rem)] overflow-y-auto sm:max-h-96">
                             {% for notification in recent_notifications %}
                             <div class="px-4 py-3 border-b border-gray-100 border-l-4 {% if not notification.is_read %}bg-blue-50 border-accent{% else %}bg-slate-50 border-transparent{% endif %}" data-notification-id="{{ notification.pk }}">
-                                <a href="{% url 'notification_detail' notification.pk %}" class="block text-sm hover:text-gray-900 {% if not notification.is_read %}text-gray-900 font-semibold{% else %}text-gray-700{% endif %}">
+                                <a href="{% url 'notification_detail' notification.pk %}" class="block break-words text-sm hover:text-gray-900 {% if not notification.is_read %}text-gray-900 font-semibold{% else %}text-gray-700{% endif %}">
                                     {{ notification.message|truncatechars:120 }}
                                 </a>
-                                <div class="mt-1 flex items-center justify-between gap-3">
-                                    <div class="flex items-center gap-2 text-xs text-gray-500">
+                                <div class="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500">
                                         <span class="inline-flex items-center rounded-full px-2 py-0.5 font-semibold {% if not notification.is_read %}bg-blue-100 text-blue-700{% else %}bg-gray-200 text-gray-700{% endif %}">
                                             {% if not notification.is_read %}Unread{% else %}Read{% endif %}
                                         </span>
                                         <span>{{ notification.created_at|date:"M d, Y H:i" }}</span>
                                     </div>
-                                    <div class="flex items-center gap-2">
+                                    <div class="flex items-center justify-end gap-2">
                                         <form action="{% url 'delete_notification' notification.pk %}" method="POST" class="inline">
                                             {% csrf_token %}
                                             <input type="hidden" name="next" value="{{ request.get_full_path }}">
