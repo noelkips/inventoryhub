@@ -6,14 +6,14 @@
     function openModal(modalId) { document.getElementById(modalId).classList.remove('hidden'); }
     function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
 </script>
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto w-full max-w-7xl px-3 py-4 sm:px-4 sm:py-8">
     <div class="bg-white shadow-xl rounded-xl overflow-hidden border border-gray-300">
         <!-- Header -->
         <div class="bg-gradient-to-r from-[#143C50] to-[#288CC8] text-white p-6">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h1 class="text-3xl font-bold">Device Details</h1>
-                    <p class="mt-2 text-lg opacity-90">Serial: <strong>{{ device.serial_number|default:"N/A" }}</strong></p>
+            <div class="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+                <div class="min-w-0">
+                    <h1 class="text-2xl sm:text-3xl font-bold">Device Details</h1>
+                    <p class="mt-2 text-base sm:text-lg opacity-90 break-words">Serial: <strong>{{ device.serial_number|default:"N/A" }}</strong></p>
                     {% if not device.is_active %}
                         <div class="mt-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-200 text-amber-900">
                             Under Repair (Inactive)
@@ -35,12 +35,12 @@
                 <!-- ✅ ADDED: Device Configuration links (ONLY CHANGE) -->
                 <div class="flex flex-wrap items-center gap-2">
                     <a href="{% url 'device_repairs' device.pk %}"
-                       class="bg-white text-[#143C50] px-4 py-2 rounded-lg hover:bg-gray-100 transition font-medium">
+                       class="bg-white text-[#143C50] px-4 py-2 rounded-lg hover:bg-gray-100 transition text-sm sm:text-base font-medium">
                         Repairs
                     </a>
 
                     <button type="button" onclick="openModal('repairModal')"
-                            class="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition font-medium">
+                            class="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition text-sm sm:text-base font-medium">
                         Start Repair
                     </button>
 
@@ -48,12 +48,12 @@
                         {% if supports_configuration %}
                             {% if configuration_types_exist %}
                                 <a href="{% url 'start_device_configuration' device.pk %}"
-                                   class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-medium">
+                                   class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition text-sm sm:text-base font-medium">
                                     Start Configuration
                                 </a>
 
                                 <a href="{% url 'device_configuration' device.pk %}"
-                                   class="bg-white text-[#143C50] px-4 py-2 rounded-lg hover:bg-gray-100 transition font-medium">
+                                   class="bg-white text-[#143C50] px-4 py-2 rounded-lg hover:bg-gray-100 transition text-sm sm:text-base font-medium">
                                     Device Configuration
                                 </a>
                             {% else %}
@@ -62,7 +62,7 @@
                                 </span>
                                 {% if user.is_superuser %}
                                     <a href="{% url 'manage_configuration_types' %}"
-                                       class="bg-white text-[#143C50] px-4 py-2 rounded-lg hover:bg-gray-100 transition font-medium">
+                                       class="bg-white text-[#143C50] px-4 py-2 rounded-lg hover:bg-gray-100 transition text-sm sm:text-base font-medium">
                                         Manage Checklist
                                     </a>
                                 {% endif %}
@@ -79,7 +79,7 @@
                     {% endif %}
 
                     <a href="{% url 'display_approved_imports' %}"
-                       class="bg-white text-[#143C50] px-6 py-2 rounded-lg hover:bg-gray-100 transition font-medium">
+                       class="bg-white text-[#143C50] px-6 py-2 rounded-lg hover:bg-gray-100 transition text-sm sm:text-base font-medium">
                         Back to List
                     </a>
                 </div>
@@ -98,7 +98,7 @@
         {% endif %}
 
         <!-- Main Content -->
-        <div class="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="p-4 sm:p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- Device Info -->
             <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
                 <h3 class="text-lg font-semibold text-[#143C50] mb-4">Device Information</h3>

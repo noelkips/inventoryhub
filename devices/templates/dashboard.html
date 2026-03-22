@@ -10,6 +10,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
 
     <style>
+        body { overflow-x: hidden; }
         .bg-primary { background-color: #143C50; }
         .bg-green { background-color: #22C55E; }
         .bg-light { background-color: #DCDCF0; }
@@ -43,11 +44,11 @@
 </head>
 <body class="flex flex-col min-h-screen bg-light text-primary">
     <header class="bg-accent text-white shadow-md fixed w-full z-50">
-        <div class="container mx-auto px-4 py-4 flex items-center justify-between">
-            <div class="flex items-center">
+        <div class="w-full px-3 py-3 sm:px-4 md:px-6 lg:px-8 sm:py-4 flex items-center justify-between gap-3">
+            <div class="flex min-w-0 items-center">
                 <button 
                     id="mobileMenuToggle" 
-                    class="md:hidden mr-4 text-white focus:outline-none" 
+                    class="md:hidden mr-3 text-white focus:outline-none" 
                     aria-label="Toggle mobile menu"
                 >
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -55,7 +56,7 @@
                     </svg>
                 </button>
                 
-                <a href="{% url 'dashboard' %}" class="text-xl font-bold text-white no-underline hover:text-gray-200 flex items-center gap-3">
+                <a href="{% url 'dashboard' %}" class="min-w-0 text-lg sm:text-xl font-bold text-white no-underline hover:text-gray-200 flex flex-wrap items-center gap-2 sm:gap-3">
                     MOHI IT
                     
                     {% if DB_NAME_CONFIG == "ufdxwals_it_test_db" %}
@@ -72,7 +73,7 @@
                 </a>
             </div>
 
-            <div class="flex items-center space-x-4">
+            <div class="flex min-w-0 items-center gap-2 sm:gap-4">
                 <!-- Notifications -->
                 <div class="relative">
                     <button
@@ -99,7 +100,7 @@
                         {% endif %}
                     </button>
 
-                    <div id="notificationsMenu" class="hidden absolute right-0 mt-2 w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
+                    <div id="notificationsMenu" class="hidden absolute right-0 mt-2 w-[calc(100vw-1rem)] max-w-sm sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
                         <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                             <div class="font-semibold text-gray-800">Notifications</div>
                             <form action="{% url 'clear_all_notifications' %}" method="POST" class="inline">
@@ -146,11 +147,11 @@
                 <div class="relative">
                     <button 
                         id="accountDropdown" 
-                        class="flex items-center space-x-2 focus:outline-none" 
+                        class="flex max-w-[12rem] items-center gap-2 focus:outline-none sm:max-w-none" 
                         aria-haspopup="true" 
                         aria-expanded="false"
                     >
-                        <span>{{ user.get_full_name|default:user.username }}</span>
+                        <span class="truncate">{{ user.get_full_name|default:user.username }}</span>
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
@@ -168,8 +169,10 @@
         </div>
     </header>
 
+    <div id="sidebarBackdrop" class="fixed inset-0 z-30 hidden bg-black/40 md:hidden"></div>
+
     <aside id="sidebar"
-           class="bg-primary text-white w-64 p-6 shadow-md fixed h-screen overflow-y-auto z-40 transition-transform duration-300 -translate-x-full md:translate-x-0">
+           class="bg-primary text-white w-64 max-w-[85vw] p-4 sm:p-6 shadow-md fixed h-screen overflow-y-auto z-40 transition-transform duration-300 -translate-x-full md:translate-x-0">
         <nav>
             <ul class="space-y-4">
 
@@ -389,7 +392,7 @@
         </nav>
     </aside>
 
-    <main class="flex-1 p-6 mt-16 md:ml-64">
+    <main class="flex-1 min-w-0 px-3 py-4 sm:px-4 sm:py-6 mt-16 md:ml-64">
         {% block content %}
         {% endblock %}
     </main>
@@ -426,11 +429,21 @@
         // Mobile Sidebar Toggle
         const sidebar = document.getElementById('sidebar');
         const mobileToggle = document.getElementById('mobileMenuToggle');
+        const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+        const setSidebarOpen = (isOpen) => {
+            if (!sidebar) return;
+            sidebar.classList.toggle('-translate-x-full', !isOpen);
+            if (sidebarBackdrop) {
+                sidebarBackdrop.classList.toggle('hidden', !isOpen);
+            }
+        };
         if (mobileToggle && sidebar) {
             mobileToggle.addEventListener('click', () => {
-                sidebar.classList.toggle('-translate-x-full');
+                const isOpen = sidebar.classList.contains('-translate-x-full');
+                setSidebarOpen(isOpen);
             });
         }
+        sidebarBackdrop?.addEventListener('click', () => setSidebarOpen(false));
 
         // Account Dropdown
         const accountDropdown = document.getElementById('accountDropdown');
@@ -506,6 +519,14 @@
                     if (el) el.classList.add('hidden');
                 });
             }
+        });
+
+        document.querySelectorAll('#sidebar a').forEach((link) => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 768) {
+                    setSidebarOpen(false);
+                }
+            });
         });
 
         // Notifications dropdown

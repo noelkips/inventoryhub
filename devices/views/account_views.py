@@ -33,6 +33,7 @@ from io import TextIOWrapper
 from devices.models import CustomUser, DeviceAgreement, DeviceRepair, DeviceUserHistory, Employee, Import, Centre, Notification, PendingUpdate, Department
 from devices.utils.devices_utils import generate_pdf_buffer
 from devices.utils.emails import send_custom_email, send_custom_email, send_device_assignment_email
+from devices.utils.device_access import can_review_device_requests
 from devices.utils.signatures import normalize_signature_data_url
 from it_operations.models import BackupRegistry, WorkPlan, IncidentReport, MissionCriticalAsset, WorkPlanTask
 from devices.forms import ClearanceForm
@@ -91,7 +92,7 @@ def _notification_target_url(notification):
 def _notification_target_label(notification):
     if notification.content_type and notification.content_type.model == 'devicerepair':
         return 'Open Repair'
-    if notification.content_type and notification.content_type.model in {'import', 'pendingupdate'}:
+    if notification.content_type and notification.content_type.model in {'import', 'pendingupdate', 'devicedeletionrequest'}:
         return 'Open Device'
     return 'Open Related Item'
 
@@ -100,14 +101,21 @@ def _notification_action_urls(notification, user):
     approve_url = None
     clarify_url = None
     related_import = resolve_related_import(notification)
+    request_model = getattr(getattr(notification, "content_type", None), "model", None)
+    deletion_request = None
+    if request_model == "devicedeletionrequest":
+        deletion_request = getattr(notification, "related_object", None)
 
     if (
-        user.is_superuser
-        and not user.is_trainer
+        can_review_device_requests(user)
         and notification.content_type
         and related_import
-        and not related_import.is_approved
-        and notification.content_type.model in {'pendingupdate', 'import'}
+        and (
+            request_model == "devicedeletionrequest"
+            or not related_import.is_approved
+        )
+        and request_model in {'pendingupdate', 'import', 'devicedeletionrequest'}
+        and (request_model != "devicedeletionrequest" or deletion_request is not None)
     ):
         approve_url = reverse('import_approve', args=[related_import.pk])
         clarify_url = reverse('import_reject', args=[related_import.pk])
@@ -475,7 +483,7 @@ def notifications_stream(request):
 @login_required
 def dashboard_view(request):
     user = request.user
-    can_switch_dashboard_scope = bool((user.is_superuser or user.is_staff) and not user.is_trainer)
+    can_switch_dashboard_scope = bool(can_review_device_requests(user) and not user.is_trainer)
     requested_stats_scope = (request.GET.get('stats_scope') or 'overall').lower()
     dashboard_stats_scope = requested_stats_scope if requested_stats_scope in {'overall', 'personal'} else 'overall'
     if not can_switch_dashboard_scope:
@@ -499,16 +507,7 @@ def dashboard_view(request):
         asset_query = MissionCriticalAsset.objects.none()
         backup_query = BackupRegistry.objects.none()
         user_scope = "personal"
-    elif user.is_superuser and not user.is_trainer:
-        device_query = Import.objects.all()
-        ppm_query = PPMTask.objects.all()
-        repair_query = DeviceRepair.objects.all()
-        incident_query = IncidentReport.objects.all()
-        workplan_query = WorkPlan.objects.all()
-        asset_query = MissionCriticalAsset.objects.all()
-        backup_query = BackupRegistry.objects.all()
-        user_scope = "all"
-    elif user.is_staff and not user.is_trainer:
+    elif can_review_device_requests(user) and not user.is_trainer:
         device_query = Import.objects.all()
         ppm_query = PPMTask.objects.all()
         repair_query = DeviceRepair.objects.all()
@@ -531,7 +530,11 @@ def dashboard_view(request):
 
     total_devices = device_query.count()
     approved_devices = device_query.filter(is_approved=True, is_disposed=False).count()
-    pending_approvals = device_query.filter(is_approved=False, is_disposed=False).count()
+    pending_approvals = device_query.filter(
+        is_disposed=False,
+    ).filter(
+        Q(is_approved=False) | Q(deletion_request__isnull=False)
+    ).distinct().count()
     disposed_devices = device_query.filter(is_disposed=True).count()
     active_device_query = device_query.filter(is_approved=True, is_disposed=False)
 
@@ -686,7 +689,7 @@ def dashboard_view(request):
     total_users = CustomUser.objects.count() if user.is_superuser else 0
     active_users = CustomUser.objects.filter(is_active=True).count() if user.is_superuser else 0
     total_centres = Centre.objects.count() if user.is_superuser else 0
-    pending_updates = PendingUpdate.objects.count() if user.is_superuser else (
+    pending_updates = PendingUpdate.objects.count() if can_review_device_requests(user) else (
         PendingUpdate.objects.filter(import_record__centre=user.centre).count() if user.centre else 0
     )
 
@@ -700,29 +703,25 @@ def dashboard_view(request):
 
     today = timezone.now().date()
     current_work_plan = WorkPlan.objects.filter(user=user, week_start_date__lte=today, week_end_date__gte=today).first()
+    current_week_filter = Q(week_start_date__lte=today, week_end_date__gte=today)
+
     trainers_query = CustomUser.objects.filter(is_active=True, is_trainer=True, is_superuser=False)
+    it_team_query = CustomUser.objects.filter(is_active=True, is_trainer=False).filter(
+        Q(is_staff=True) | Q(is_it_manager=True) | Q(is_senior_it_officer=True) | Q(is_superuser=True)
+    ).distinct()
+
     if user_scope == "personal":
-        trainers_query = CustomUser.objects.filter(pk=user.pk, is_active=True)
+        trainers_query = trainers_query.filter(pk=user.pk) if user.is_trainer else CustomUser.objects.none()
+        it_team_query = it_team_query.filter(pk=user.pk) if not user.is_trainer else CustomUser.objects.none()
     elif user_scope == "centre" and user.centre:
         trainers_query = trainers_query.filter(centre=user.centre)
-    total_trainers_count = trainers_query.count()
+        it_team_query = it_team_query.filter(centre=user.centre)
 
-    team_work_plans = WorkPlan.objects.filter(
-        week_start_date__lte=today,
-        week_end_date__gte=today,
-        user__is_active=True,
-        user__is_trainer=True,
-        user__is_superuser=False,
-    )
-    if user_scope == "personal":
-        team_work_plans = WorkPlan.objects.filter(
-            user=user,
-            week_start_date__lte=today,
-            week_end_date__gte=today,
-        )
-    elif user_scope == "centre" and user.centre:
-        team_work_plans = team_work_plans.filter(user__centre=user.centre)
-    submitted_work_plans = team_work_plans.values('user_id').distinct().count()
+    total_trainers_count = trainers_query.count()
+    total_it_workplan_users = it_team_query.count()
+
+    submitted_work_plans = WorkPlan.objects.filter(current_week_filter, user__in=trainers_query).values('user_id').distinct().count()
+    submitted_it_workplans = WorkPlan.objects.filter(current_week_filter, user__in=it_team_query).values('user_id').distinct().count()
 
     # Work plan task status (current week) for dashboard chart
     current_week_workplan_tasks = WorkPlanTask.objects.filter(
@@ -807,11 +806,13 @@ def dashboard_view(request):
     ]
 
     workplan_submission_pending = max(total_trainers_count - submitted_work_plans, 0)
+    it_workplan_submission_pending = max(total_it_workplan_users - submitted_it_workplans, 0)
 
     context = {
         'user_scope': user_scope,
         'dashboard_stats_scope': dashboard_stats_scope,
         'can_switch_dashboard_scope': can_switch_dashboard_scope,
+        'can_review_device_requests': can_review_device_requests(user),
         'can_download_inventory_centre_report': _can_download_inventory_centre_report(user),
         'total_devices': total_devices,
         'approved_devices': approved_devices,
@@ -870,6 +871,9 @@ def dashboard_view(request):
         'submitted_work_plans_count': submitted_work_plans,
         'total_trainers_count': total_trainers_count,
         'workplan_submission_pending': workplan_submission_pending,
+        'submitted_it_workplans_count': submitted_it_workplans,
+        'total_it_workplan_users': total_it_workplan_users,
+        'it_workplan_submission_pending': it_workplan_submission_pending,
         'workplan_task_status_breakdown': workplan_task_status_breakdown,
         'workplans_monthly': workplans_monthly,
         'incidents_monthly': incidents_monthly,
@@ -912,7 +916,7 @@ def filtered_list_view(request, list_type):
         return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
 
     user_scope = "none"
-    if user.is_superuser:
+    if can_review_device_requests(user):
         user_scope = "all"
     elif user.is_trainer and user.centre:
         user_scope = "centre"

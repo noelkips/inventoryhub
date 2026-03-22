@@ -130,6 +130,7 @@
                             <div class="bg-white border-2 border-gray-400 rounded overflow-hidden">
                                 <canvas id="user-signature-pad" class="w-full cursor-crosshair" height="150"></canvas>
                             </div>
+                            <p class="mt-1 text-[11px] text-gray-500 sm:hidden">Tap the signature area to sign in full screen.</p>
                             <button type="button" id="clear-user-btn" 
                                     class="mt-1 px-3 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700">
                                 Clear
@@ -162,6 +163,7 @@
                                 <div class="bg-white border-2 border-gray-400 rounded overflow-hidden">
                                     <canvas id="it-signature-pad" class="w-full cursor-crosshair" height="150"></canvas>
                                 </div>
+                                <p class="mt-1 text-[11px] text-gray-500 sm:hidden">Tap the signature area to sign in full screen.</p>
                                 <div class="flex items-center justify-between mt-1">
                                     <button type="button" id="clear-it-btn"
                                             class="px-3 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700">
@@ -193,6 +195,36 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<div id="mobile-signature-modal" class="fixed inset-0 z-[1000] hidden bg-slate-950/90 p-3 sm:hidden">
+    <div class="flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+            <div>
+                <h3 class="text-base font-bold text-[#143C50]">Sign Here</h3>
+                <p id="mobile-signature-title" class="text-xs text-gray-500"></p>
+            </div>
+            <button type="button" id="close-mobile-signature"
+                    class="rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700 hover:bg-gray-200">
+                Close
+            </button>
+        </div>
+        <div class="flex-1 bg-slate-100 p-3">
+            <div class="h-full rounded-2xl border-2 border-dashed border-slate-300 bg-white p-2">
+                <canvas id="mobile-signature-pad" class="h-full w-full rounded-xl"></canvas>
+            </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 border-t border-gray-200 p-4">
+            <button type="button" id="clear-mobile-signature"
+                    class="rounded-xl bg-gray-700 px-4 py-3 text-sm font-semibold text-white hover:bg-gray-800">
+                Clear
+            </button>
+            <button type="button" id="done-mobile-signature"
+                    class="rounded-xl bg-[#288CC8] px-4 py-3 text-sm font-semibold text-white hover:bg-[#143C50]">
+                Done
+            </button>
         </div>
     </div>
 </div>
@@ -236,29 +268,87 @@
     const itDrawWrap = document.getElementById('it-sig-draw');
     const itSwitchToDrawBtn = document.getElementById('it-sig-switch-to-draw');
     const itSwitchToSavedBtn = document.getElementById('it-sig-switch-to-saved');
+    const mobileSignatureModal = document.getElementById('mobile-signature-modal');
+    const mobileSignatureTitle = document.getElementById('mobile-signature-title');
+    const mobileSignatureCanvas = document.getElementById('mobile-signature-pad');
+    const closeMobileSignatureBtn = document.getElementById('close-mobile-signature');
+    const clearMobileSignatureBtn = document.getElementById('clear-mobile-signature');
+    const doneMobileSignatureBtn = document.getElementById('done-mobile-signature');
+    const mobilePad = mobileSignatureCanvas ? new SignaturePad(mobileSignatureCanvas, {
+        backgroundColor: 'rgb(255, 255, 255)',
+        penColor: 'rgb(0, 0, 0)',
+        minWidth: 1.1,
+        maxWidth: 3.2,
+    }) : null;
+    let activeMobileTarget = null;
+
+    function isMobileViewport() {
+        return window.innerWidth < 640;
+    }
 
     function resizeCanvases() {
         const ratio = Math.max(window.devicePixelRatio || 1, 1);
-        
+
+        const userData = !userPad.isEmpty() ? userPad.toData() : null;
+        const itData = itPad && !itPad.isEmpty() ? itPad.toData() : null;
+
         [userCanvas].forEach(canvas => {
-            if (canvas) {
-                const parent = canvas.parentElement;
-                canvas.width = parent.offsetWidth * ratio;
-                canvas.height = 150 * ratio;  // Updated to match new height
-                canvas.getContext('2d').scale(ratio, ratio);
-            }
+            if (!canvas) return;
+            const parent = canvas.parentElement;
+            canvas.width = parent.offsetWidth * ratio;
+            canvas.height = 150 * ratio;
+            canvas.getContext('2d').scale(ratio, ratio);
         });
 
         if (itPad && document.getElementById('it-signature-pad')) {
             const itCanvas = document.getElementById('it-signature-pad');
             const parent = itCanvas.parentElement;
             itCanvas.width = parent.offsetWidth * ratio;
-            itCanvas.height = 150 * ratio;  // Updated to match new height
+            itCanvas.height = 150 * ratio;
             itCanvas.getContext('2d').scale(ratio, ratio);
         }
+
+        if (userData) userPad.fromData(userData);
+        if (itPad && itData) itPad.fromData(itData);
+    }
+
+    function resizeMobileSignatureCanvas() {
+        if (!mobileSignatureCanvas || !mobilePad) return;
+        const wrapper = mobileSignatureCanvas.parentElement;
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        const existingData = !mobilePad.isEmpty() ? mobilePad.toData() : null;
+        mobileSignatureCanvas.width = wrapper.offsetWidth * ratio;
+        mobileSignatureCanvas.height = wrapper.offsetHeight * ratio;
+        mobileSignatureCanvas.getContext('2d').scale(ratio, ratio);
+        if (existingData) mobilePad.fromData(existingData);
+    }
+
+    function openMobileSignature(targetKey) {
+        if (!mobilePad || !mobileSignatureModal || !isMobileViewport()) return;
+
+        const targetPad = targetKey === 'it' ? itPad : userPad;
+        if (!targetPad) return;
+
+        activeMobileTarget = targetKey;
+        mobileSignatureTitle.textContent = targetKey === 'it' ? 'I.T Staff Signature' : 'Staff Signature';
+        mobilePad.clear();
+        if (!targetPad.isEmpty()) {
+            mobilePad.fromData(targetPad.toData());
+        }
+        mobileSignatureModal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        requestAnimationFrame(resizeMobileSignatureCanvas);
+    }
+
+    function closeMobileSignature() {
+        if (!mobileSignatureModal) return;
+        mobileSignatureModal.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+        activeMobileTarget = null;
     }
 
     window.addEventListener('resize', resizeCanvases);
+    window.addEventListener('resize', resizeMobileSignatureCanvas);
     resizeCanvases();
 
     function updateSubmitButton() {
@@ -315,6 +405,46 @@
         if (itSwitchToDrawBtn) itSwitchToDrawBtn.addEventListener('click', useDrawnItSignature);
         if (itSwitchToSavedBtn) itSwitchToSavedBtn.addEventListener('click', useSavedItSignature);
     }
+
+    const bindMobileSignatureLauncher = (canvas, targetKey) => {
+        if (!canvas) return;
+        ['touchstart', 'pointerdown'].forEach((eventName) => {
+            canvas.addEventListener(eventName, (event) => {
+                if (!isMobileViewport()) return;
+                event.preventDefault();
+                openMobileSignature(targetKey);
+            }, { passive: false });
+        });
+        canvas.addEventListener('click', () => openMobileSignature(targetKey));
+    };
+
+    bindMobileSignatureLauncher(userCanvas, 'user');
+    bindMobileSignatureLauncher(document.getElementById('it-signature-pad'), 'it');
+    closeMobileSignatureBtn?.addEventListener('click', closeMobileSignature);
+    clearMobileSignatureBtn?.addEventListener('click', () => mobilePad?.clear());
+    doneMobileSignatureBtn?.addEventListener('click', () => {
+        if (!mobilePad || !activeMobileTarget) {
+            closeMobileSignature();
+            return;
+        }
+
+        const targetPad = activeMobileTarget === 'it' ? itPad : userPad;
+        if (!targetPad) {
+            closeMobileSignature();
+            return;
+        }
+
+        if (activeMobileTarget === 'it' && itSigInput) {
+            itSigInput.value = '';
+        }
+
+        targetPad.clear();
+        if (!mobilePad.isEmpty()) {
+            targetPad.fromData(mobilePad.toData());
+        }
+        closeMobileSignature();
+        updateSubmitButton();
+    });
 
     updateSubmitButton();
 

@@ -14,6 +14,36 @@ def can_manage_device_assignments(user) -> bool:
     )
 
 
+def can_review_device_requests(user) -> bool:
+    if not getattr(user, "is_authenticated", False):
+        return False
+
+    return bool(
+        user.is_superuser
+        or user.is_it_manager
+        or user.is_senior_it_officer
+        or (user.is_staff and not user.is_trainer)
+    )
+
+
+def can_delete_devices(user) -> bool:
+    return can_review_device_requests(user)
+
+
+def can_request_device_deletion(user) -> bool:
+    if not getattr(user, "is_authenticated", False):
+        return False
+
+    return bool(getattr(user, "is_trainer", False) or can_delete_devices(user))
+
+
+def can_access_inventory_lists(user) -> bool:
+    if not getattr(user, "is_authenticated", False):
+        return False
+
+    return bool(getattr(user, "is_trainer", False) or can_review_device_requests(user))
+
+
 def can_clear_device_users(user) -> bool:
     if not getattr(user, "is_authenticated", False):
         return False

@@ -19,6 +19,7 @@ from decimal import Decimal, InvalidOperation
 from devices.models import (
     CustomUser,
     DeviceAgreement,
+    DeviceDeletionRequest,
     DeviceLog,
     DeviceRepair,
     DeviceUserHistory,
@@ -35,8 +36,12 @@ from devices.utils.devices_utils import generate_pdf_buffer
 from devices.utils.emails import send_custom_email, send_custom_email, send_device_assignment_email
 from devices.utils.device_access import (
     assignment_employee_queryset,
+    can_access_inventory_lists,
     can_clear_device_users,
+    can_delete_devices,
     can_manage_device_assignments,
+    can_request_device_deletion,
+    can_review_device_requests,
 )
 from it_operations.models import BackupRegistry, WorkPlan, IncidentReport, MissionCriticalAsset, WorkPlanTask
 from devices.forms import ClearanceForm
@@ -286,13 +291,100 @@ def _block_actions_if_inactive(request, device: Import):
     return redirect("device_detail", pk=device.pk)
 
 
-def _can_delete(user):
-    """Only IT Manager or Senior IT Officer can delete."""
-    return user.is_it_manager or user.is_senior_it_officer
+def _notify_device_request_reviewers(*, device, message, related_object=None):
+    reviewers = CustomUser.objects.filter(
+        is_active=True,
+        is_trainer=False,
+    ).filter(
+        Q(is_superuser=True) | Q(is_it_manager=True) | Q(is_senior_it_officer=True) | Q(is_staff=True)
+    ).distinct()
+    target_object = related_object or device
+    content_type = ContentType.objects.get_for_model(target_object)
+    for reviewer in reviewers:
+        notification = Notification.objects.filter(
+            user=reviewer,
+            content_type=content_type,
+            object_id=target_object.pk,
+            is_read=False,
+        ).first()
+        if notification:
+            notification.message = message
+            notification.responded_by = None
+            notification.save(update_fields=["message", "responded_by"])
+            continue
+        Notification.objects.create(
+            user=reviewer,
+            message=message,
+            content_type=content_type,
+            object_id=target_object.pk,
+        )
+
+
+def _perform_device_delete(*, import_instance, actor):
+    serial_number = import_instance.serial_number
+    device_id = import_instance.pk
+    delete_request_id = (
+        DeviceDeletionRequest.objects.filter(device_id=device_id)
+        .values_list("pk", flat=True)
+        .first()
+    )
+    device_summary = {
+        'serial_number': import_instance.serial_number,
+        'device_name': import_instance.device_name or 'N/A',
+        'system_model': import_instance.system_model or 'N/A',
+        'category': import_instance.get_category_display(),
+        'centre': import_instance.centre.name if import_instance.centre else 'N/A',
+        'department': import_instance.department.name if import_instance.department else 'N/A',
+        'assignee': import_instance.assignee.full_name if import_instance.assignee else 'N/A',
+        'status': import_instance.status or 'N/A',
+        'date_added': import_instance.date.strftime('%Y-%m-%d') if import_instance.date else 'N/A',
+    }
+
+    device_content_type = ContentType.objects.get_for_model(Import)
+    delete_request_content_type = ContentType.objects.get_for_model(DeviceDeletionRequest)
+    notification_query = Q(content_type=device_content_type, object_id=device_id)
+    if delete_request_id:
+        notification_query |= Q(content_type=delete_request_content_type, object_id=delete_request_id)
+    Notification.objects.filter(
+        is_read=False,
+    ).filter(notification_query).update(is_read=True, responded_by=actor)
+
+    import_instance.delete()
+
+    it_email = "it@mohiafrica.org"
+    subject = f"Device Deleted: {serial_number}"
+    message = f"""
+Device Deleted Summary
+
+Serial Number:      {device_summary['serial_number']}
+Device Name:        {device_summary['device_name']}
+Model:              {device_summary['system_model']}
+Category:           {device_summary['category']}
+Centre:             {device_summary['centre']}
+Department:         {device_summary['department']}
+Assignee:           {device_summary['assignee']}
+Status:             {device_summary['status']}
+Date Added:         {device_summary['date_added']}
+
+Deleted by:         {actor.get_full_name() or actor.username} ({actor.email or 'N/A'})
+Deleted on:         {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+This device has been permanently removed from the inventory.
+    """
+
+    try:
+        send_custom_email(
+            subject=subject,
+            message=message,
+            recipient_list=[it_email]
+        )
+    except Exception as e:
+        logger.error(f"Failed to send deletion email for {serial_number}: {str(e)}")
+
+    return serial_number
 
 
 @login_required
-@user_passes_test(_can_delete, login_url='display_approved_imports')
 def import_delete(request, pk):
     import_instance = get_object_or_404(Import, pk=pk)
 
@@ -554,7 +646,11 @@ def get_list_context(request, initial_queryset, view_name, is_disposed=False):
             Q(assignee__staff_number__icontains=search_query) |
             Q(device_condition__icontains=search_query) |
             Q(status__icontains=search_query) |
-            Q(reason_for_update__icontains=search_query)
+            Q(reason_for_update__icontains=search_query) |
+            Q(deletion_request__reason__icontains=search_query) |
+            Q(deletion_request__requested_by__username__icontains=search_query) |
+            Q(deletion_request__requested_by__first_name__icontains=search_query) |
+            Q(deletion_request__requested_by__last_name__icontains=search_query)
         )
         
         # Add disposal_reason only for disposed view
@@ -602,6 +698,7 @@ def get_list_context(request, initial_queryset, view_name, is_disposed=False):
                 open_repairs_by_device_id[repair.device_id] = repair
 
     latest_pending_by_import_id = {}
+    deletion_request_by_device_id = {}
     if page_ids and not is_disposed:
         pending_updates = (
             PendingUpdate.objects.filter(import_record_id__in=page_ids)
@@ -610,6 +707,12 @@ def get_list_context(request, initial_queryset, view_name, is_disposed=False):
         )
         for pending in pending_updates:
             latest_pending_by_import_id.setdefault(pending.import_record_id, pending)
+        deletion_requests = (
+            DeviceDeletionRequest.objects.filter(device_id__in=page_ids)
+            .select_related('requested_by')
+        )
+        for deletion_request in deletion_requests:
+            deletion_request_by_device_id[deletion_request.device_id] = deletion_request
 
     available_centres = Centre.objects.all().order_by('name')
     if request.user.is_trainer:
@@ -619,16 +722,24 @@ def get_list_context(request, initial_queryset, view_name, is_disposed=False):
     data_with_pending = []
     for item in page_obj:
         pending = latest_pending_by_import_id.get(item.id)
+        deletion_request = deletion_request_by_device_id.get(item.id)
         data_with_pending.append({
             'item': item,
             'pending_update': pending,
+            'deletion_request': deletion_request,
             'open_repair': open_repairs_by_device_id.get(item.id),
             'approval_preview': _build_approval_preview(item, pending),
         })
 
     # Stats
     total_devices = initial_queryset.count()
-    unapproved_count = initial_queryset.filter(is_approved=False).count()
+    standard_pending_count = initial_queryset.filter(is_approved=False).count()
+    deletion_request_count = initial_queryset.filter(deletion_request__isnull=False).count() if not is_disposed else 0
+    unapproved_count = (
+        initial_queryset.filter(Q(is_approved=False) | Q(deletion_request__isnull=False)).distinct().count()
+        if not is_disposed
+        else standard_pending_count
+    )
     approved_imports = total_devices - unapproved_count
     this_month_count = initial_queryset.filter(
         date__year=timezone.now().year,
@@ -686,20 +797,34 @@ def get_list_context(request, initial_queryset, view_name, is_disposed=False):
         'show_all_centres_option': not request.user.is_trainer,
         'items_per_page_options': [10, 25, 50, 100, 500],
         'unapproved_count': unapproved_count,
+        'bulk_approvable_count': standard_pending_count,
         'total_devices': total_devices,
         'approved_imports': approved_imports,
         'view_name': view_name,
         'this_month_count': this_month_count,
         'needs_configuration_ids': needs_configuration_ids,
         'configuration_progress': configuration_progress,
+        'can_delete_devices': can_delete_devices(request.user),
+        'can_request_device_deletion': can_request_device_deletion(request.user),
+        'can_review_device_requests': can_review_device_requests(request.user),
+        'can_manage_assignments_list': can_manage_device_assignments(request.user),
     }
 
 @login_required
 def display_approved_imports(request):
-    if request.user.is_superuser:
-        initial_queryset = Import.objects.filter(is_approved=True, is_disposed=False)
-    elif request.user.is_trainer:
-        initial_queryset = Import.objects.filter(centre=request.user.centre, is_approved=True, is_disposed=False) if request.user.centre else Import.objects.none()
+    if request.user.is_trainer:
+        initial_queryset = Import.objects.filter(
+            centre=request.user.centre,
+            is_approved=True,
+            is_disposed=False,
+            deletion_request__isnull=True,
+        ) if request.user.centre else Import.objects.none()
+    elif can_access_inventory_lists(request.user):
+        initial_queryset = Import.objects.filter(
+            is_approved=True,
+            is_disposed=False,
+            deletion_request__isnull=True,
+        )
     else:
         initial_queryset = Import.objects.none()
 
@@ -708,10 +833,17 @@ def display_approved_imports(request):
 
 @login_required
 def display_unapproved_imports(request):
-    if request.user.is_superuser:
-        initial_queryset = Import.objects.filter(is_approved=False, is_disposed=False)
-    elif request.user.is_trainer:
-        initial_queryset = Import.objects.filter(centre=request.user.centre, is_approved=False, is_disposed=False) if request.user.centre else Import.objects.none()
+    if request.user.is_trainer:
+        initial_queryset = Import.objects.filter(
+            centre=request.user.centre,
+            is_disposed=False,
+        ).filter(
+            Q(is_approved=False) | Q(deletion_request__isnull=False)
+        ) if request.user.centre else Import.objects.none()
+    elif can_review_device_requests(request.user):
+        initial_queryset = Import.objects.filter(is_disposed=False).filter(
+            Q(is_approved=False) | Q(deletion_request__isnull=False)
+        )
     else:
         initial_queryset = Import.objects.none()
 
@@ -720,10 +852,10 @@ def display_unapproved_imports(request):
 
 @login_required
 def display_disposed_imports(request):
-    if request.user.is_superuser:
-        initial_queryset = Import.objects.filter(is_disposed=True)
-    elif request.user.is_trainer:
+    if request.user.is_trainer:
         initial_queryset = Import.objects.filter(centre=request.user.centre, is_disposed=True) if request.user.centre else Import.objects.none()
+    elif can_access_inventory_lists(request.user):
+        initial_queryset = Import.objects.filter(is_disposed=True)
     else:
         initial_queryset = Import.objects.none()
 
@@ -1133,9 +1265,9 @@ def device_detail(request, pk):
         'can_manage_assignments': can_manage_assignments,
         'can_clear_user': can_clear_user,
         'can_trainer_reassign': can_trainer_reassign,
-        'can_approve': request.user.is_superuser and not request.user.is_trainer and not device.is_approved,
+        'can_approve': can_review_device_requests(request.user) and not request.user.is_trainer and not device.is_approved,
         'can_dispose': request.user.is_superuser and not request.user.is_trainer and not device.is_disposed,
-        'can_delete': request.user.is_it_manager or request.user.is_senior_it_officer,
+        'can_delete': can_request_device_deletion(request.user),
 
         'supports_configuration': supports_configuration,
         'configuration_types_exist': configuration_types_exist,
@@ -2887,6 +3019,51 @@ def _can_delete(user):
 
 
 @login_required
+def import_delete(request, pk):
+    import_instance = get_object_or_404(Import, pk=pk)
+
+    if request.user.is_trainer and import_instance.centre != request.user.centre:
+        messages.error(request, "You can only manage devices from your own centre.")
+        return redirect('display_approved_imports')
+
+    if request.method != 'POST':
+        return redirect('display_approved_imports')
+
+    if request.user.is_trainer:
+        delete_reason = (request.POST.get('delete_reason') or '').strip()
+        if not delete_reason:
+            messages.error(request, "Deletion reason is required before requesting approval.")
+            return redirect('display_approved_imports')
+
+        deletion_request, _ = DeviceDeletionRequest.objects.update_or_create(
+            device=import_instance,
+            defaults={
+                "reason": delete_reason,
+                "requested_by": request.user,
+            },
+        )
+        _notify_device_request_reviewers(
+            device=import_instance,
+            message=(
+                f"Delete request for device {import_instance.serial_number} by "
+                f"{request.user.get_full_name() or request.user.username} awaiting approval."
+            ),
+            related_object=deletion_request,
+        )
+        messages.success(request, f"Delete request for {import_instance.serial_number} submitted for approval.")
+        return redirect('display_unapproved_imports')
+
+    if not can_delete_devices(request.user):
+        messages.error(request, "You do not have permission to delete devices.")
+        return redirect('display_approved_imports')
+
+    with transaction.atomic():
+        serial_number = _perform_device_delete(import_instance=import_instance, actor=request.user)
+        messages.success(request, f"Device {serial_number} deleted successfully. IT notified.")
+    return redirect('display_approved_imports')
+
+
+@login_required
 def import_update(request, pk):
     """Update existing device - assignee can only be set if currently None"""
     device = get_object_or_404(Import, pk=pk)
@@ -3341,6 +3518,290 @@ def import_update(request, pk):
         'can_trainer_reassign': can_trainer_reassign,
     }
     return render(request, 'import/update.html', context)
+
+
+@login_required
+def import_approve(request, pk):
+    if not can_review_device_requests(request.user):
+        messages.error(request, "You do not have permission to approve device requests.")
+        return redirect('display_unapproved_imports')
+
+    import_instance = get_object_or_404(Import, pk=pk)
+    if request.method != 'POST':
+        return redirect('display_unapproved_imports')
+
+    reviewer_filter = (
+        Q(user__is_superuser=True)
+        | Q(user__is_it_manager=True)
+        | Q(user__is_senior_it_officer=True)
+        | (Q(user__is_staff=True) & Q(user__is_trainer=False))
+    )
+
+    with transaction.atomic():
+        deletion_request = DeviceDeletionRequest.objects.filter(device=import_instance).select_related('requested_by').first()
+        pending_update = PendingUpdate.objects.filter(import_record=import_instance).order_by('-created_at').first()
+
+        if deletion_request:
+            requester = deletion_request.requested_by
+            deletion_request_id = deletion_request.pk
+            serial_number = _perform_device_delete(import_instance=import_instance, actor=request.user)
+            if requester:
+                Notification.objects.create(
+                    user=requester,
+                    message=f"Your delete request for device {serial_number} was approved.",
+                    content_type=ContentType.objects.get_for_model(Import),
+                    object_id=pk,
+                )
+            Notification.objects.filter(
+                Q(content_type=ContentType.objects.get_for_model(Import), object_id=pk)
+                | Q(content_type=ContentType.objects.get_for_model(DeviceDeletionRequest), object_id=deletion_request_id),
+                is_read=False,
+            ).filter(reviewer_filter).update(is_read=True, responded_by=request.user)
+            messages.success(request, f"Delete request approved. Device {serial_number} was deleted.")
+            return redirect('display_unapproved_imports')
+
+        if pending_update:
+            pending_update_id = pending_update.pk
+            trainer_user_id = pending_update.updated_by_id
+            try:
+                old_assignee = _apply_pending_update_to_import(
+                    import_instance=import_instance,
+                    pending_update=pending_update,
+                    approved_by=request.user,
+                )
+            except ValueError as exc:
+                messages.error(request, str(exc))
+                return redirect('display_unapproved_imports')
+
+            if import_instance.assignee != old_assignee:
+                if old_assignee and old_assignee.email:
+                    send_device_assignment_email(import_instance, action='cleared', cleared_by=request.user)
+                if import_instance.assignee and import_instance.assignee.email:
+                    send_device_assignment_email(import_instance, action='assigned')
+                if old_assignee and import_instance.assignee:
+                    send_device_assignment_email(import_instance, action='transferred', cleared_by=request.user)
+
+            pending_update.delete()
+            Notification.objects.filter(
+                Q(content_type=ContentType.objects.get_for_model(Import), object_id=import_instance.pk)
+                | Q(content_type=ContentType.objects.get_for_model(PendingUpdate), object_id=pending_update_id),
+                is_read=False,
+            ).filter(reviewer_filter).exclude(user_id=trainer_user_id).update(
+                is_read=True,
+                responded_by=request.user,
+            )
+            messages.success(request, f"Device {import_instance.serial_number} update approved.")
+            return redirect('display_unapproved_imports')
+
+        import_instance.is_approved = True
+        import_instance.approved_by = request.user
+        import_instance.save()
+        Notification.objects.filter(
+            content_type=ContentType.objects.get_for_model(Import),
+            object_id=import_instance.pk,
+            is_read=False,
+        ).filter(reviewer_filter).update(is_read=True, responded_by=request.user)
+        messages.success(request, f"Device {import_instance.serial_number} approved.")
+        return redirect('display_unapproved_imports')
+
+
+@login_required
+def import_reject(request, pk):
+    if not can_review_device_requests(request.user):
+        messages.error(request, "You do not have permission to review device requests.")
+        return redirect('display_unapproved_imports')
+
+    import_instance = get_object_or_404(Import, pk=pk)
+    if request.method != 'POST':
+        return redirect('display_unapproved_imports')
+
+    reviewer_filter = (
+        Q(user__is_superuser=True)
+        | Q(user__is_it_manager=True)
+        | Q(user__is_senior_it_officer=True)
+        | (Q(user__is_staff=True) & Q(user__is_trainer=False))
+    )
+
+    with transaction.atomic():
+        deletion_request = DeviceDeletionRequest.objects.filter(device=import_instance).select_related('requested_by').first()
+        pending_update = PendingUpdate.objects.filter(import_record=import_instance).order_by('-created_at').first()
+
+        if deletion_request:
+            requester = deletion_request.requested_by
+            deletion_request_id = deletion_request.pk
+            deletion_request.delete()
+            if requester:
+                Notification.objects.create(
+                    user=requester,
+                    message=f"Your delete request for device {import_instance.serial_number} was rejected.",
+                    content_type=ContentType.objects.get_for_model(Import),
+                    object_id=import_instance.pk,
+                )
+            Notification.objects.filter(
+                Q(content_type=ContentType.objects.get_for_model(Import), object_id=import_instance.pk)
+                | Q(content_type=ContentType.objects.get_for_model(DeviceDeletionRequest), object_id=deletion_request_id),
+                is_read=False,
+            ).filter(reviewer_filter).update(is_read=True, responded_by=request.user)
+            messages.success(request, f"Delete request for device {import_instance.serial_number} was rejected.")
+            return redirect('display_unapproved_imports')
+
+        if pending_update:
+            pending_update.pending_clarification = True
+            pending_update.save()
+            trainer = pending_update.updated_by
+            if trainer:
+                content_type = ContentType.objects.get_for_model(PendingUpdate)
+                if not Notification.objects.filter(user=trainer, content_type=content_type, object_id=pending_update.pk).exists():
+                    Notification.objects.create(
+                        user=trainer,
+                        message=f"Your update for device {pending_update.serial_number} was rejected. Please provide clarification.",
+                        content_type=content_type,
+                        object_id=pending_update.pk
+                    )
+            Notification.objects.filter(
+                Q(content_type=ContentType.objects.get_for_model(Import), object_id=import_instance.pk)
+                | Q(content_type=ContentType.objects.get_for_model(PendingUpdate), object_id=pending_update.pk),
+                is_read=False,
+            ).filter(reviewer_filter).exclude(user_id=getattr(trainer, "id", None)).update(
+                is_read=True,
+                responded_by=request.user,
+            )
+            messages.success(request, f"Update for device {pending_update.serial_number} sent back for clarification.")
+            return redirect('display_unapproved_imports')
+
+        import_instance.pending_clarification = True
+        import_instance.save()
+        trainer = import_instance.added_by
+        if trainer:
+            content_type = ContentType.objects.get_for_model(Import)
+            if not Notification.objects.filter(user=trainer, content_type=content_type, object_id=import_instance.pk).exists():
+                Notification.objects.create(
+                    user=trainer,
+                    message=f"Your import request for device {import_instance.serial_number} was rejected. Please provide clarification.",
+                    content_type=content_type,
+                    object_id=import_instance.pk
+                )
+        Notification.objects.filter(
+            content_type=ContentType.objects.get_for_model(Import),
+            object_id=import_instance.pk,
+            is_read=False,
+        ).filter(reviewer_filter).exclude(user_id=getattr(trainer, "id", None)).update(
+            is_read=True,
+            responded_by=request.user,
+        )
+        messages.success(request, f"Import request for device {import_instance.serial_number} sent back for clarification.")
+        return redirect('display_unapproved_imports')
+
+
+@login_required
+def import_approve_all(request):
+    if not can_review_device_requests(request.user):
+        messages.error(request, "You do not have permission to approve device requests.")
+        return redirect('display_unapproved_imports')
+
+    if request.method != 'POST':
+        return redirect('display_unapproved_imports')
+
+    page_number = request.GET.get('page', '1')
+    items_per_page = request.GET.get('items_per_page', '10')
+    search_query = request.GET.get('search', '')
+
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [10, 25, 50, 100, 500]:
+            items_per_page = 10
+    except ValueError:
+        items_per_page = 10
+
+    try:
+        page_number = int(page_number) if page_number else 1
+    except ValueError:
+        page_number = 1
+
+    data = Import.objects.filter(is_approved=False, is_disposed=False, deletion_request__isnull=True).order_by('-pk')
+    if search_query:
+        data = data.filter(
+            Q(centre__name__icontains=search_query) |
+            Q(centre__centre_code__icontains=search_query) |
+            Q(department__name__icontains=search_query) |
+            Q(device_name__icontains=search_query) |
+            Q(system_model__icontains=search_query) |
+            Q(processor__icontains=search_query) |
+            Q(ram_gb__icontains=search_query) |
+            Q(hdd_gb__icontains=search_query) |
+            Q(serial_number__icontains=search_query) |
+            Q(assignee__first_name__icontains=search_query) |
+            Q(assignee__last_name__icontains=search_query) |
+            Q(assignee__email__icontains=search_query) |
+            Q(assignee__staff_number__icontains=search_query) |
+            Q(device_condition__icontains=search_query) |
+            Q(status__icontains=search_query) |
+            Q(reason_for_update__icontains=search_query)
+        )
+
+    paginator = Paginator(data, items_per_page)
+    try:
+        data_on_page = paginator.page(page_number)
+    except PageNotAnInteger:
+        data_on_page = paginator.page(1)
+    except EmptyPage:
+        data_on_page = paginator.page(paginator.num_pages)
+
+    approved_count = 0
+    skipped_conflicts = []
+    with transaction.atomic():
+        for item in data_on_page:
+            pending_update = PendingUpdate.objects.filter(import_record=item).order_by('-created_at').first()
+            if pending_update:
+                try:
+                    old_assignee = _apply_pending_update_to_import(
+                        import_instance=item,
+                        pending_update=pending_update,
+                        approved_by=request.user,
+                    )
+                except ValueError:
+                    skipped_conflicts.append(
+                        f"Skipped {item.serial_number}: the updated serial number conflicts with another device."
+                    )
+                    continue
+                if item.assignee != old_assignee:
+                    if old_assignee and old_assignee.email:
+                        send_device_assignment_email(item, action='cleared', cleared_by=request.user)
+                    if item.assignee and item.assignee.email:
+                        send_device_assignment_email(item, action='assigned')
+                    if old_assignee and item.assignee:
+                        send_device_assignment_email(item, action='transferred', cleared_by=request.user)
+                pending_update.delete()
+                Notification.objects.filter(
+                    content_type=ContentType.objects.get_for_model(PendingUpdate),
+                    object_id=pending_update.pk,
+                    is_read=False,
+                ).exclude(user__is_trainer=True).update(is_read=True, responded_by=request.user)
+                approved_count += 1
+            elif not item.is_approved:
+                item.is_approved = True
+                item.approved_by = request.user
+                item.save()
+                Notification.objects.filter(
+                    content_type=ContentType.objects.get_for_model(Import),
+                    object_id=item.pk,
+                    is_read=False,
+                ).exclude(user__is_trainer=True).update(is_read=True, responded_by=request.user)
+                approved_count += 1
+
+    if approved_count > 0:
+        messages.success(request, f"{approved_count} device(s) approved successfully.")
+    else:
+        messages.info(request, "No unapproved devices to approve on this page.")
+    if skipped_conflicts:
+        messages.warning(request, skipped_conflicts[0])
+
+    redirect_url = reverse('display_unapproved_imports')
+    query_params = [f"page={page_number}", f"items_per_page={items_per_page}"]
+    if search_query:
+        query_params.append(f"search={search_query}")
+    redirect_url += "?" + "&".join(query_params)
+    return redirect(redirect_url)
 
 
 @login_required

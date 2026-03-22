@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 from django.utils.text import Truncator
 
-from devices.models import Import, Notification, PendingUpdate
+from devices.models import DeviceDeletionRequest, Import, Notification, PendingUpdate
 
 
 WORKFLOW_REQUEST_MARKERS = (
@@ -25,7 +25,7 @@ def build_notification_preview(message, length=140):
 
 def is_workflow_request_notification(notification):
     model_name = getattr(getattr(notification, "content_type", None), "model", None)
-    if model_name not in {"import", "pendingupdate"}:
+    if model_name not in {"import", "pendingupdate", "devicedeletionrequest"}:
         return False
 
     message = str(getattr(notification, "message", "") or "").lower()
@@ -35,6 +35,7 @@ def is_workflow_request_notification(notification):
 def _build_related_maps(notifications):
     import_ids = set()
     pending_update_ids = set()
+    deletion_request_ids = set()
 
     for notification in notifications:
         model_name = getattr(getattr(notification, "content_type", None), "model", None)
@@ -42,16 +43,22 @@ def _build_related_maps(notifications):
             import_ids.add(notification.object_id)
         elif model_name == "pendingupdate" and notification.object_id:
             pending_update_ids.add(notification.object_id)
+        elif model_name == "devicedeletionrequest" and notification.object_id:
+            deletion_request_ids.add(notification.object_id)
 
     import_map = Import.objects.in_bulk(import_ids) if import_ids else {}
     pending_update_map = {
         pending.pk: pending
         for pending in PendingUpdate.objects.select_related("import_record").filter(pk__in=pending_update_ids)
     }
-    return import_map, pending_update_map
+    deletion_request_map = {
+        request.pk: request
+        for request in DeviceDeletionRequest.objects.select_related("device").filter(pk__in=deletion_request_ids)
+    }
+    return import_map, pending_update_map, deletion_request_map
 
 
-def resolve_related_import(notification, *, import_map=None, pending_update_map=None):
+def resolve_related_import(notification, *, import_map=None, pending_update_map=None, deletion_request_map=None):
     if hasattr(notification, "_resolved_import"):
         return notification._resolved_import
 
@@ -70,16 +77,24 @@ def resolve_related_import(notification, *, import_map=None, pending_update_map=
         else:
             pending_update = getattr(notification, "related_object", None)
         related_import = getattr(pending_update, "import_record", None)
+    elif model_name == "devicedeletionrequest":
+        deletion_request = None
+        if deletion_request_map is not None:
+            deletion_request = deletion_request_map.get(notification.object_id)
+        else:
+            deletion_request = getattr(notification, "related_object", None)
+        related_import = getattr(deletion_request, "device", None)
 
     notification._resolved_import = related_import
     return related_import
 
 
-def sync_notification_state(notification, *, import_map=None, pending_update_map=None):
+def sync_notification_state(notification, *, import_map=None, pending_update_map=None, deletion_request_map=None):
     related_import = resolve_related_import(
         notification,
         import_map=import_map,
         pending_update_map=pending_update_map,
+        deletion_request_map=deletion_request_map,
     )
 
     if notification.is_read or not is_workflow_request_notification(notification):
@@ -105,7 +120,7 @@ def sync_stale_workflow_notifications(user):
         Notification.objects.filter(
             user=user,
             is_read=False,
-            content_type__model__in=["import", "pendingupdate"],
+            content_type__model__in=["import", "pendingupdate", "devicedeletionrequest"],
         ).select_related("content_type", "responded_by")
     )
 
@@ -113,7 +128,7 @@ def sync_stale_workflow_notifications(user):
     if not candidates:
         return 0
 
-    import_map, pending_update_map = _build_related_maps(candidates)
+    import_map, pending_update_map, deletion_request_map = _build_related_maps(candidates)
     notifications_to_update = []
 
     for notification in candidates:
@@ -121,6 +136,7 @@ def sync_stale_workflow_notifications(user):
             notification,
             import_map=import_map,
             pending_update_map=pending_update_map,
+            deletion_request_map=deletion_request_map,
         )
 
         if related_import is None or related_import.is_approved:

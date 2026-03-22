@@ -134,7 +134,17 @@ def logout_view(request):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def manage_users(request):
-    users = CustomUser.objects.all()
+    search_query = (request.GET.get('search') or '').strip()
+    users = CustomUser.objects.select_related('centre').prefetch_related('groups').all()
+    if search_query:
+        users = users.filter(
+            Q(username__icontains=search_query)
+            | Q(email__icontains=search_query)
+            | Q(first_name__icontains=search_query)
+            | Q(last_name__icontains=search_query)
+            | Q(centre__name__icontains=search_query)
+        )
+    users = users.order_by('username')
     centres = Centre.objects.all()
     groups = Group.objects.all()
     permissions = Permission.objects.all()
@@ -146,6 +156,7 @@ def manage_users(request):
         }
     return render(request, 'manage_users.html', {
         'users': users,
+        'search_query': search_query,
         'centres': centres,
         'groups': groups,
         'permissions': permissions

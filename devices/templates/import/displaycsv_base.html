@@ -3,7 +3,7 @@
     .hidden { display: none; }
 </style>
 
-<div class="container mx-auto p-4 max-w-7xl">
+<div class="mx-auto w-full max-w-7xl px-3 py-4 sm:px-4 sm:py-6">
 
     <!-- Tabs (top) -->
     <div class="mb-4">
@@ -34,7 +34,7 @@
         </div>
     </div>
 
-    <div class="mb-4 flex items-center justify-between gap-3">
+    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 class="text-xl sm:text-2xl font-bold text-gray-800">
             {% if view_name == 'display_approved_imports' %}All Devices
             {% elif view_name == 'display_unapproved_imports' %}Unapproved Devices
@@ -42,10 +42,10 @@
             {% endif %}
         </h1>
 
-        {% if view_name == 'display_unapproved_imports' and user.is_superuser and not user.is_trainer and unapproved_count > 0 %}
+        {% if view_name == 'display_unapproved_imports' and can_review_device_requests and bulk_approvable_count > 0 %}
             <button onclick="openModal('approveAllModal')"
-                    class="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 transition duration-200 font-medium text-sm whitespace-nowrap">
-                Approve All ({{ unapproved_count }})
+                    class="w-full sm:w-auto bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 transition duration-200 font-medium text-sm whitespace-nowrap">
+                Approve All ({{ bulk_approvable_count }})
             </button>
         {% endif %}
     </div>
@@ -154,7 +154,7 @@
                                     {% endif %}
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4 whitespace-nowrap">
+                            <td class="py-3 px-4">
                                 <div class="flex flex-col text-sm">
                                     <span class="font-medium text-gray-800">
                                         {{ item.centre.name|default:"No Centre" }}
@@ -203,7 +203,7 @@
                                     {% endif %}
 
                                     {% if item.is_active %}
-                                        {% if user.is_superuser or user.is_trainer %}
+                                        {% if can_manage_assignments_list %}
                                         <a href="{% url 'import_update' item.id %}"
                                            class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded transition" target="_blank">
                                             Edit
@@ -218,16 +218,14 @@
                                         </button>
                                     {% endif %}
 
-                                    {% if item.is_active %}
-                                        {% if user.is_it_manager or user.is_senior_it_officer %}
+                                    {% if not item.is_disposed and can_request_device_deletion %}
                                         <button onclick="openModal('deleteModal{{ item.id }}')"
                                                 class="bg-red-800 hover:bg-red-900 text-white px-3 py-1 rounded transition">
                                             Delete
                                         </button>
-                                        {% endif %}
                                     {% endif %}
 
-                                    {% if item.is_active and user.is_superuser and not user.is_trainer and not item.is_approved %}
+                                    {% if can_review_device_requests and (not item.is_approved or entry.deletion_request) %}
                                         <button onclick="openModal('approveModal{{ item.id }}')"
                                                 class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded transition">
                                             Approve
@@ -262,21 +260,34 @@
                                 {% endif %}
 
                                 <!-- Delete Modal -->
-                                {% if user.is_it_manager or user.is_senior_it_officer %}
+                                {% if can_request_device_deletion %}
                                 <div id="deleteModal{{ item.id }}" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4 text-left">
                                     <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md animate__animated animate__zoomIn">
-                                        <h3 class="text-lg font-bold text-red-600 mb-3">Confirm Delete</h3>
+                                        <h3 class="text-lg font-bold text-red-600 mb-3">
+                                            {% if can_delete_devices %}Confirm Delete{% else %}Request Delete Approval{% endif %}
+                                        </h3>
                                         <p class="text-gray-700 mb-4">
-                                            Are you sure you want to <strong>permanently delete</strong> this device?
+                                            {% if can_delete_devices %}
+                                                Are you sure you want to <strong>permanently delete</strong> this device?
+                                            {% else %}
+                                                Provide a reason for deletion. Your request will be sent for approval.
+                                            {% endif %}
                                         </p>
                                         <p class="text-sm text-gray-600 mb-4">
                                             <strong>Serial:</strong> {{ item.serial_number|default:"N/A" }}
                                         </p>
                                         <form action="{% url 'import_delete' item.id %}" method="POST">
                                             {% csrf_token %}
+                                            {% if not can_delete_devices %}
+                                            <div class="mb-4">
+                                                <label for="delete_reason_{{ item.id }}" class="block text-sm font-medium text-gray-700 mb-1">Reason for Deletion</label>
+                                                <textarea id="delete_reason_{{ item.id }}" name="delete_reason" rows="4" required
+                                                          class="w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                                            </div>
+                                            {% endif %}
                                             <div class="flex space-x-3">
                                                 <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 font-medium">
-                                                    Delete Device
+                                                    {% if can_delete_devices %}Delete Device{% else %}Request Approval{% endif %}
                                                 </button>
                                                 <button type="button" onclick="closeModal('deleteModal{{ item.id }}')"
                                                         class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 font-medium">
@@ -289,12 +300,16 @@
                                 {% endif %}
 
                                 <!-- Approve Modal -->
-                                {% if user.is_superuser and not user.is_trainer and not item.is_approved %}
+                                {% if can_review_device_requests and (not item.is_approved or entry.deletion_request) %}
                                 <div id="approveModal{{ item.id }}" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 text-left">
                                     <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-4xl mx-4 animate__animated animate__zoomIn max-h-[90vh] overflow-y-auto">
-                                        <h3 class="text-lg font-bold mb-2 text-gray-800">Review Approval Request</h3>
+                                        <h3 class="text-lg font-bold mb-2 text-gray-800">
+                                            {% if entry.deletion_request %}Review Delete Request{% else %}Review Approval Request{% endif %}
+                                        </h3>
                                         <p class="text-gray-600 mb-4">
-                                            {% if entry.approval_preview.is_update_request %}
+                                            {% if entry.deletion_request %}
+                                                Review the full device details below before approving this delete request.
+                                            {% elif entry.approval_preview.is_update_request %}
                                                 Review the full device details below. Changed fields are highlighted before you approve this update.
                                             {% else %}
                                                 Review the full device details below before approving this new device.
@@ -302,7 +317,26 @@
                                         </p>
 
                                         {% with pending_update=entry.pending_update %}
-                                            {% if pending_update %}
+                                            {% if entry.deletion_request %}
+                                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                                                    <div class="rounded-lg bg-slate-50 border border-slate-200 p-3">
+                                                        <div class="text-xs uppercase tracking-wide text-slate-500">Requested By</div>
+                                                        <div class="mt-1 font-semibold text-slate-800">{{ entry.deletion_request.requested_by|default:"N/A" }}</div>
+                                                    </div>
+                                                    <div class="rounded-lg bg-slate-50 border border-slate-200 p-3">
+                                                        <div class="text-xs uppercase tracking-wide text-slate-500">Requested</div>
+                                                        <div class="mt-1 font-semibold text-slate-800">{{ entry.deletion_request.created_at|date:"Y-m-d H:i"|default:"N/A" }}</div>
+                                                    </div>
+                                                    <div class="rounded-lg bg-red-50 border border-red-200 p-3">
+                                                        <div class="text-xs uppercase tracking-wide text-red-700">Action</div>
+                                                        <div class="mt-1 font-semibold text-red-900">Delete Device</div>
+                                                    </div>
+                                                </div>
+                                                <div class="mb-4 rounded-lg bg-red-50 border border-red-200 p-4">
+                                                    <div class="text-sm font-semibold text-red-900 mb-1">Reason for Deletion</div>
+                                                    <div class="text-sm text-red-900">{{ entry.deletion_request.reason|default:"N/A" }}</div>
+                                                </div>
+                                            {% elif pending_update %}
                                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                                                     <div class="rounded-lg bg-slate-50 border border-slate-200 p-3">
                                                         <div class="text-xs uppercase tracking-wide text-slate-500">Updated By</div>
@@ -329,7 +363,9 @@
                                                 <thead class="bg-gray-100 text-gray-700">
                                                     <tr>
                                                         <th class="px-4 py-3 text-left font-semibold">Field</th>
-                                                        {% if entry.approval_preview.is_update_request %}
+                                                        {% if entry.deletion_request %}
+                                                            <th class="px-4 py-3 text-left font-semibold">Current Value</th>
+                                                        {% elif entry.approval_preview.is_update_request %}
                                                             <th class="px-4 py-3 text-left font-semibold">Current</th>
                                                             <th class="px-4 py-3 text-left font-semibold">Requested</th>
                                                         {% else %}
@@ -341,7 +377,9 @@
                                                     {% for row in entry.approval_preview.rows %}
                                                         <tr class="border-t {% if row.is_changed %}bg-amber-50{% endif %}">
                                                             <td class="px-4 py-3 font-medium text-gray-700">{{ row.label }}</td>
-                                                            {% if entry.approval_preview.is_update_request %}
+                                                            {% if entry.deletion_request %}
+                                                                <td class="px-4 py-3 text-gray-700">{{ row.current }}</td>
+                                                            {% elif entry.approval_preview.is_update_request %}
                                                                 <td class="px-4 py-3 text-gray-700">{{ row.current }}</td>
                                                                 <td class="px-4 py-3 {% if row.is_changed %}text-amber-900 font-semibold{% else %}text-gray-700{% endif %}">{{ row.proposed }}</td>
                                                             {% else %}
@@ -356,7 +394,9 @@
                                         <form action="{% url 'import_approve' item.id %}" method="POST">
                                             {% csrf_token %}
                                             <div class="flex space-x-3 mt-4">
-                                                <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition duration-200">Approve</button>
+                                                <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition duration-200">
+                                                    {% if entry.deletion_request %}Approve Delete{% else %}Approve{% endif %}
+                                                </button>
                                                 <button type="button" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200" onclick="closeModal('approveModal{{ item.id }}')">Cancel</button>
                                             </div>
                                         </form>
@@ -428,11 +468,11 @@
         </button>
     </div>
 
-    {% if view_name == 'display_unapproved_imports' and user.is_superuser and not user.is_trainer and unapproved_count > 0 %}
+    {% if view_name == 'display_unapproved_imports' and can_review_device_requests and bulk_approvable_count > 0 %}
     <div id="approveAllModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md animate__animated animate__zoomIn">
             <h3 class="text-lg font-bold text-green-600 mb-3">Bulk Approve</h3>
-            <p class="text-gray-700 mb-4">Approve all {{ unapproved_count }} unapproved devices?</p>
+            <p class="text-gray-700 mb-4">Approve all {{ bulk_approvable_count }} unapproved devices?</p>
             <form action="{% url 'import_approve_all' %}?{% if report_data.search_query %}search={{ report_data.search_query|urlencode }}&{% endif %}{% if centre_filter %}centre={{ centre_filter }}&{% endif %}{% if department_filter %}department={{ department_filter }}&{% endif %}page={{ data.number }}&items_per_page={{ report_data.items_per_page }}"
                   method="POST">
                 {% csrf_token %}

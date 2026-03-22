@@ -394,7 +394,32 @@ class PendingUpdate(models.Model):
 
     def __str__(self):
         return f"Pending update for {self.import_record.serial_number} by {self.updated_by}"
-    
+
+
+class DeviceDeletionRequest(models.Model):
+    device = models.OneToOneField(
+        Import,
+        on_delete=models.CASCADE,
+        related_name="deletion_request",
+    )
+    reason = models.TextField()
+    requested_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="device_deletion_requests",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        requester = self.requested_by or "Unknown"
+        return f"Delete request for {self.device.serial_number} by {requester}"
+
+
 class Report(models.Model):
     def __str__(self):
         return "Report"

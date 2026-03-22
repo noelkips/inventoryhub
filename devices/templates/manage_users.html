@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block content %}
-<div class="container mx-auto p-4">
+<div class="mx-auto w-full max-w-7xl px-3 py-4 sm:px-4 sm:py-6">
   <h2 class="text-2xl font-bold mb-4 text-gray-800">Manage Users</h2>
 
   <!-- Breadcrumbs -->
@@ -26,15 +26,30 @@
   {% endif %}
 
   <!-- Action Buttons -->
-  <div class="mb-4 flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
+  <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
     <button onclick="showModal('add')" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full sm:w-auto">Add User</button>
     {% if request.user.is_superuser %}
       <button onclick="showModal('manage_groups')" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full sm:w-auto">Manage Groups</button>
     {% endif %}
   </div>
 
+  <form method="get" class="mb-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+      <div class="flex-1">
+        <label for="search" class="mb-1 block text-sm font-medium text-gray-700">Search Users</label>
+        <input type="text" id="search" name="search" value="{{ search_query|default:'' }}"
+               placeholder="Username, email, name, or centre"
+               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div class="flex flex-col gap-2 sm:flex-row">
+        <button type="submit" class="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-white hover:bg-blue-700 sm:w-auto">Search</button>
+        <a href="{% url 'manage_users' %}" class="w-full rounded-lg bg-gray-100 px-4 py-2.5 text-center text-gray-700 hover:bg-gray-200 sm:w-auto">Reset</a>
+      </div>
+    </div>
+  </form>
+
   <!-- Table -->
-  <div class="overflow-x-auto">
+  <div class="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
     <table class="min-w-full bg-white border shadow-sm">
       <thead>
         <tr class="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
@@ -70,7 +85,8 @@
               {% if user.is_it_manager %}IT Manager{% elif user.is_senior_it_officer %}Senior IT Officer{% elif user.is_trainer %}Trainer{% elif user.is_staff %}Staff{% else %}User{% endif %}
             </td>
             <td class="py-2 px-4 border">{{ user.groups.all|join:", "|default:"N/A" }}</td>
-            <td class="py-2 px-4 border flex flex-wrap gap-1 text-xs">
+            <td class="py-2 px-4 border">
+              <div class="flex flex-wrap gap-1 text-xs">
               <button onclick="showModal('view', {{ user.pk }})" class="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">View</button>
               <button onclick="showModal('update', {{ user.pk }})" class="bg-yellow-600 text-white px-2 py-1 rounded hover:bg-yellow-700">Edit</button>
               <form method="post" action="{% url 'resend_user_credentials' user.pk %}" class="inline">
@@ -81,6 +97,7 @@
               {% if request.user.is_it_manager or request.user.is_senior_it_officer %}
                 <button onclick="showModal('delete', {{ user.pk }})" class="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Delete</button>
               {% endif %}
+              </div>
             </td>
           </tr>
         {% empty %}
@@ -93,8 +110,8 @@
   </div>
 
   <!-- VIEW MODAL -->
-  <div id="viewModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 p-6">
+  <div id="viewModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-xl font-bold text-blue-800">User Details</h3>
         <button onclick="closeModal('viewModal')" class="text-gray-600 hover:text-gray-800 text-2xl">x</button>
@@ -114,14 +131,14 @@
   </div>
 
   <!-- UPDATE MODAL (existing) -->
-  <div id="userModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-7xl mx-4 md:mx-6 max-h-[90vh] overflow-y-auto">
+  <div id="userModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] overflow-y-auto">
       <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-t-lg flex justify-between items-center">
         <h3 id="modalTitle" class="text-xl font-semibold"></h3>
         <button onclick="closeModal('userModal')" class="text-white hover:bg-gray-200 hover:text-gray-800 rounded-full p-2">x</button>
       </div>
-      <div class="p-8">
-        <form id="userForm" method="post" action="" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="p-4 sm:p-6 lg:p-8">
+        <form id="userForm" method="post" action="" class="grid grid-cols-1 gap-6 md:grid-cols-3">
           {% csrf_token %}
           <input type="hidden" id="userId" name="user_id">
           <div>
@@ -169,7 +186,7 @@
                 {% endfor %}
               </select>
             </div>
-            <div class="mb-4 grid grid-cols-2 gap-2">
+            <div class="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <label class="flex items-center">
                 <input type="checkbox" name="is_trainer" id="is_trainer" class="mr-2">
                 <span>Is Trainer</span>
@@ -205,7 +222,7 @@
           <input type="hidden" name="is_active" value="false">
           {% endif %}
 
-          <div class="col-span-1 md:col-span-3 flex justify-end space-x-3">
+          <div class="col-span-1 flex flex-col gap-3 md:col-span-3 sm:flex-row sm:justify-end">
             <button type="button" onclick="closeModal('userModal')" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">Cancel</button>
             <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Save</button>
           </div>
@@ -216,8 +233,8 @@
 
   <!-- DELETE MODAL -->
   {% if request.user.is_it_manager or request.user.is_senior_it_officer %}
-  <div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center">
-    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md mx-4">
+  <div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
       <h3 class="text-lg font-bold mb-4 text-red-600">Delete User</h3>
       <p class="text-gray-700 mb-4">Are you sure you want to <strong>permanently delete</strong> this user?</p>
       <p class="text-sm text-gray-600 mb-4">
