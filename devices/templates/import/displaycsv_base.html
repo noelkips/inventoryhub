@@ -37,20 +37,39 @@
     <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 class="text-xl sm:text-2xl font-bold text-gray-800">
             {% if view_name == 'display_approved_imports' %}All Devices
+            {% elif view_name == 'display_unapproved_imports' and clarification_only %}Devices Needing Clarification
             {% elif view_name == 'display_unapproved_imports' %}Unapproved Devices
             {% else %}Disposed Devices
             {% endif %}
         </h1>
 
-        {% if view_name == 'display_unapproved_imports' and can_review_device_requests and bulk_approvable_count > 0 %}
-            <button onclick="openModal('approveAllModal')"
-                    class="w-full sm:w-auto bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 transition duration-200 font-medium text-sm whitespace-nowrap">
-                Approve All ({{ bulk_approvable_count }})
-            </button>
-        {% endif %}
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            {% if view_name == 'display_unapproved_imports' and user.is_trainer and clarification_requests_count > 0 %}
+                <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <a href="{% url 'display_unapproved_imports' %}"
+                       class="inline-flex items-center justify-center rounded px-4 py-2 text-sm font-medium transition {% if not clarification_only %}bg-[#288CC8] text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+                        All Requests
+                    </a>
+                    <a href="{% url 'display_unapproved_imports' %}?clarification=1"
+                       class="inline-flex items-center justify-center rounded px-4 py-2 text-sm font-medium transition {% if clarification_only %}bg-amber-600 text-white{% else %}bg-amber-100 text-amber-900 hover:bg-amber-200{% endif %}">
+                        Needs Clarification ({{ clarification_requests_count }})
+                    </a>
+                </div>
+            {% endif %}
+
+            {% if view_name == 'display_unapproved_imports' and can_review_device_requests and bulk_approvable_count > 0 %}
+                <button onclick="openModal('approveAllModal')"
+                        class="w-full sm:w-auto bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 transition duration-200 font-medium text-sm whitespace-nowrap">
+                    Approve All ({{ bulk_approvable_count }})
+                </button>
+            {% endif %}
+        </div>
     </div>
 
     <form method="get" class="mb-6 rounded-lg border bg-white p-3 shadow-md sm:p-4">
+        {% if clarification_only %}
+            <input type="hidden" name="clarification" value="1">
+        {% endif %}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
@@ -154,6 +173,13 @@
                                             {% endif %}
                                         </div>
                                     {% endif %}
+                                {% endif %}
+                                {% if user.is_trainer %}
+                                {% if item.pending_clarification or entry.pending_update.pending_clarification %}
+                                    <div class="mt-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-900">
+                                        Needs Clarification
+                                    </div>
+                                {% endif %}
                                 {% endif %}
                             </td>
                             <td class="block border-b border-slate-100 px-4 py-3 align-top lg:table-cell lg:border-b">
@@ -401,15 +427,43 @@
                                             </table>
                                         </div>
 
-                                        <form action="{% url 'import_approve' item.id %}" method="POST">
-                                            {% csrf_token %}
-                                            <div class="flex space-x-3 mt-4">
-                                                <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition duration-200">
+                                        <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+                                            <form action="{% url 'import_approve' item.id %}" method="POST">
+                                                {% csrf_token %}
+                                                <button type="submit" class="w-full rounded bg-green-600 px-4 py-2 text-white transition duration-200 hover:bg-green-700 sm:w-auto">
                                                     {% if entry.deletion_request %}Approve Delete{% else %}Approve{% endif %}
                                                 </button>
-                                                <button type="button" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200" onclick="closeModal('approveModal{{ item.id }}')">Cancel</button>
-                                            </div>
-                                        </form>
+                                            </form>
+                                            <button type="button" class="w-full rounded bg-gray-600 px-4 py-2 text-white transition duration-200 hover:bg-gray-700 sm:w-auto" onclick="closeModal('approveModal{{ item.id }}')">Cancel</button>
+                                        </div>
+
+                                        <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                                            <form action="{% url 'import_reject' item.id %}" method="POST" class="space-y-3">
+                                                {% csrf_token %}
+                                                <div>
+                                                    <label for="clarification_reason_{{ item.id }}" class="block text-sm font-semibold text-amber-900">
+                                                        Reason for Clarification
+                                                    </label>
+                                                    <textarea
+                                                        id="clarification_reason_{{ item.id }}"
+                                                        name="clarification_reason"
+                                                        rows="3"
+                                                        required
+                                                        minlength="5"
+                                                        placeholder="Explain what needs to be corrected or clarified before approval."
+                                                        class="mt-2 w-full rounded-md border border-amber-300 p-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                                    ></textarea>
+                                                </div>
+                                                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                    <p class="text-xs text-amber-900">
+                                                        This will send the request back to the requester with your note.
+                                                    </p>
+                                                    <button type="submit" class="w-full rounded bg-amber-600 px-4 py-2 text-white transition duration-200 hover:bg-amber-700 sm:w-auto">
+                                                        Send Back for Clarification
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
                                     </div>
                                 </div>
                                 {% endif %}
@@ -436,15 +490,15 @@
             </div>
             <div class="flex flex-wrap justify-center gap-2">
                 {% if data.has_previous %}
-                    <a href="?page=1{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if show_duplicates == 'on' %}&show_duplicates=on{% endif %}&items_per_page={{ report_data.items_per_page }}"
+                    <a href="?page=1{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if show_duplicates == 'on' %}&show_duplicates=on{% endif %}{% if clarification_only %}&clarification=1{% endif %}&items_per_page={{ report_data.items_per_page }}"
                        class="rounded border px-3 py-1 text-sm hover:bg-gray-200">First</a>
-                    <a href="?page={{ data.previous_page_number }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if show_duplicates == 'on' %}&show_duplicates=on{% endif %}&items_per_page={{ report_data.items_per_page }}"
+                    <a href="?page={{ data.previous_page_number }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if show_duplicates == 'on' %}&show_duplicates=on{% endif %}{% if clarification_only %}&clarification=1{% endif %}&items_per_page={{ report_data.items_per_page }}"
                        class="rounded border px-3 py-1 text-sm hover:bg-gray-200">Prev</a>
                 {% endif %}
 
                 {% for num in paginator.page_range %}
                     {% if num >= data.number|add:-2 and num <= data.number|add:2 %}
-                        <a href="?page={{ num }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if show_duplicates == 'on' %}&show_duplicates=on{% endif %}&items_per_page={{ report_data.items_per_page }}"
+                        <a href="?page={{ num }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if show_duplicates == 'on' %}&show_duplicates=on{% endif %}{% if clarification_only %}&clarification=1{% endif %}&items_per_page={{ report_data.items_per_page }}"
                            class="rounded border px-3 py-1 text-sm {% if num == data.number %}bg-blue-600 text-white{% else %}hover:bg-gray-200{% endif %}">
                             {{ num }}
                         </a>
@@ -452,9 +506,9 @@
                 {% endfor %}
 
                 {% if data.has_next %}
-                    <a href="?page={{ data.next_page_number }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if show_duplicates == 'on' %}&show_duplicates=on{% endif %}&items_per_page={{ report_data.items_per_page }}"
+                    <a href="?page={{ data.next_page_number }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if show_duplicates == 'on' %}&show_duplicates=on{% endif %}{% if clarification_only %}&clarification=1{% endif %}&items_per_page={{ report_data.items_per_page }}"
                        class="rounded border px-3 py-1 text-sm hover:bg-gray-200">Next</a>
-                    <a href="?page={{ paginator.num_pages }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if show_duplicates == 'on' %}&show_duplicates=on{% endif %}&items_per_page={{ report_data.items_per_page }}"
+                    <a href="?page={{ paginator.num_pages }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if show_duplicates == 'on' %}&show_duplicates=on{% endif %}{% if clarification_only %}&clarification=1{% endif %}&items_per_page={{ report_data.items_per_page }}"
                        class="rounded border px-3 py-1 text-sm hover:bg-gray-200">Last</a>
                 {% endif %}
             </div>
@@ -462,11 +516,11 @@
     {% endif %}
 
     <div class="mt-6 flex flex-col sm:flex-row gap-3">
-        <a href="{% url 'export_to_pdf' %}?scope=page&page={{ data.number }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}&items_per_page={{ report_data.items_per_page }}&view_context={{ view_name }}"
+        <a href="{% url 'export_to_pdf' %}?scope=page&page={{ data.number }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if clarification_only %}&clarification=1{% endif %}&items_per_page={{ report_data.items_per_page }}&view_context={{ view_name }}"
            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-center font-medium text-sm">
             Export Page to PDF
         </a>
-        <a href="{% url 'export_to_pdf' %}?scope=all{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}&view_context={{ view_name }}"
+        <a href="{% url 'export_to_pdf' %}?scope=all{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if clarification_only %}&clarification=1{% endif %}&view_context={{ view_name }}"
            class="bg-blue-800 text-white px-4 py-2 rounded hover:bg-blue-900 text-center font-medium text-sm">
             Export All to PDF
         </a>
@@ -485,7 +539,7 @@
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md animate__animated animate__zoomIn">
             <h3 class="text-lg font-bold text-green-600 mb-3">Bulk Approve</h3>
             <p class="text-gray-700 mb-4">Approve all {{ bulk_approvable_count }} unapproved devices?</p>
-            <form action="{% url 'import_approve_all' %}?{% if report_data.search_query %}search={{ report_data.search_query|urlencode }}&{% endif %}{% if centre_filter %}centre={{ centre_filter }}&{% endif %}{% if department_filter %}department={{ department_filter }}&{% endif %}page={{ data.number }}&items_per_page={{ report_data.items_per_page }}"
+            <form action="{% url 'import_approve_all' %}?{% if report_data.search_query %}search={{ report_data.search_query|urlencode }}&{% endif %}{% if centre_filter %}centre={{ centre_filter }}&{% endif %}{% if department_filter %}department={{ department_filter }}&{% endif %}{% if clarification_only %}clarification=1&{% endif %}page={{ data.number }}&items_per_page={{ report_data.items_per_page }}"
                   method="POST">
                 {% csrf_token %}
                 <div class="flex space-x-3">
@@ -518,8 +572,8 @@
         const viewContext = "&view_context={{ view_name }}";
         
         let url = scope === 'all'
-            ? `${base}?scope=all{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if show_duplicates == 'on' %}&show_duplicates=on{% endif %}${viewContext}`
-            : `${base}?scope=page&page={{ data.number }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}&items_per_page={{ report_data.items_per_page }}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if show_duplicates == 'on' %}&show_duplicates=on{% endif %}${viewContext}`;
+            ? `${base}?scope=all{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if show_duplicates == 'on' %}&show_duplicates=on{% endif %}{% if clarification_only %}&clarification=1{% endif %}${viewContext}`
+            : `${base}?scope=page&page={{ data.number }}{% if report_data.search_query %}&search={{ report_data.search_query|urlencode }}{% endif %}&items_per_page={{ report_data.items_per_page }}{% if centre_filter %}&centre={{ centre_filter }}{% endif %}{% if department_filter %}&department={{ department_filter }}{% endif %}{% if show_duplicates == 'on' %}&show_duplicates=on{% endif %}{% if clarification_only %}&clarification=1{% endif %}${viewContext}`;
         
         window.location.href = url;
     }

@@ -19,7 +19,51 @@
         </div>
         {% endif %}
 
-        <div class="p-6 md:p-8">
+        <div class="p-6 md:p-8 space-y-6">
+            {% if user.is_trainer and clarification_mode %}
+            <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-amber-900">
+                <h3 class="text-lg font-semibold">Clarification requested</h3>
+                <p class="mt-2 text-sm leading-6">
+                    The form below is ready for you to adjust and resubmit. You can also update your delete reason or cancel the pending request from this page.
+                </p>
+            </div>
+            {% endif %}
+
+            {% if user.is_trainer and pending_update_request %}
+            <div class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-4 text-blue-950">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div class="space-y-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h3 class="text-lg font-semibold">Pending Update Request</h3>
+                            {% if pending_update_request.pending_clarification %}
+                            <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-800">
+                                Clarification Needed
+                            </span>
+                            {% else %}
+                            <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-800">
+                                Awaiting Approval
+                            </span>
+                            {% endif %}
+                        </div>
+                        <p class="text-sm">
+                            Submitted on {{ pending_update_request.created_at|date:"M d, Y H:i" }}.
+                        </p>
+                        <p class="text-sm leading-6">
+                            <span class="font-semibold">Reason:</span> {{ pending_update_request.reason_for_update }}
+                        </p>
+                    </div>
+                    <form method="post" action="{% url 'cancel_pending_update' import_instance.pk %}" class="w-full lg:w-auto">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button type="submit"
+                                class="w-full rounded-lg border border-red-200 bg-white px-5 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 lg:w-auto">
+                            Cancel Update Request
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
             <form method="post" class="grid grid-cols-1 md:grid-cols-3 gap-6" id="updateForm">
                 {% csrf_token %}
 
@@ -84,7 +128,7 @@
                                 <input list="employee-list" id="assignee_search" name="assignee_search"
                                        placeholder="Search user to reassign by name, email or staff number..."
                                        class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
-                                <input type="hidden" name="assignee" id="assignee_id" value="">
+                                <input type="hidden" name="assignee" id="assignee_id" value="{{ pre_selected_assignee.id|default:'' }}">
                             </div>
                             <button type="button" id="openNewEmployeeModal"
                                     class="bg-[#143C50] text-white px-6 py-3 rounded-lg hover:bg-[#288CC8] transition whitespace-nowrap font-medium">
@@ -111,7 +155,7 @@
                                 <input list="employee-list" id="assignee_search" name="assignee_search"
                                        placeholder="Search by name, email or staff number..."
                                        class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
-                                <input type="hidden" name="assignee" id="assignee_id">
+                                <input type="hidden" name="assignee" id="assignee_id" value="{{ pre_selected_assignee.id|default:'' }}">
                             </div>
                             <button type="button" id="openNewEmployeeModal"
                                     class="bg-[#143C50] text-white px-6 py-3 rounded-lg hover:bg-[#288CC8] transition whitespace-nowrap font-medium">
@@ -202,17 +246,61 @@
                 </div>
                 {% endif %}
 
-                <div class="md:col-span-3 flex justify-end gap-4 mt-8">
+                <div class="md:col-span-3 mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                     <a href="{% url 'display_approved_imports' %}"
-                       class="bg-gray-500 text-white px-8 py-3 rounded-lg hover:bg-gray-600 transition duration-200 font-medium">
+                       class="inline-flex items-center justify-center rounded-lg bg-gray-500 px-8 py-3 font-medium text-white transition duration-200 hover:bg-gray-600">
                         Cancel
                     </a>
                     <button type="submit"
-                            class="bg-[#288CC8] text-white px-8 py-3 rounded-lg hover:bg-[#143C50] transition duration-200 font-bold">
-                        Save Changes
+                            class="inline-flex items-center justify-center rounded-lg bg-[#288CC8] px-8 py-3 font-bold text-white transition duration-200 hover:bg-[#143C50]">
+                        {% if user.is_trainer and pending_update_request %}Resubmit Update Request{% else %}Save Changes{% endif %}
                     </button>
                 </div>
             </form>
+
+            {% if user.is_trainer %}
+            <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-5">
+                <div class="flex flex-col gap-2">
+                    <h3 class="text-lg font-semibold text-red-900">Delete Request</h3>
+                    <p class="text-sm leading-6 text-red-800">
+                        Submit this only if the device should be deleted instead of kept in inventory. The reason must be at least 10 characters.
+                    </p>
+                </div>
+                <form method="post" action="{% url 'import_delete' import_instance.pk %}" class="mt-4 space-y-4" id="deleteRequestForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <div>
+                        <label for="delete_reason" class="mb-2 block font-semibold text-red-900">Reason for Deletion *</label>
+                        <textarea name="delete_reason"
+                                  id="delete_reason"
+                                  required
+                                  minlength="10"
+                                  rows="4"
+                                  class="w-full rounded-lg border border-red-200 p-3 focus:ring-2 focus:ring-red-300">{% if pending_delete_request %}{{ pending_delete_request.reason }}{% endif %}</textarea>
+                        <p class="mt-1 text-xs text-red-700">Please enter at least 10 characters.</p>
+                    </div>
+                    <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                        {% if pending_delete_request %}
+                        <button type="submit"
+                                form="cancelDeleteRequestForm"
+                                class="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-6 py-3 font-semibold text-red-700 transition hover:bg-red-100">
+                            Cancel Delete Request
+                        </button>
+                        {% endif %}
+                        <button type="submit"
+                                class="inline-flex items-center justify-center rounded-lg bg-red-800 px-6 py-3 font-semibold text-white transition hover:bg-red-900">
+                            {% if pending_delete_request %}Update Delete Request{% else %}Request Delete Approval{% endif %}
+                        </button>
+                    </div>
+                </form>
+                {% if pending_delete_request %}
+                <form method="post" action="{% url 'cancel_delete_request' import_instance.pk %}" id="cancelDeleteRequestForm" class="hidden">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                </form>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
     </div>
 
@@ -333,17 +421,19 @@ document.addEventListener('keydown', function(e) {
 document.addEventListener('DOMContentLoaded', function() {
     const params = new URLSearchParams(window.location.search);
     const newEmpId = params.get('new_employee');
+    const pendingAssigneeId = "{{ pre_selected_assignee.id|default:'' }}";
+    const selectedAssigneeId = newEmpId || pendingAssigneeId;
 
-    if (newEmpId) {
+    if (selectedAssigneeId) {
         const hidden = document.getElementById('assignee_id');
         const search = document.getElementById('assignee_search');
 
         if (hidden && search) {
-            hidden.value = newEmpId;
+            hidden.value = selectedAssigneeId;
 
             const options = document.querySelectorAll('#employee-list option');
             for (const opt of options) {
-                if (opt.value.startsWith(newEmpId + ' - ')) {
+                if (opt.value.startsWith(selectedAssigneeId + ' - ')) {
                     search.value = opt.value;
                     break;
                 }
@@ -353,7 +443,9 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => search.style.borderColor = '', 3000);
         }
 
-        history.replaceState({}, document.title, location.pathname);
+        if (newEmpId) {
+            history.replaceState({}, document.title, location.pathname);
+        }
     }
 });
 
@@ -371,6 +463,8 @@ document.getElementById('assignee_search')?.addEventListener('input', function(e
 
 const updateForm = document.getElementById('updateForm');
 const reasonField = document.getElementById('reason_for_update');
+const deleteRequestForm = document.getElementById('deleteRequestForm');
+const deleteReasonField = document.getElementById('delete_reason');
 
 function validateReasonField() {
     if (!reasonField) return true;
@@ -396,6 +490,33 @@ updateForm?.addEventListener('submit', function(e) {
     if (!validateReasonField()) {
         e.preventDefault();
         reasonField.reportValidity();
+    }
+});
+
+function validateDeleteReasonField() {
+    if (!deleteReasonField) return true;
+
+    const trimmedReason = deleteReasonField.value.trim();
+    if (!trimmedReason) {
+        deleteReasonField.setCustomValidity('Reason for deletion is required.');
+        return false;
+    }
+
+    if (trimmedReason.length < 10) {
+        deleteReasonField.setCustomValidity('Reason for deletion must be at least 10 characters.');
+        return false;
+    }
+
+    deleteReasonField.setCustomValidity('');
+    return true;
+}
+
+deleteReasonField?.addEventListener('input', validateDeleteReasonField);
+
+deleteRequestForm?.addEventListener('submit', function(e) {
+    if (!validateDeleteReasonField()) {
+        e.preventDefault();
+        deleteReasonField.reportValidity();
     }
 });
 

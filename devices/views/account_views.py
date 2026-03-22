@@ -78,9 +78,21 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
 
-def _notification_target_url(notification):
+def _notification_opens_edit_form(notification, user):
+    model_name = getattr(getattr(notification, "content_type", None), "model", None)
+    message = str(getattr(notification, "message", "") or "").lower()
+    return bool(
+        getattr(user, "is_trainer", False)
+        and model_name in {"import", "pendingupdate", "devicedeletionrequest"}
+        and "clarification" in message
+    )
+
+
+def _notification_target_url(notification, user):
     related_import = resolve_related_import(notification)
     if related_import:
+        if _notification_opens_edit_form(notification, user):
+            return f"{reverse('import_update', args=[related_import.pk])}?notification=clarification"
         return reverse('device_detail', args=[related_import.pk])
 
     if notification.content_type and notification.related_object:
@@ -89,7 +101,9 @@ def _notification_target_url(notification):
     return reverse('notifications_view')
 
 
-def _notification_target_label(notification):
+def _notification_target_label(notification, user):
+    if _notification_opens_edit_form(notification, user):
+        return 'Edit Device Request'
     if notification.content_type and notification.content_type.model == 'devicerepair':
         return 'Open Repair'
     if notification.content_type and notification.content_type.model in {'import', 'pendingupdate', 'devicedeletionrequest'}:
@@ -126,9 +140,13 @@ def _notification_action_urls(notification, user):
 def _prepare_notification(notification, user):
     notification = sync_notification_state(notification)
     related_import = resolve_related_import(notification)
-    notification.detail_url = reverse('notification_detail', args=[notification.pk])
-    notification.target_url = _notification_target_url(notification)
-    notification.target_label = _notification_target_label(notification)
+    notification.target_url = _notification_target_url(notification, user)
+    notification.detail_url = (
+        notification.target_url
+        if _notification_opens_edit_form(notification, user)
+        else reverse('notification_detail', args=[notification.pk])
+    )
+    notification.target_label = _notification_target_label(notification, user)
     notification.has_related_target = notification.target_url != reverse('notifications_view')
     notification.approve_url, notification.clarify_url = _notification_action_urls(notification, user)
     notification.can_review_request = bool(notification.approve_url and notification.clarify_url)
@@ -528,13 +546,32 @@ def dashboard_view(request):
 
     active_period = PPMPeriod.objects.filter(is_active=True).first()
 
+    clarification_devices_qs = Import.objects.none()
+    if user.is_trainer and user.centre:
+        clarification_devices_qs = device_query.filter(
+            is_disposed=False,
+        ).filter(
+            Q(pending_clarification=True) | Q(pending_updates__pending_clarification=True)
+        ).distinct()
+
     total_devices = device_query.count()
     approved_devices = device_query.filter(is_approved=True, is_disposed=False).count()
-    pending_approvals = device_query.filter(
-        is_disposed=False,
-    ).filter(
-        Q(is_approved=False) | Q(deletion_request__isnull=False)
-    ).distinct().count()
+    if can_review_device_requests(user) and not user.is_trainer:
+        pending_approvals = Import.objects.filter(
+            is_disposed=False,
+            pending_clarification=False,
+        ).filter(
+            Q(is_approved=False) | Q(deletion_request__isnull=False)
+        ).exclude(
+            pending_updates__pending_clarification=True
+        ).distinct().count()
+    else:
+        pending_approvals = device_query.filter(
+            is_disposed=False,
+        ).filter(
+            Q(is_approved=False) | Q(deletion_request__isnull=False)
+        ).distinct().count()
+    clarification_devices_count = clarification_devices_qs.count()
     disposed_devices = device_query.filter(is_disposed=True).count()
     active_device_query = device_query.filter(is_approved=True, is_disposed=False)
 
@@ -689,8 +726,8 @@ def dashboard_view(request):
     total_users = CustomUser.objects.count() if user.is_superuser else 0
     active_users = CustomUser.objects.filter(is_active=True).count() if user.is_superuser else 0
     total_centres = Centre.objects.count() if user.is_superuser else 0
-    pending_updates = PendingUpdate.objects.count() if can_review_device_requests(user) else (
-        PendingUpdate.objects.filter(import_record__centre=user.centre).count() if user.centre else 0
+    pending_updates = PendingUpdate.objects.filter(pending_clarification=False).count() if can_review_device_requests(user) else (
+        PendingUpdate.objects.filter(import_record__centre=user.centre, pending_clarification=False).count() if user.centre else 0
     )
 
     sync_stale_workflow_notifications_if_due(request)
@@ -817,6 +854,7 @@ def dashboard_view(request):
         'total_devices': total_devices,
         'approved_devices': approved_devices,
         'pending_approvals': pending_approvals,
+        'clarification_devices_count': clarification_devices_count,
         'disposed_devices': disposed_devices,
         'total_repairs': total_repairs,
         'open_repairs_count': open_repairs_count,

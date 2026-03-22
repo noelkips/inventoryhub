@@ -139,6 +139,7 @@ class Import(models.Model):
     added_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='imports_added')
     approved_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='imports_approved')
     is_approved = models.BooleanField(default=False)
+    pending_clarification = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True, help_text="If false, the device is inactive (e.g., under repair) and actions are blocked.")
     reason_for_update = models.TextField(blank=True, null=True)
     is_disposed = models.BooleanField(default=False)

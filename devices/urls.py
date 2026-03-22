@@ -35,6 +35,8 @@ urlpatterns = [
     # Device Management
     path('import/add/', views.import_add, name='import_add'),
     path('import/update/<int:pk>/', views.import_update, name='import_update'),
+    path('import/update/<int:pk>/cancel-pending/', views.cancel_pending_update, name='cancel_pending_update'),
+    path('import/update/<int:pk>/cancel-delete-request/', views.cancel_delete_request, name='cancel_delete_request'),
     path('import/delete/<int:pk>/', views.import_delete, name='import_delete'),
     path('import/approve/<int:pk>/', views.import_approve, name='import_approve'),
     path('import/reject/<int:pk>/', views.import_reject, name='import_reject'),  # New: Added reject URL
