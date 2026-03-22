@@ -1,0 +1,286 @@
+<style>
+    .page-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        background:
+            radial-gradient(circle at top, rgba(40, 140, 200, 0.18), transparent 42%),
+            linear-gradient(180deg, rgba(220, 220, 240, 0.96), rgba(255, 255, 255, 0.98));
+        backdrop-filter: blur(6px);
+        transition: opacity 220ms ease, visibility 220ms ease;
+    }
+
+    .page-loader.is-hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+
+    .page-loader__card {
+        width: min(100%, 24rem);
+        border-radius: 1.25rem;
+        border: 1px solid rgba(20, 60, 80, 0.12);
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 20px 45px rgba(20, 60, 80, 0.16);
+        padding: 1rem 1rem 1.1rem;
+    }
+
+    .page-loader__brand {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.9rem;
+    }
+
+    .page-loader__icon {
+        display: inline-flex;
+        height: 2.75rem;
+        width: 2.75rem;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.9rem;
+        background: linear-gradient(135deg, #143C50, #288CC8);
+        color: #fff;
+        box-shadow: 0 10px 22px rgba(40, 140, 200, 0.24);
+        animation: page-loader-pulse 1.35s ease-in-out infinite;
+    }
+
+    .page-loader__title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #143C50;
+    }
+
+    .page-loader__text {
+        margin: 0.15rem 0 0;
+        font-size: 0.85rem;
+        color: rgba(20, 60, 80, 0.72);
+    }
+
+    .page-loader__track {
+        position: relative;
+        overflow: hidden;
+        height: 0.52rem;
+        width: 100%;
+        border-radius: 9999px;
+        background: rgba(20, 60, 80, 0.09);
+    }
+
+    .page-loader__bar {
+        height: 100%;
+        width: 8%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #143C50, #288CC8, #22C55E);
+        box-shadow: 0 8px 18px rgba(40, 140, 200, 0.28);
+        transition: width 180ms ease;
+    }
+
+    .page-loader__meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+        font-size: 0.76rem;
+        color: rgba(20, 60, 80, 0.66);
+    }
+
+    .page-loader__dots {
+        display: inline-flex;
+        gap: 0.28rem;
+    }
+
+    .page-loader__dots span {
+        height: 0.35rem;
+        width: 0.35rem;
+        border-radius: 9999px;
+        background: #288CC8;
+        animation: page-loader-bounce 0.9s ease-in-out infinite;
+    }
+
+    .page-loader__dots span:nth-child(2) {
+        animation-delay: 0.12s;
+    }
+
+    .page-loader__dots span:nth-child(3) {
+        animation-delay: 0.24s;
+    }
+
+    @keyframes page-loader-pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+
+    @keyframes page-loader-bounce {
+        0%, 100% { transform: translateY(0); opacity: 0.5; }
+        50% { transform: translateY(-2px); opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .page-loader,
+        .page-loader__bar,
+        .page-loader__icon,
+        .page-loader__dots span {
+            transition: none;
+            animation: none;
+        }
+    }
+</style>
+
+<div id="pageLoader" class="page-loader" aria-hidden="false" role="status" aria-live="polite">
+    <div class="page-loader__card">
+        <div class="page-loader__brand">
+            <div class="page-loader__icon" aria-hidden="true">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="page-loader__title">Loading page</p>
+                <p class="page-loader__text">Preparing your workspace...</p>
+            </div>
+        </div>
+        <div class="page-loader__track" aria-hidden="true">
+            <div id="pageLoaderBar" class="page-loader__bar"></div>
+        </div>
+        <div class="page-loader__meta">
+            <span id="pageLoaderLabel">Starting</span>
+            <span class="page-loader__dots" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+            </span>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const loader = document.getElementById('pageLoader');
+        const bar = document.getElementById('pageLoaderBar');
+        const label = document.getElementById('pageLoaderLabel');
+
+        if (!loader || !bar) return;
+
+        let progress = 8;
+        let trickleTimer = null;
+        let hasFinished = false;
+
+        const labels = {
+            initial: 'Starting',
+            interactive: 'Loading content',
+            finishing: 'Almost ready',
+            navigating: 'Opening page',
+        };
+
+        const syncProgress = () => {
+            bar.style.width = `${Math.max(4, Math.min(progress, 100))}%`;
+        };
+
+        const setLabel = (value) => {
+            if (label) label.textContent = value;
+        };
+
+        const setProgress = (value) => {
+            progress = Math.max(progress, Math.min(value, 100));
+            syncProgress();
+        };
+
+        const startTrickle = () => {
+            if (trickleTimer) return;
+            trickleTimer = window.setInterval(() => {
+                if (hasFinished) return;
+                const remaining = 92 - progress;
+                if (remaining <= 0.4) return;
+                progress = Math.min(progress + Math.max(remaining * 0.09, 1.2), 92);
+                syncProgress();
+            }, 170);
+        };
+
+        const showLoader = (stateLabel) => {
+            hasFinished = false;
+            loader.classList.remove('is-hidden');
+            loader.setAttribute('aria-hidden', 'false');
+            setLabel(stateLabel || labels.navigating);
+            if (progress < 14) {
+                progress = 14;
+                syncProgress();
+            }
+            startTrickle();
+        };
+
+        const finishLoader = () => {
+            if (hasFinished) return;
+            hasFinished = true;
+            window.clearInterval(trickleTimer);
+            trickleTimer = null;
+            setLabel(labels.finishing);
+            progress = 100;
+            syncProgress();
+            window.setTimeout(() => {
+                loader.classList.add('is-hidden');
+                loader.setAttribute('aria-hidden', 'true');
+            }, 170);
+        };
+
+        syncProgress();
+        setLabel(labels.initial);
+        startTrickle();
+
+        document.addEventListener('readystatechange', function () {
+            if (document.readyState === 'interactive') {
+                setLabel(labels.interactive);
+                setProgress(62);
+            } else if (document.readyState === 'complete') {
+                finishLoader();
+            }
+        });
+
+        window.addEventListener('load', finishLoader);
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) {
+                finishLoader();
+            }
+        });
+
+        document.addEventListener('click', function (event) {
+            if (event.defaultPrevented) return;
+
+            const link = event.target.closest('a[href]');
+            if (!link || link.hasAttribute('data-no-loader')) return;
+            if (link.target && link.target.toLowerCase() === '_blank') return;
+            if (link.hasAttribute('download')) return;
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+            const href = (link.getAttribute('href') || '').trim();
+            if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+
+            let url;
+            try {
+                url = new URL(link.href, window.location.href);
+            } catch (_) {
+                return;
+            }
+
+            if (url.origin !== window.location.origin) return;
+            if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) return;
+
+            showLoader(labels.navigating);
+        });
+
+        document.addEventListener('submit', function (event) {
+            if (event.defaultPrevented) return;
+
+            const form = event.target;
+            if (!(form instanceof HTMLFormElement)) return;
+            if (form.hasAttribute('data-no-loader')) return;
+
+            showLoader(labels.navigating);
+        });
+    })();
+</script>
