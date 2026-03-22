@@ -29,6 +29,7 @@ IS_TEST_ENVIRONMENT = settings.DEBUG or (
 )
 from django.utils.crypto import get_random_string
 from devices.utils.emails import send_custom_email
+from devices.utils.notification_utils import reset_workflow_notification_sync
 
 
 
@@ -105,6 +106,7 @@ def login_view(request):
         
         if user is not None:
             login(request, user)
+            reset_workflow_notification_sync(request)
             logger.info(f"Successful login for user: {login_identifier}")
             
             # Redirect to 'next' if it exists and is safe, otherwise dashboard

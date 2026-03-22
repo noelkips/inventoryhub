@@ -222,6 +222,7 @@
                             {% endif %}
 
                             <!-- Sign Clearance Form -->
+                            {% if can_clear_user %}
                             <a href="{% url 'sign_clearance' device.pk %}"
                                class="block bg-orange-600 hover:bg-orange-700 text-white text-center py-3 rounded-lg transition font-medium shadow-md">
                                 <svg class="inline w-5 h-5 mr-2 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -229,6 +230,12 @@
                                 </svg>
                                 Clear Device (Return to IT)
                             </a>
+                            {% elif can_trainer_reassign %}
+                            <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+                                <div class="text-sm font-semibold text-blue-900">Trainer Reassignment Available</div>
+                                <div class="text-xs text-blue-800 mt-1">Cisco trainers cannot clear assigned devices, but they can reassign devices within their own centre from the edit page.</div>
+                            </div>
+                            {% endif %}
                         {% endif %}
                     {% else %}
                         <!-- Device is UNASSIGNED (cleared or never assigned) -->
@@ -243,7 +250,7 @@
                         </div>
 
                         <!-- Assign to New User Button -->
-                        {% if can_edit %}
+                        {% if can_manage_assignments %}
                             <a href="{% url 'import_update' device.pk %}"
                                class="block bg-green-600 hover:bg-green-700 text-white text-center py-3 rounded-lg transition font-medium shadow-md">
                                 <svg class="inline w-5 h-5 mr-2 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -266,7 +273,7 @@
                     {% endif %}
 
                     <!-- Edit Device - Always show for authorized users -->
-                    {% if can_edit %}
+                    {% if can_manage_assignments %}
                         {% if device.assignee %}
                             <!-- Only show as separate button if device is assigned -->
                             <a href="{% url 'import_update' device.pk %}"

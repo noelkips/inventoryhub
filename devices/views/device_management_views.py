@@ -33,6 +33,11 @@ from devices.models import (
 )
 from devices.utils.devices_utils import generate_pdf_buffer
 from devices.utils.emails import send_custom_email, send_custom_email, send_device_assignment_email
+from devices.utils.device_access import (
+    assignment_employee_queryset,
+    can_clear_device_users,
+    can_manage_device_assignments,
+)
 from it_operations.models import BackupRegistry, WorkPlan, IncidentReport, MissionCriticalAsset, WorkPlanTask
 from devices.forms import ClearanceForm
 from ppm.models import PPMTask, PPMPeriod, PPMActivity
@@ -69,6 +74,140 @@ from django.views.decorators.http import require_POST
 
 
 ASSET_TAG_RE = re.compile(r"^\s*(\d+)-([LDS])-\s*MOHI\s*$", re.IGNORECASE)
+APPROVAL_FIELD_LABELS = (
+    ("category", "Category"),
+    ("centre", "Centre"),
+    ("department", "Department"),
+    ("device_name", "Device Name"),
+    ("system_model", "System Model"),
+    ("processor", "Processor"),
+    ("ram_gb", "RAM (GB)"),
+    ("hdd_gb", "HDD/SSD (GB)"),
+    ("serial_number", "Serial Number"),
+    ("assignee", "Assignee"),
+    ("device_condition", "Condition"),
+    ("status", "Status"),
+    ("date", "Date"),
+)
+CATEGORY_LABELS = dict(Import.CATEGORY_CHOICES)
+
+
+def _serialize_device_value(field_name, value):
+    if field_name == "category":
+        return CATEGORY_LABELS.get(value, value or "N/A")
+    if field_name == "centre":
+        return getattr(value, "name", None) or "N/A"
+    if field_name == "department":
+        return getattr(value, "name", None) or "N/A"
+    if field_name == "assignee":
+        if value:
+            parts = [value.full_name]
+            if value.staff_number:
+                parts.append(f"ID: {value.staff_number}")
+            if value.email:
+                parts.append(value.email)
+            return " | ".join(parts)
+        return "Unassigned"
+    if field_name == "date":
+        return value.strftime("%Y-%m-%d") if value else "N/A"
+    return value or "N/A"
+
+
+def _approval_field_value(source, field_name):
+    if field_name == "assignee":
+        assignee = getattr(source, "assignee", None)
+        if assignee:
+            return _serialize_device_value(field_name, assignee)
+
+        legacy_parts = [
+            (getattr(source, "assignee_first_name", "") or "").strip(),
+            (getattr(source, "assignee_last_name", "") or "").strip(),
+        ]
+        legacy_name = " ".join(part for part in legacy_parts if part).strip()
+        legacy_email = (getattr(source, "assignee_email_address", "") or "").strip()
+        if legacy_name and legacy_email:
+            return f"{legacy_name} | {legacy_email}"
+        if legacy_name:
+            return legacy_name
+        return "Unassigned"
+
+    return _serialize_device_value(field_name, getattr(source, field_name, None))
+
+
+def _build_approval_preview(device, pending_update=None):
+    rows = []
+    changed_count = 0
+    proposed_source = pending_update or device
+
+    for field_name, label in APPROVAL_FIELD_LABELS:
+        current_value = _approval_field_value(device, field_name)
+        proposed_value = _approval_field_value(proposed_source, field_name)
+        is_changed = bool(pending_update and current_value != proposed_value)
+        if is_changed:
+            changed_count += 1
+        rows.append({
+            "label": label,
+            "current": current_value,
+            "proposed": proposed_value,
+            "is_changed": is_changed,
+        })
+
+    return {
+        "rows": rows,
+        "changed_count": changed_count,
+        "has_changes": changed_count > 0,
+        "is_update_request": pending_update is not None,
+    }
+
+
+def _validate_device_identity(*, serial_number, device_name, exclude_pk=None):
+    normalized_serial = (serial_number or "").strip()
+    normalized_device_name = (device_name or "").strip()
+
+    if not normalized_serial:
+        raise ValueError("Serial number is required.")
+    if not normalized_device_name:
+        raise ValueError("Device name is required.")
+
+    serial_qs = Import.objects.filter(serial_number__iexact=normalized_serial)
+    if exclude_pk is not None:
+        serial_qs = serial_qs.exclude(pk=exclude_pk)
+    if serial_qs.exists():
+        raise ValueError(f"Serial number {normalized_serial} already exists.")
+
+    return normalized_serial, normalized_device_name
+
+
+def _can_trainer_reassign_device(user, device):
+    return bool(
+        getattr(user, "is_trainer", False)
+        and getattr(user, "centre_id", None)
+        and getattr(device, "centre_id", None) == getattr(user, "centre_id", None)
+    )
+
+
+def _sync_device_assignment_agreement(device, *, old_assignee, new_assignee, actor):
+    if old_assignee == new_assignee:
+        return
+
+    if old_assignee:
+        DeviceAgreement.objects.filter(
+            device=device,
+            employee=old_assignee,
+            is_archived=False,
+        ).update(is_archived=True)
+
+    if new_assignee:
+        DeviceAgreement.objects.get_or_create(
+            device=device,
+            employee=new_assignee,
+            is_archived=False,
+            defaults={"issuance_it_user": actor},
+        )
+
+    if device.uaf_signed:
+        device.uaf_signed = False
+        device.save(update_fields=["uaf_signed"])
 
 
 def _device_asset_kind_from_record(device: Import):
@@ -375,7 +514,7 @@ def configuration_type_delete(request, type_id):
 
 @login_required
 def get_list_context(request, initial_queryset, view_name, is_disposed=False):
-    data = initial_queryset
+    data = initial_queryset.select_related('centre', 'department', 'assignee')
 
     # Filters
     centre_filter = request.GET.get('centre', '').strip()
@@ -462,14 +601,29 @@ def get_list_context(request, initial_queryset, view_name, is_disposed=False):
             if repair.device_id not in open_repairs_by_device_id:
                 open_repairs_by_device_id[repair.device_id] = repair
 
+    latest_pending_by_import_id = {}
+    if page_ids and not is_disposed:
+        pending_updates = (
+            PendingUpdate.objects.filter(import_record_id__in=page_ids)
+            .select_related('updated_by', 'centre', 'department', 'assignee')
+            .order_by('import_record_id', '-created_at')
+        )
+        for pending in pending_updates:
+            latest_pending_by_import_id.setdefault(pending.import_record_id, pending)
+
+    available_centres = Centre.objects.all().order_by('name')
+    if request.user.is_trainer:
+        available_centres = available_centres.filter(pk=request.user.centre_id) if request.user.centre_id else available_centres.none()
+
     # Pending updates
     data_with_pending = []
     for item in page_obj:
-        pending = PendingUpdate.objects.filter(import_record=item).order_by('-created_at').first() if not is_disposed else None
+        pending = latest_pending_by_import_id.get(item.id)
         data_with_pending.append({
             'item': item,
             'pending_update': pending,
             'open_repair': open_repairs_by_device_id.get(item.id),
+            'approval_preview': _build_approval_preview(item, pending),
         })
 
     # Stats
@@ -523,19 +677,19 @@ def get_list_context(request, initial_queryset, view_name, is_disposed=False):
             'search_query': search_query,
             'items_per_page': items_per_page,
         },
-        'centres': Centre.objects.all(),
-        'departments': Department.objects.all(),
+        'centres': available_centres,
+        'departments': Department.objects.all().order_by('name'),
         'category_choices': category_choices,
         'centre_filter': centre_filter,
         'department_filter': department_filter,
         'show_duplicates': show_duplicates,
+        'show_all_centres_option': not request.user.is_trainer,
         'items_per_page_options': [10, 25, 50, 100, 500],
         'unapproved_count': unapproved_count,
         'total_devices': total_devices,
         'approved_imports': approved_imports,
         'view_name': view_name,
         'this_month_count': this_month_count,
-        'employees': Employee.objects.filter(is_active=True).order_by('last_name', 'first_name'),
         'needs_configuration_ids': needs_configuration_ids,
         'configuration_progress': configuration_progress,
     }
@@ -951,6 +1105,9 @@ def device_detail(request, pk):
         current_agreement = DeviceAgreement.objects.filter(device=device, is_archived=False).order_by("-issuance_date", "-id").first()
 
     clearance = device.clearances.order_by('-created_at').first()
+    can_manage_assignments = can_manage_device_assignments(request.user)
+    can_clear_user = can_clear_device_users(request.user)
+    can_trainer_reassign = _can_trainer_reassign_device(request.user, device)
 
     config_kind = _device_asset_kind_from_record(device)
     supports_configuration = config_kind in {"laptop", "desktop", "server"}
@@ -972,7 +1129,10 @@ def device_detail(request, pk):
         'current_agreement': current_agreement,
         'clearance': clearance,
 
-        'can_edit': request.user.is_superuser or request.user.is_trainer,
+        'can_edit': can_manage_assignments,
+        'can_manage_assignments': can_manage_assignments,
+        'can_clear_user': can_clear_user,
+        'can_trainer_reassign': can_trainer_reassign,
         'can_approve': request.user.is_superuser and not request.user.is_trainer and not device.is_approved,
         'can_dispose': request.user.is_superuser and not request.user.is_trainer and not device.is_disposed,
         'can_delete': request.user.is_it_manager or request.user.is_senior_it_officer,
@@ -2031,7 +2191,12 @@ def import_add(request):
                         pass
 
                 centre = None
-                if centre_id:
+                if user.is_trainer:
+                    if not user.centre:
+                        messages.error(request, "Your account has no centre assigned.")
+                        return redirect('import_add')
+                    centre = user.centre
+                elif centre_id:
                     try:
                         centre = Centre.objects.get(id=centre_id)
                     except Centre.DoesNotExist:
@@ -2134,21 +2299,26 @@ def import_add(request):
                     department_id = request.POST.get('department')
                     category      = request.POST.get('category')
                     serial_number = (request.POST.get('serial_number') or '').strip()
+                    provided_device_name = (request.POST.get('device_name') or '').strip()
                     is_server = str(request.POST.get('is_server') or '').strip().lower() in {'1', 'true', 'yes', 'y', 'on'}
 
                     if not all([centre_id, department_id, category, serial_number]):
                         messages.error(request, "All required fields must be filled.")
                         return redirect('import_add')
 
-                    if Import.objects.filter(serial_number=serial_number).exists():
-                        messages.error(request, f"Serial number {serial_number} already exists.")
-                        return redirect('import_add')
-
                     centre = Centre.objects.get(id=centre_id) if not user.is_trainer else user.centre
+                    if user.is_trainer and not centre:
+                        messages.error(request, "Your account has no centre assigned.")
+                        return redirect('import_add')
                     department = Department.objects.get(id=department_id)
 
                     assignee_id = request.POST.get('assignee')
-                    assignee = Employee.objects.get(id=assignee_id) if assignee_id and assignee_id.strip() else None
+                    assignee = None
+                    if assignee_id and assignee_id.strip():
+                        assignee = assignment_employee_queryset(user).filter(id=assignee_id).first()
+                        if assignee is None:
+                            messages.error(request, "Invalid assignee selected.")
+                            return redirect('import_add')
 
                     kind = None
                     if category == "laptop":
@@ -2157,13 +2327,18 @@ def import_add(request):
                         kind = "server" if is_server else "desktop"
 
                     generated_device_name = _next_asset_tag(kind) if kind else None
+                    final_device_name = generated_device_name or provided_device_name
+                    serial_number, final_device_name = _validate_device_identity(
+                        serial_number=serial_number,
+                        device_name=final_device_name,
+                    )
 
                     device = Import(
                         added_by=user,
                         centre=centre,
                         department=department,
                         category=category,
-                        device_name=generated_device_name if generated_device_name else request.POST.get('device_name'),
+                        device_name=final_device_name,
                         system_model=request.POST.get('system_model'),
                         processor=request.POST.get('processor'),
                         ram_gb=request.POST.get('ram_gb'),
@@ -2200,8 +2375,10 @@ def import_add(request):
 
     # GET – show form
     centres = Centre.objects.all().order_by('name')
+    if user.is_trainer:
+        centres = centres.filter(pk=user.centre_id) if user.centre_id else centres.none()
     departments = Department.objects.all().order_by('name')
-    employees = Employee.objects.filter(is_active=True).order_by('last_name', 'first_name')
+    employees = assignment_employee_queryset(user)
 
     context = {
         'centres': centres,
@@ -2243,12 +2420,21 @@ def handle_uploaded_file(file, user, centre, department, category):
         reader = csv.reader(decoded)
         headers = [h.lower().strip() for h in next(reader, [])]
 
-        if 'serial_number' not in headers:
-            raise ValueError("CSV missing required column: serial_number")
+        missing_headers = [
+            required_header
+            for required_header in ('serial_number', 'device_name')
+            if required_header not in headers
+        ]
+        if missing_headers:
+            raise ValueError(
+                "CSV missing required column(s): " + ", ".join(missing_headers)
+            )
 
         sn_idx = headers.index('serial_number')
+        device_name_idx = headers.index('device_name')
 
         devices_to_create = []
+        seen_serials = set()
         admins = CustomUser.objects.filter(
             is_trainer=False
         ).filter(
@@ -2261,13 +2447,20 @@ def handle_uploaded_file(file, user, centre, department, category):
             stats['total_rows'] += 1
 
             sn = (row[sn_idx] or '').strip()
-            if not sn:
+            device_name = (row[device_name_idx] or '').strip() if device_name_idx < len(row) else ''
+            if not sn or not device_name:
                 stats['skipped_validation'] += 1
                 continue
 
-            if Import.objects.filter(serial_number=sn).exists():
+            normalized_serial = sn.casefold()
+            if normalized_serial in seen_serials:
                 stats['skipped_existing'] += 1
                 continue
+
+            if Import.objects.filter(serial_number__iexact=sn).exists():
+                stats['skipped_existing'] += 1
+                continue
+            seen_serials.add(normalized_serial)
 
             device = Import(
                 added_by=user,
@@ -2275,6 +2468,7 @@ def handle_uploaded_file(file, user, centre, department, category):
                 department=department,
                 category=category,
                 serial_number=sn,
+                device_name=device_name,
                 is_approved=not user.is_trainer,
                 approved_by=user if not user.is_trainer and user.is_superuser else None,
                 date=timezone.now().date(),
@@ -2283,7 +2477,7 @@ def handle_uploaded_file(file, user, centre, department, category):
             for h, value in zip(headers, row):
                 value = (value or '').strip()
                 field = header_mapping.get(h)
-                if field and field != 'serial_number':
+                if field and field not in {'serial_number', 'device_name'}:
                     if field == 'date' and value:
                         for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'):
                             try:
@@ -2328,14 +2522,27 @@ def handle_uploaded_file(file, user, centre, department, category):
                 created = Import.objects.bulk_create(devices_to_create, batch_size=400)
                 stats['created_count'] = len(created)
 
+                created_devices = list(
+                    Import.objects.filter(id__in=[d.id for d in created if d.id]).select_related('assignee')
+                )
+
+                for dev in created_devices:
+                    if dev.assignee:
+                        DeviceAgreement.objects.get_or_create(
+                            device=dev,
+                            employee=dev.assignee,
+                            is_archived=False,
+                            defaults={"issuance_it_user": user},
+                        )
+
                 # Send emails
-                for dev in Import.objects.filter(id__in=[d.id for d in created if d.id]):
+                for dev in created_devices:
                     if dev.assignee and dev.assignee.email:
                         send_device_assignment_email(dev, action='assigned')
 
                 # Trainer notifications
                 if user.is_trainer:
-                    for dev in Import.objects.filter(id__in=[d.id for d in created if d.id]):
+                    for dev in created_devices:
                         for admin in admins:
                             Notification.objects.create(
                                 user=admin,
@@ -2411,9 +2618,23 @@ def _apply_pending_update_to_import(import_instance, pending_update, approved_by
     if pending_update.reason_for_update is not None:
         import_instance.reason_for_update = pending_update.reason_for_update
 
+    if (
+        import_instance.serial_number
+        and Import.objects.filter(serial_number__iexact=import_instance.serial_number)
+        .exclude(pk=import_instance.pk)
+        .exists()
+    ):
+        raise ValueError(f"Serial number {import_instance.serial_number} is already used by another device.")
+
     import_instance.is_approved = True
     import_instance.approved_by = approved_by
     import_instance.save()
+    _sync_device_assignment_agreement(
+        import_instance,
+        old_assignee=old_assignee,
+        new_assignee=import_instance.assignee,
+        actor=approved_by,
+    )
     return old_assignee
 
 
@@ -2447,11 +2668,15 @@ def import_approve(request, pk):
                 # Save pk before deleting
                 pending_update_id = pending_update.pk
                 trainer_user_id = pending_update.updated_by_id
-                old_assignee = _apply_pending_update_to_import(
-                    import_instance=import_instance,
-                    pending_update=pending_update,
-                    approved_by=request.user,
-                )
+                try:
+                    old_assignee = _apply_pending_update_to_import(
+                        import_instance=import_instance,
+                        pending_update=pending_update,
+                        approved_by=request.user,
+                    )
+                except ValueError as exc:
+                    messages.error(request, str(exc))
+                    return redirect('display_unapproved_imports')
                 # Check if assignee changed
                 if import_instance.assignee != old_assignee:
                     # Email to old assignee (cleared)
@@ -2592,15 +2817,20 @@ def import_approve_all(request):
         except EmptyPage:
             data_on_page = paginator.page(paginator.num_pages)
         approved_count = 0
+        skipped_conflicts = []
         with transaction.atomic():
             for item in data_on_page:
                 pending_update = PendingUpdate.objects.filter(import_record=item).order_by('-created_at').first()
                 if pending_update:
-                    old_assignee = _apply_pending_update_to_import(
-                        import_instance=item,
-                        pending_update=pending_update,
-                        approved_by=request.user,
-                    )
+                    try:
+                        old_assignee = _apply_pending_update_to_import(
+                            import_instance=item,
+                            pending_update=pending_update,
+                            approved_by=request.user,
+                        )
+                    except ValueError as exc:
+                        skipped_conflicts.append(str(exc))
+                        continue
                     # Check if assignee changed
                     if pending_update.assignee != old_assignee:
                         # Email to old assignee (cleared)
@@ -2641,6 +2871,8 @@ def import_approve_all(request):
             messages.success(request, f"{approved_count} device(s) approved successfully.")
         else:
             messages.info(request, "No unapproved devices to approve on this page.")
+        if skipped_conflicts:
+            messages.warning(request, skipped_conflicts[0])
        
         redirect_url = reverse('display_unapproved_imports')
         query_params = [f"page={page_number}", f"items_per_page={items_per_page}"]
@@ -2658,6 +2890,9 @@ def _can_delete(user):
 def import_update(request, pk):
     """Update existing device - assignee can only be set if currently None"""
     device = get_object_or_404(Import, pk=pk)
+    if not can_manage_device_assignments(request.user):
+        messages.error(request, "You do not have permission to update device assignments.")
+        return redirect('device_detail', pk=device.pk)
     # Permission: trainers can only edit their centre's devices
     if request.user.is_trainer and device.centre != request.user.centre:
         messages.error(request, "You can only update records for your own centre.")
@@ -2693,7 +2928,12 @@ def import_update(request, pk):
                     except Department.DoesNotExist:
                         pass
                 centre = None
-                if centre_id:
+                if request.user.is_trainer:
+                    if not request.user.centre:
+                        messages.error(request, "Your account has no centre assigned.")
+                        return redirect('import_update', pk=pk)
+                    centre = request.user.centre
+                elif centre_id:
                     try:
                         centre = Centre.objects.get(id=centre_id)
                     except Centre.DoesNotExist:
@@ -2861,11 +3101,254 @@ def import_update(request, pk):
     }
     return render(request, 'import/update.html', context)
 
+@login_required
+def import_update(request, pk):
+    """Update an existing device and allow trainer reassignment within the trainer's centre."""
+    device = get_object_or_404(Import, pk=pk)
+    if not can_manage_device_assignments(request.user):
+        messages.error(request, "You do not have permission to update device assignments.")
+        return redirect('device_detail', pk=device.pk)
+
+    if request.user.is_trainer and device.centre != request.user.centre:
+        messages.error(request, "You can only update records for your own centre.")
+        return redirect('display_approved_imports')
+
+    blocked = _block_actions_if_inactive(request, device)
+    if blocked:
+        return blocked
+
+    can_trainer_reassign = _can_trainer_reassign_device(request.user, device)
+
+    if request.method == 'POST':
+        if request.POST.get('new_employee_submit') == '1':
+            try:
+                first_name = (request.POST.get('new_first_name') or '').strip()
+                last_name = (request.POST.get('new_last_name') or '').strip()
+                email = (request.POST.get('new_email') or '').strip().lower()
+                staff_number = (request.POST.get('new_staff_number') or '').strip()
+                department_id = request.POST.get('new_department')
+                centre_id = request.POST.get('new_centre')
+
+                if not first_name or not last_name:
+                    messages.error(request, "First name and last name are required.")
+                    return redirect('import_update', pk=pk)
+                if email and Employee.objects.filter(email__iexact=email).exists():
+                    messages.warning(request, f"Email {email} is already used by another employee.")
+                    return redirect('import_update', pk=pk)
+                if Employee.objects.filter(first_name__iexact=first_name, last_name__iexact=last_name).exists():
+                    messages.info(request, f"An employee named {first_name} {last_name} already exists.")
+                    return redirect('import_update', pk=pk)
+
+                department = None
+                if department_id:
+                    try:
+                        department = Department.objects.get(id=department_id)
+                    except Department.DoesNotExist:
+                        pass
+
+                centre = None
+                if request.user.is_trainer:
+                    if not request.user.centre:
+                        messages.error(request, "Your account has no centre assigned.")
+                        return redirect('import_update', pk=pk)
+                    centre = request.user.centre
+                elif centre_id:
+                    try:
+                        centre = Centre.objects.get(id=centre_id)
+                    except Centre.DoesNotExist:
+                        pass
+
+                new_employee = Employee.objects.create(
+                    first_name=first_name,
+                    last_name=last_name,
+                    email=email or None,
+                    staff_number=staff_number or None,
+                    department=department,
+                    centre=centre,
+                    is_active=True,
+                )
+                messages.success(request, f"New employee created: {new_employee.full_name}")
+                return redirect(f"{reverse('import_update', kwargs={'pk': pk})}?new_employee={new_employee.id}")
+            except Exception as e:
+                logger.exception("Failed to create employee")
+                messages.error(request, f"Could not create employee: {str(e)}")
+                return redirect('import_update', pk=pk)
+
+        try:
+            with transaction.atomic():
+                department_id = request.POST.get('department')
+                category = request.POST.get('category')
+                serial_number = (request.POST.get('serial_number') or '').strip()
+
+                centre = device.centre
+                if not request.user.is_trainer:
+                    centre_id = request.POST.get('centre')
+                    if centre_id:
+                        try:
+                            centre = Centre.objects.get(id=centre_id)
+                        except Centre.DoesNotExist:
+                            messages.error(request, "Invalid centre selected.")
+                            return redirect('import_update', pk=pk)
+
+                department = device.department
+                if department_id:
+                    try:
+                        department = Department.objects.get(id=department_id)
+                    except Department.DoesNotExist:
+                        messages.error(request, "Invalid department selected.")
+                        return redirect('import_update', pk=pk)
+
+                if not category:
+                    messages.error(request, "Category is required.")
+                    return redirect('import_update', pk=pk)
+                if serial_number and Import.objects.filter(serial_number__iexact=serial_number).exclude(pk=pk).exists():
+                    messages.error(request, f"Serial number {serial_number} is already used by another device.")
+                    return redirect('import_update', pk=pk)
+
+                date_value = device.date
+                date_str = request.POST.get('date', '').strip()
+                if date_str:
+                    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'):
+                        try:
+                            date_value = datetime.strptime(date_str, fmt).date()
+                            break
+                        except ValueError:
+                            continue
+
+                new_assignee = device.assignee
+                assignee_id = request.POST.get('assignee', '').strip()
+                if assignee_id:
+                    candidate_assignee = assignment_employee_queryset(request.user).filter(id=assignee_id).first()
+                    if candidate_assignee is None:
+                        messages.error(request, "Invalid assignee selected.")
+                        return redirect('import_update', pk=pk)
+
+                    if not device.assignee:
+                        new_assignee = candidate_assignee
+                    elif assignee_id == str(device.assignee.id):
+                        new_assignee = device.assignee
+                    elif can_trainer_reassign:
+                        new_assignee = candidate_assignee
+                    else:
+                        messages.error(request, "Cannot change assignee. Clear the current user first.")
+                        return redirect('import_update', pk=pk)
+
+                fields_to_update = {}
+                form_data = {
+                    'centre': centre,
+                    'department': department,
+                    'category': category,
+                    'device_name': request.POST.get('device_name', '').strip(),
+                    'system_model': request.POST.get('system_model', '').strip(),
+                    'processor': request.POST.get('processor', '').strip(),
+                    'ram_gb': request.POST.get('ram_gb', '').strip(),
+                    'hdd_gb': request.POST.get('hdd_gb', '').strip(),
+                    'serial_number': serial_number,
+                    'device_condition': request.POST.get('device_condition', '').strip(),
+                    'status': request.POST.get('status', '').strip(),
+                    'reason_for_update': request.POST.get('reason_for_update', '').strip(),
+                    'date': date_value,
+                    'assignee': new_assignee,
+                }
+                for field, new_val in form_data.items():
+                    old_val = getattr(device, field)
+                    if new_val != old_val:
+                        fields_to_update[field] = new_val
+
+                if not fields_to_update:
+                    messages.info(request, "No changes detected.")
+                    return redirect('import_update', pk=pk)
+
+                if request.user.is_trainer:
+                    reason = request.POST.get('reason_for_update', '').strip()
+                    if not reason:
+                        messages.error(request, "Reason for update is required for trainers.")
+                        return redirect('import_update', pk=pk)
+                    if len(reason) < 10:
+                        messages.error(request, "Reason for update must be at least 10 characters for trainers.")
+                        return redirect('import_update', pk=pk)
+
+                    PendingUpdate.objects.create(
+                        import_record=device,
+                        **fields_to_update,
+                        updated_by=request.user
+                    )
+                    device.is_approved = False
+                    device.approved_by = None
+                    device.save(update_fields=['is_approved', 'approved_by'])
+
+                    admins = CustomUser.objects.filter(is_trainer=False).filter(
+                        Q(is_superuser=True) | Q(is_it_manager=True) | Q(is_senior_it_officer=True)
+                    )
+                    for admin in admins:
+                        Notification.objects.create(
+                            user=admin,
+                            message=f"Update request for device {device.serial_number} by {request.user} â€” awaiting approval.",
+                            content_type=ContentType.objects.get_for_model(Import),
+                            object_id=device.pk
+                        )
+                    messages.success(request, "Update request submitted for approval.")
+                    return redirect('notifications_view')
+
+                old_assignee = device.assignee
+                for field, value in fields_to_update.items():
+                    setattr(device, field, value)
+                device.is_approved = True if request.user.is_superuser else device.is_approved
+                device.approved_by = request.user if request.user.is_superuser else device.approved_by
+                device.save()
+
+                _sync_device_assignment_agreement(
+                    device,
+                    old_assignee=old_assignee,
+                    new_assignee=device.assignee,
+                    actor=request.user,
+                )
+
+                if 'assignee' in fields_to_update and old_assignee != device.assignee:
+                    if old_assignee and old_assignee.email:
+                        send_device_assignment_email(device, action='cleared', cleared_by=request.user)
+                    if device.assignee and device.assignee.email:
+                        send_device_assignment_email(device, action='assigned')
+                    if old_assignee and device.assignee:
+                        send_device_assignment_email(device, action='transferred', cleared_by=request.user)
+
+                messages.success(request, "Device updated successfully.")
+                return redirect('import_update', pk=pk)
+        except Exception as e:
+            logger.exception(f"Update failed for device {pk}")
+            messages.error(request, f"Update failed: {str(e)}")
+            return redirect('import_update', pk=pk)
+
+    employees = assignment_employee_queryset(request.user)
+    centres = Centre.objects.all().order_by('name')
+    if request.user.is_trainer:
+        centres = centres.filter(pk=request.user.centre_id) if request.user.centre_id else centres.none()
+    departments = Department.objects.all().order_by('name')
+
+    new_employee_id = request.GET.get('new_employee')
+    pre_selected_assignee = None
+    if new_employee_id:
+        pre_selected_assignee = employees.filter(id=new_employee_id).first()
+
+    context = {
+        'import_instance': device,
+        'centres': centres,
+        'departments': departments,
+        'employees': employees,
+        'category_choices': Import.CATEGORY_CHOICES,
+        'pre_selected_assignee': pre_selected_assignee,
+        'can_clear_user': can_clear_device_users(request.user),
+        'can_trainer_reassign': can_trainer_reassign,
+    }
+    return render(request, 'import/update.html', context)
+
 
 @login_required
 def clear_user(request, device_id):
     device = get_object_or_404(Import, id=device_id)
-    # Permission check
+    if not can_clear_device_users(request.user):
+        messages.error(request, "Only IT staff, IT managers, and senior IT officers can clear assigned devices.")
+        return redirect('device_detail', pk=device.pk)
     if request.user.is_trainer and device.centre != request.user.centre:
         messages.error(request, "You can only clear devices from your centre.")
         return redirect('display_approved_imports')

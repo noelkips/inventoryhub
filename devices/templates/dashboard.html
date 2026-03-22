@@ -520,10 +520,9 @@
         }
 
         // =============================================
-        // Notifications: realtime updates (SSE) + actions
+        // Notifications: low-frequency refresh + actions
         // =============================================
         const notificationsApiUrl = "{% url 'notifications_api' %}";
-        const notificationsStreamUrl = "{% url 'notifications_stream' %}";
 
         const notificationBadge = document.getElementById('notificationBadge');
         const notificationsList = document.getElementById('notificationsList');
@@ -643,32 +642,8 @@
             });
         }
 
-        // Refresh when user opens the dropdown
-        if (notificationsDropdown) {
-            notificationsDropdown.addEventListener('click', () => {
-                fetchNotifications();
-            });
-        }
-
-        // Try SSE first; fallback to polling
-        let pollingTimer = null;
-        try {
-            const es = new EventSource(notificationsStreamUrl);
-            es.addEventListener('notifications', (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    renderNotifications(data);
-                } catch (_) {
-                    // ignore
-                }
-            });
-            es.addEventListener('error', () => {
-                if (pollingTimer) return;
-                pollingTimer = setInterval(fetchNotifications, 15000);
-            });
-        } catch (_) {
-            pollingTimer = setInterval(fetchNotifications, 15000);
-        }
+        // Keep notifications fresh without continuous background traffic.
+        setInterval(fetchNotifications, 60 * 60 * 1000);
     });
 
 

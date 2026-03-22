@@ -69,7 +69,7 @@
                     <div>
                         <label class="block font-semibold text-[#143C50] mb-2">CSV File *</label>
                         <input type="file" name="file" accept=".csv" required class="block w-full border border-gray-300 rounded p-2">
-                        <p class="text-sm text-gray-500 mt-1">Do <strong>not</strong> include centre/department/category in CSV</p>
+                        <p class="text-sm text-gray-500 mt-1">Include <strong>device_name</strong> and <strong>serial_number</strong> for every row. Do <strong>not</strong> include centre/department/category in CSV.</p>
                     </div>
 
                     <div class="flex flex-wrap gap-4">
@@ -167,7 +167,7 @@
 
                         <!-- Device fields -->
                         <div>
-                            <label class="block font-semibold text-[#143C50] mb-1.5">Device Name (Asset Tag)</label>
+                            <label class="block font-semibold text-[#143C50] mb-1.5">Device Name (Asset Tag) *</label>
                             <input id="deviceNameInput" type="text" name="device_name" class="w-full border border-gray-300 rounded p-2.5" placeholder="Auto-generated for Laptop/Desktop/Server">
                             <p id="deviceNameAutoHint" class="text-sm text-gray-500 mt-1 hidden">Auto-generated for Laptop, Desktop and Server.</p>
                         </div>
@@ -255,8 +255,8 @@
                     <div class="prose text-[#143C50]">
                         <p class="font-semibold mb-4">Important notes:</p>
                         <ul class="list-disc pl-5 space-y-2 mb-6">
-                            <li>Required column: <code>serial_number</code></li>
-                            <li>Optional: device_name, system_model, processor, ram_gb, hdd_gb, assignee_first_name, assignee_last_name, assignee_email_address, device_condition, status, date</li>
+                            <li>Required columns: <code>serial_number</code> and <code>device_name</code></li>
+                            <li>Optional: system_model, processor, ram_gb, hdd_gb, assignee_first_name, assignee_last_name, assignee_email_address, device_condition, status, date</li>
                             <li><strong>Do NOT</strong> include centre, department, category in the CSV — they are selected above</li>
                         </ul>
 
@@ -308,12 +308,13 @@
 
         if (deviceNameInput) {
             deviceNameInput.disabled = isAuto;
+            deviceNameInput.required = !isAuto;
             if (isAuto) {
                 deviceNameInput.value = '';
                 deviceNameInput.placeholder = 'Auto-generated after save';
                 deviceNameInput.classList.add('bg-gray-100');
             } else {
-                deviceNameInput.placeholder = 'Enter device name (optional)';
+                deviceNameInput.placeholder = 'Enter device name';
                 deviceNameInput.classList.remove('bg-gray-100');
             }
         }

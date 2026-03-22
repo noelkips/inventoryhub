@@ -4,12 +4,11 @@
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <div class="bg-white shadow-xl rounded-xl overflow-hidden border border-gray-300">
-        <!-- Header -->
         <div class="bg-gradient-to-r from-[#143C50] to-[#288CC8] text-white p-6">
             <h2 class="text-2xl md:text-3xl font-bold">Edit Device</h2>
             <p class="mt-2 text-lg opacity-90">Serial: <strong>{{ import_instance.serial_number|default:"N/A" }}</strong></p>
         </div>
-        <!-- Messages -->
+
         {% if messages %}
         <div class="p-6 space-y-4">
             {% for message in messages %}
@@ -20,109 +19,115 @@
         </div>
         {% endif %}
 
-        <!-- Main Form -->
         <div class="p-6 md:p-8">
             <form method="post" class="grid grid-cols-1 md:grid-cols-3 gap-6" id="updateForm">
                 {% csrf_token %}
 
-                <!-- Centre -->
                 <div>
                     <label class="block font-semibold text-[#143C50] mb-2">Centre</label>
-                    <select name="centre" {% if user.is_trainer %}disabled{% endif %} 
+                    <select name="centre" {% if user.is_trainer %}disabled{% endif %}
                             class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
-                        <option value="">— Select Centre —</option>
+                        <option value="">Select Centre</option>
                         {% for c in centres %}
-                            <option value="{{ c.id }}" {% if c.id == import_instance.centre.id %}selected{% endif %}>
-                                {{ c.name }}
-                            </option>
+                        <option value="{{ c.id }}" {% if import_instance.centre and c.id == import_instance.centre.id %}selected{% endif %}>{{ c.name }}</option>
                         {% endfor %}
                     </select>
                     {% if user.is_trainer %}
-                        <input type="hidden" name="centre" value="{{ user.centre.id|default:'' }}">
+                    <input type="hidden" name="centre" value="{{ user.centre.id|default:'' }}">
                     {% endif %}
                 </div>
 
-                <!-- Department -->
                 <div>
                     <label class="block font-semibold text-[#143C50] mb-2">Department *</label>
-                    <select name="department" required 
-                            class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
-                        <option value="">— Select Department —</option>
+                    <select name="department" required class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
+                        <option value="">Select Department</option>
                         {% for d in departments %}
-                            <option value="{{ d.id }}" {% if d.id == import_instance.department.id %}selected{% endif %}>
-                                {{ d.name }} ({{ d.department_code }})
-                            </option>
+                        <option value="{{ d.id }}" {% if import_instance.department and d.id == import_instance.department.id %}selected{% endif %}>{{ d.name }} ({{ d.department_code }})</option>
                         {% endfor %}
                     </select>
                 </div>
 
-                <!-- Category -->
                 <div>
                     <label class="block font-semibold text-[#143C50] mb-2">Category *</label>
-                    <select name="category" required 
-                            class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
-                        <option value="">— Select Category —</option>
+                    <select name="category" required class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
+                        <option value="">Select Category</option>
                         {% for val, label in category_choices %}
-                            <option value="{{ val }}" {% if import_instance.category == val %}selected{% endif %}>
-                                {{ label }}
-                            </option>
+                        <option value="{{ val }}" {% if import_instance.category == val %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
                 </div>
 
-                <!-- Serial Number -->
                 <div class="md:col-span-3">
                     <label class="block font-semibold text-[#143C50] mb-2">Serial Number *</label>
                     <input type="text" name="serial_number" id="serial_number_input"
-                           value="{{ import_instance.serial_number|default:'' }}" required 
+                           value="{{ import_instance.serial_number|default:'' }}" required
                            class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
-                    <p id="serial_error" class="text-red-600 text-sm mt-1 hidden">
-                        This serial number already exists on another device.
-                    </p>
+                    <p id="serial_error" class="text-red-600 text-sm mt-1 hidden">This serial number already exists on another device.</p>
                 </div>
 
-                <!-- Assignee Section - Blocked if assigned -->
                 <div class="md:col-span-3">
                     <label class="block font-semibold text-[#143C50] mb-2">Current Assignee</label>
                     <div class="p-4 border border-gray-200 rounded-lg bg-gray-50">
                         {% if import_instance.assignee %}
-                            <p class="text-lg font-medium">
-                                Assigned to: <strong>{{ import_instance.assignee.full_name }}</strong>
-                                {% if import_instance.assignee.email %} • {{ import_instance.assignee.email }}{% endif %}
-                                {% if import_instance.assignee.staff_number %} • ID: {{ import_instance.assignee.staff_number }}{% endif %}
-                            </p>
-                            <p class="mt-2 text-sm text-red-700">
-                                To assign to someone else, you must first 
-                                <a href="{% url 'clear_user' import_instance.pk %}" 
-                                   class="font-medium underline hover:text-red-900">
-                                    clear the current user
-                                </a>.
-                            </p>
-                            <input type="hidden" name="assignee" value="{{ import_instance.assignee.id }}">
-                        {% else %}
-                            <div class="flex flex-col sm:flex-row sm:items-center gap-4">
-                                <div class="relative flex-1">
-                                    <input list="employee-list" id="assignee_search" name="assignee_search"
-                                           placeholder="Search by name, email or staff number..."
-                                           class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
-                                    <datalist id="employee-list">
-                                        {% for emp in employees %}
-                                        <option value="{{ emp.id }} - {{ emp.full_name }}{% if emp.email %} ({{ emp.email }}){% endif %}{% if emp.staff_number %} [{{ emp.staff_number }}]{% endif %}">
-                                        {% endfor %}
-                                    </datalist>
-                                    <input type="hidden" name="assignee" id="assignee_id">
-                                </div>
+                        <p class="text-lg font-medium">
+                            Assigned to: <strong>{{ import_instance.assignee.full_name }}</strong>
+                            {% if import_instance.assignee.email %} • {{ import_instance.assignee.email }}{% endif %}
+                            {% if import_instance.assignee.staff_number %} • ID: {{ import_instance.assignee.staff_number }}{% endif %}
+                        </p>
 
-                                <button type="button" id="openNewEmployeeModal"
-                                        class="bg-[#143C50] text-white px-6 py-3 rounded-lg hover:bg-[#288CC8] transition whitespace-nowrap font-medium">
-                                    Add New Person
-                                </button>
+                        {% if can_trainer_reassign %}
+                        <p class="mt-2 text-sm text-blue-700">
+                            Search user below to reassign. Leave blank to keep the current user.
+                        </p>
+                        <div class="mt-4 flex flex-col sm:flex-row sm:items-center gap-4">
+                            <div class="relative flex-1">
+                                <input list="employee-list" id="assignee_search" name="assignee_search"
+                                       placeholder="Search user to reassign by name, email or staff number..."
+                                       class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
+                                <input type="hidden" name="assignee" id="assignee_id" value="">
                             </div>
+                            <button type="button" id="openNewEmployeeModal"
+                                    class="bg-[#143C50] text-white px-6 py-3 rounded-lg hover:bg-[#288CC8] transition whitespace-nowrap font-medium">
+                                Add New Person
+                            </button>
+                        </div>
+                        {% elif can_clear_user %}
+                        <p class="mt-2 text-sm text-red-700">
+                            To assign to someone else, you must first
+                            <a href="{% url 'clear_user' import_instance.pk %}" class="font-medium underline hover:text-red-900">
+                                clear the current user
+                            </a>.
+                        </p>
+                        <input type="hidden" name="assignee" value="{{ import_instance.assignee.id }}">
+                        {% else %}
+                        <p class="mt-2 text-sm text-gray-700">
+                            This device must be cleared by IT staff, the IT manager, or a senior IT officer before reassignment.
+                        </p>
+                        <input type="hidden" name="assignee" value="{{ import_instance.assignee.id }}">
                         {% endif %}
+                        {% else %}
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+                            <div class="relative flex-1">
+                                <input list="employee-list" id="assignee_search" name="assignee_search"
+                                       placeholder="Search by name, email or staff number..."
+                                       class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
+                                <input type="hidden" name="assignee" id="assignee_id">
+                            </div>
+                            <button type="button" id="openNewEmployeeModal"
+                                    class="bg-[#143C50] text-white px-6 py-3 rounded-lg hover:bg-[#288CC8] transition whitespace-nowrap font-medium">
+                                Add New Person
+                            </button>
+                        </div>
+                        {% endif %}
+
+                        <datalist id="employee-list">
+                            {% for emp in employees %}
+                            <option value="{{ emp.id }} - {{ emp.full_name }}{% if emp.email %} ({{ emp.email }}){% endif %}{% if emp.staff_number %} [{{ emp.staff_number }}]{% endif %}">
+                            {% endfor %}
+                        </datalist>
                     </div>
                 </div>
 
-                <!-- Other fields -->
                 <div>
                     <label class="block font-semibold text-[#143C50] mb-2">Device Name</label>
                     {% if import_instance.category == 'laptop' or import_instance.category == 'system_unit' %}
@@ -181,8 +186,9 @@
                 {% if user.is_trainer %}
                 <div class="md:col-span-3">
                     <label class="block font-semibold text-[#143C50] mb-2">Reason for Update *</label>
-                    <textarea name="reason_for_update" required rows="4"
+                    <textarea name="reason_for_update" id="reason_for_update" required minlength="10" rows="4"
                               class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">{{ import_instance.reason_for_update|default:'' }}</textarea>
+                    <p class="text-xs text-gray-500 mt-1">Please enter at least 10 characters.</p>
                 </div>
                 {% endif %}
 
@@ -197,11 +203,11 @@
                 {% endif %}
 
                 <div class="md:col-span-3 flex justify-end gap-4 mt-8">
-                    <a href="{% url 'display_approved_imports' %}" 
+                    <a href="{% url 'display_approved_imports' %}"
                        class="bg-gray-500 text-white px-8 py-3 rounded-lg hover:bg-gray-600 transition duration-200 font-medium">
                         Cancel
                     </a>
-                    <button type="submit" 
+                    <button type="submit"
                             class="bg-[#288CC8] text-white px-8 py-3 rounded-lg hover:bg-[#143C50] transition duration-200 font-bold">
                         Save Changes
                     </button>
@@ -210,13 +216,12 @@
         </div>
     </div>
 
-    <!-- Add New Employee Modal -->
     <div id="newEmployeeModal" class="fixed inset-0 bg-black bg-opacity-60 hidden z-[1000] flex items-center justify-center p-4">
         <div class="bg-white rounded-xl p-8 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6 sticky top-0 bg-white z-10">
                 <h3 class="text-2xl font-bold text-[#143C50]">Add New Person</h3>
-                <button type="button" onclick="closeModal('newEmployeeModal')" 
-                        class="text-gray-600 hover:text-gray-900 text-3xl font-bold">×</button>
+                <button type="button" onclick="closeModal('newEmployeeModal')"
+                        class="text-gray-600 hover:text-gray-900 text-3xl font-bold">&times;</button>
             </div>
 
             <form method="post" action="{% url 'import_update' import_instance.pk %}" class="space-y-6">
@@ -226,46 +231,45 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block font-semibold text-[#143C50] mb-2">First Name *</label>
-                        <input type="text" name="new_first_name" required 
-                               class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
+                        <input type="text" name="new_first_name" required class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
                     </div>
                     <div>
                         <label class="block font-semibold text-[#143C50] mb-2">Last Name *</label>
-                        <input type="text" name="new_last_name" required 
-                               class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
+                        <input type="text" name="new_last_name" required class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
                     </div>
                 </div>
 
                 <div>
                     <label class="block font-semibold text-[#143C50] mb-2">Email (optional – must be unique)</label>
-                    <input type="email" name="new_email" 
-                           class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
+                    <input type="email" name="new_email" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
                 </div>
 
                 <div>
                     <label class="block font-semibold text-[#143C50] mb-2">Staff Number (optional)</label>
-                    <input type="text" name="new_staff_number" 
-                           class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
+                    <input type="text" name="new_staff_number" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label class="block font-semibold text-[#143C50] mb-2">Centre (optional)</label>
-                        <select name="new_centre" 
-                                class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
-                            <option value="">— None —</option>
+                        <label class="block font-semibold text-[#143C50] mb-2">Centre{% if not user.is_trainer %} (optional){% endif %}</label>
+                        {% if user.is_trainer %}
+                        <input type="hidden" name="new_centre" value="{{ user.centre.id }}">
+                        <input type="text" value="{{ user.centre.name }}" disabled class="w-full border border-gray-300 rounded-lg p-3 bg-gray-100">
+                        {% else %}
+                        <select name="new_centre" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
+                            <option value="">None</option>
                             {% for c in centres %}
-                                <option value="{{ c.id }}">{{ c.name }}</option>
+                            <option value="{{ c.id }}">{{ c.name }}</option>
                             {% endfor %}
                         </select>
+                        {% endif %}
                     </div>
                     <div>
                         <label class="block font-semibold text-[#143C50] mb-2">Department (optional)</label>
-                        <select name="new_department" 
-                                class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
-                            <option value="">— None —</option>
+                        <select name="new_department" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#288CC8]">
+                            <option value="">None</option>
                             {% for d in departments %}
-                                <option value="{{ d.id }}">{{ d.name }} ({{ d.department_code }})</option>
+                            <option value="{{ d.id }}">{{ d.name }} ({{ d.department_code }})</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -276,7 +280,7 @@
                             class="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 transition duration-200">
                         Cancel
                     </button>
-                    <button type="submit" 
+                    <button type="submit"
                             class="bg-[#288CC8] text-white px-6 py-3 rounded-lg hover:bg-[#143C50] transition duration-200 font-bold">
                         Create & Select
                     </button>
@@ -287,7 +291,6 @@
 </div>
 
 <script>
-// Modal functions
 function showModal(id) {
     const modal = document.getElementById(id);
     if (modal) {
@@ -305,14 +308,12 @@ function closeModal(id) {
     }
 }
 
-// Open modal
 document.getElementById('openNewEmployeeModal')?.addEventListener('click', function(e) {
     e.preventDefault();
     e.stopPropagation();
     showModal('newEmployeeModal');
 });
 
-// Close on outside click
 document.addEventListener('click', function(e) {
     const modal = document.getElementById('newEmployeeModal');
     if (!modal || modal.classList.contains('hidden')) return;
@@ -323,14 +324,12 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Escape key close
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeModal('newEmployeeModal');
     }
 });
 
-// Auto-select new employee after creation
 document.addEventListener('DOMContentLoaded', function() {
     const params = new URLSearchParams(window.location.search);
     const newEmpId = params.get('new_employee');
@@ -343,28 +342,26 @@ document.addEventListener('DOMContentLoaded', function() {
             hidden.value = newEmpId;
 
             const options = document.querySelectorAll('#employee-list option');
-            for (let opt of options) {
+            for (const opt of options) {
                 if (opt.value.startsWith(newEmpId + ' - ')) {
-                    search.value = opt.value.replace(newEmpId + ' - ', '');
+                    search.value = opt.value;
                     break;
                 }
             }
 
             search.style.borderColor = '#10B981';
             setTimeout(() => search.style.borderColor = '', 3000);
-            search.focus();
-            search.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
-        // Clean URL
         history.replaceState({}, document.title, location.pathname);
     }
 });
 
-// Search → hidden ID
 document.getElementById('assignee_search')?.addEventListener('input', function(e) {
     const val = e.target.value.trim();
     const hidden = document.getElementById('assignee_id');
+    if (!hidden) return;
+
     if (val.includes(' - ')) {
         hidden.value = val.split(' - ')[0].trim();
     } else {
@@ -372,7 +369,36 @@ document.getElementById('assignee_search')?.addEventListener('input', function(e
     }
 });
 
-// Serial warning
+const updateForm = document.getElementById('updateForm');
+const reasonField = document.getElementById('reason_for_update');
+
+function validateReasonField() {
+    if (!reasonField) return true;
+
+    const trimmedReason = reasonField.value.trim();
+    if (!trimmedReason) {
+        reasonField.setCustomValidity('Reason for update is required.');
+        return false;
+    }
+
+    if (trimmedReason.length < 10) {
+        reasonField.setCustomValidity('Reason for update must be at least 10 characters.');
+        return false;
+    }
+
+    reasonField.setCustomValidity('');
+    return true;
+}
+
+reasonField?.addEventListener('input', validateReasonField);
+
+updateForm?.addEventListener('submit', function(e) {
+    if (!validateReasonField()) {
+        e.preventDefault();
+        reasonField.reportValidity();
+    }
+});
+
 document.getElementById('serial_number_input')?.addEventListener('input', function() {
     const val = this.value.trim();
     const orig = "{{ import_instance.serial_number|default:'' }}".trim();
@@ -385,5 +411,4 @@ document.getElementById('serial_number_input')?.addEventListener('input', functi
     }
 });
 </script>
-
 {% endblock %}

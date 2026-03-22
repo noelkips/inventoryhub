@@ -22,7 +22,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction
 from django.db.models import Q, F, Case, When, IntegerField, Count
 from django.db.models.functions import TruncMonth
-from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect, StreamingHttpResponse
+from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.template.loader import get_template
 from django.urls import reverse
 from django.utils import timezone
@@ -41,7 +41,7 @@ from devices.utils.notification_utils import (
     is_workflow_request_notification,
     resolve_related_import,
     sync_notification_state,
-    sync_stale_workflow_notifications,
+    sync_stale_workflow_notifications_if_due,
 )
 from ppm.models import PPMTask, PPMPeriod, PPMActivity
 from devices.utils.inventory_centre_report import build_inventory_workbook, get_inventory_devices
@@ -49,8 +49,6 @@ from devices.utils.inventory_centre_report import build_inventory_workbook, get_
 # Third-party & Standard Library
 import csv
 import logging
-import json
-import time
 from urllib.parse import urlparse
 from io import BytesIO
 
@@ -261,7 +259,7 @@ def password_reset_confirm(request, uidb64=None, token=None):
 
 @login_required
 def notifications_view(request):
-    sync_stale_workflow_notifications(request.user)
+    sync_stale_workflow_notifications_if_due(request)
     qs = Notification.objects.filter(user=request.user).select_related('content_type', 'responded_by').order_by('is_read', '-created_at')
     unread_count = qs.filter(is_read=False).count()
 
@@ -441,7 +439,7 @@ def delete_notification(request, pk):
 @login_required
 @require_safe
 def notifications_api(request):
-    sync_stale_workflow_notifications(request.user)
+    sync_stale_workflow_notifications_if_due(request)
     try:
         limit = int(request.GET.get('limit', 8))
     except ValueError:
@@ -470,52 +468,7 @@ def notifications_api(request):
 @login_required
 @require_safe
 def notifications_stream(request):
-    user_id = request.user.id
-    try:
-        poll_seconds = float(request.GET.get('poll', 3))
-    except ValueError:
-        poll_seconds = 3
-    poll_seconds = max(1.0, min(poll_seconds, 10.0))
-
-    def event_stream():
-        last_state = None
-        # Keep the connection alive; client will reconnect if needed
-        while True:
-            sync_stale_workflow_notifications(request.user)
-            qs = Notification.objects.filter(user_id=user_id).select_related('content_type', 'responded_by').order_by('is_read', '-created_at')
-            unread_count = qs.filter(is_read=False).count()
-            latest_id = qs.values_list('id', flat=True).first() or 0
-            state = (unread_count, latest_id)
-
-            if state != last_state:
-                items = []
-                for n in qs[:8]:
-                    prepared = _prepare_notification(n, request.user)
-                    items.append({
-                        'id': prepared.pk,
-                        'message': prepared.message,
-                        'created_at': prepared.created_at.isoformat(),
-                        'created_at_display': prepared.created_at.strftime('%b %d, %Y %H:%M'),
-                        'is_read': prepared.is_read,
-                        'url': prepared.detail_url,
-                        'target_url': prepared.target_url,
-                        'target_label': prepared.target_label,
-                    })
-                payload = {
-                    'unread_count': unread_count,
-                    'items': items,
-                }
-                yield f"event: notifications\ndata: {json.dumps(payload)}\n\n"
-                last_state = state
-            else:
-                yield "event: ping\ndata: {}\n\n"
-
-            time.sleep(poll_seconds)
-
-    resp = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
-    resp['Cache-Control'] = 'no-cache'
-    resp['X-Accel-Buffering'] = 'no'
-    return resp
+    return HttpResponse(status=204)
 
 
 
@@ -737,7 +690,7 @@ def dashboard_view(request):
         PendingUpdate.objects.filter(import_record__centre=user.centre).count() if user.centre else 0
     )
 
-    sync_stale_workflow_notifications(user)
+    sync_stale_workflow_notifications_if_due(request)
     notifications_qs = Notification.objects.filter(user=user).select_related('content_type', 'responded_by').order_by('is_read', '-created_at')
     notifications = notifications_qs[:5]
     unread_count = notifications_qs.filter(is_read=False).count()

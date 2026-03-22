@@ -17,6 +17,7 @@ import base64
 from pypdf import PdfReader, PdfWriter
 from ..models import CustomUser, Import, DeviceAgreement
 from ..utils import send_custom_email
+from ..utils.device_access import can_clear_device_users, can_manage_device_assignments
 from ..utils.signatures import normalize_signature_data_url
 
 
@@ -49,6 +50,12 @@ def _compress_pdf_bytes(pdf_bytes: bytes) -> bytes:
 def sign_issuance(request, pk):
     """Handle issuance signing - both IT staff and employee sign"""
     device = get_object_or_404(Import, pk=pk)
+    if not can_manage_device_assignments(request.user):
+        messages.error(request, "You do not have permission to manage device issuance.")
+        return redirect('device_detail', pk=device.pk)
+    if request.user.is_trainer and device.centre != request.user.centre:
+        messages.error(request, "You can only manage devices from your own centre.")
+        return redirect('display_approved_imports')
     if not getattr(device, "is_active", True):
         messages.warning(request, "This device is currently under repair and is inactive. UAF actions are blocked.")
         return redirect("device_detail", pk=device.pk)
@@ -145,6 +152,9 @@ def sign_issuance(request, pk):
 def sign_clearance(request, pk):
     """Handle clearance signing - ONLY employee signs when returning device"""
     device = get_object_or_404(Import, pk=pk)
+    if not can_clear_device_users(request.user):
+        messages.error(request, "Only IT staff, IT managers, and senior IT officers can clear assigned devices.")
+        return redirect('device_detail', pk=device.pk)
     if not getattr(device, "is_active", True):
         messages.warning(request, "This device is currently under repair and is inactive. UAF actions are blocked.")
         return redirect("device_detail", pk=device.pk)
@@ -356,7 +366,7 @@ def upload_existing_uaf_pdf(request, pk):
         return redirect("device_detail", pk=device.pk)
 
     # Limit to staff who can manage devices (consistent with the UI actions)
-    if not (request.user.is_superuser or getattr(request.user, "is_trainer", False)):
+    if not can_manage_device_assignments(request.user):
         messages.error(request, "You do not have permission to upload UAF documents.")
         return redirect("device_detail", pk=device.pk)
 

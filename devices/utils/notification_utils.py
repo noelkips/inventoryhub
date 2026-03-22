@@ -1,3 +1,6 @@
+from datetime import datetime, timedelta
+
+from django.utils import timezone
 from django.utils.text import Truncator
 
 from devices.models import Import, Notification, PendingUpdate
@@ -10,6 +13,8 @@ WORKFLOW_REQUEST_MARKERS = (
     "provide clarification",
     "clarification",
 )
+WORKFLOW_NOTIFICATION_SYNC_INTERVAL = timedelta(hours=1)
+WORKFLOW_NOTIFICATION_SYNC_SESSION_KEY = "workflow_notification_sync_at"
 
 
 def build_notification_preview(message, length=140):
@@ -129,3 +134,63 @@ def sync_stale_workflow_notifications(user):
         Notification.objects.bulk_update(notifications_to_update, ["is_read", "responded_by"])
 
     return len(notifications_to_update)
+
+
+def _parse_session_datetime(value):
+    if not value:
+        return None
+
+    if isinstance(value, datetime):
+        return value
+
+    try:
+        return datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _match_datetime_awareness(value, reference):
+    if value is None or reference is None:
+        return value
+
+    current_timezone = timezone.get_current_timezone()
+
+    if timezone.is_naive(reference):
+        if timezone.is_aware(value):
+            return timezone.make_naive(value, current_timezone)
+        return value
+
+    if timezone.is_naive(value):
+        return timezone.make_aware(value, current_timezone)
+
+    return value.astimezone(current_timezone)
+
+
+def sync_stale_workflow_notifications_if_due(request, *, force=False):
+    user = getattr(request, "user", None)
+    if not getattr(user, "is_authenticated", False):
+        return 0
+
+    now = timezone.now()
+    last_sync = _match_datetime_awareness(
+        _parse_session_datetime(
+        request.session.get(WORKFLOW_NOTIFICATION_SYNC_SESSION_KEY)
+        ),
+        now,
+    )
+
+    if not force and last_sync:
+        try:
+            if (now - last_sync) < WORKFLOW_NOTIFICATION_SYNC_INTERVAL:
+                return 0
+        except TypeError:
+            request.session.pop(WORKFLOW_NOTIFICATION_SYNC_SESSION_KEY, None)
+
+    updated_count = sync_stale_workflow_notifications(user)
+    request.session[WORKFLOW_NOTIFICATION_SYNC_SESSION_KEY] = now.isoformat()
+    return updated_count
+
+
+def reset_workflow_notification_sync(request):
+    if hasattr(request, "session"):
+        request.session.pop(WORKFLOW_NOTIFICATION_SYNC_SESSION_KEY, None)
