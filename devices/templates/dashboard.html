@@ -465,6 +465,7 @@
             'ppmManagementToggle',
             'manageUsersToggle'
         ];
+        const toggleIdSet = new Set(toggleIds);
 
         toggleIds.forEach(id => {
             const toggle = document.getElementById(id);
@@ -524,6 +525,10 @@
 
         document.querySelectorAll('#sidebar a').forEach((link) => {
             link.addEventListener('click', () => {
+                if (toggleIdSet.has(link.id)) {
+                    return;
+                }
+
                 if (window.innerWidth < 768) {
                     setSidebarOpen(false);
                 }
