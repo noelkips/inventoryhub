@@ -24,6 +24,7 @@ urlpatterns = [
     path('dashboard/', views.dashboard_view, name='dashboard'),
     path('dashboard/filter/<str:list_type>/', views.filtered_list_view, name='filtered_list'),
     path('manage-users/', views.manage_users, name='manage_users'),
+    path('manage-users/export/', views.export_users_excel, name='export_users_excel'),
     path('user/add/', views.user_add, name='user_add'),
     path('user/update/<int:pk>/', views.user_update, name='user_update'),
     path('user/resend-credentials/<int:pk>/', views.resend_user_credentials, name='resend_user_credentials'),

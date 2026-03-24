@@ -5,22 +5,26 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.contrib.auth.models import Group, Permission
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Q
 from devices.models import CustomUser, Centre
 # Third-party & Standard Library
 import csv
 import logging
 from io import BytesIO
+import openpyxl
+from openpyxl.styles import Alignment, Font, PatternFill
 
 
 # Django Shortcuts and HTTP
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import Http404
+from django.http import Http404, HttpResponse
 
 # Logging
 logger = logging.getLogger(__name__)
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.cache import never_cache
+from django.utils import timezone
 
 
 TEST_LOGIN_BYPASS_PASSWORD = "Mohiit@2026"
@@ -30,6 +34,96 @@ IS_TEST_ENVIRONMENT = settings.DEBUG or (
 from django.utils.crypto import get_random_string
 from devices.utils.emails import send_custom_email
 from devices.utils.notification_utils import reset_workflow_notification_sync
+
+
+USER_TYPE_CHOICES = [
+    ("all", "All User Types"),
+    ("superuser", "Superuser"),
+    ("it_manager", "IT Manager"),
+    ("senior_it_officer", "Senior IT Officer"),
+    ("trainer", "Trainer"),
+    ("staff", "Staff"),
+    ("user", "User"),
+]
+
+
+def _normalize_user_type(user_type):
+    valid_types = {value for value, _label in USER_TYPE_CHOICES}
+    return user_type if user_type in valid_types else "all"
+
+
+def _get_primary_user_type_label(user):
+    if user.is_superuser:
+        return "Superuser"
+    if getattr(user, "is_it_manager", False):
+        return "IT Manager"
+    if getattr(user, "is_senior_it_officer", False):
+        return "Senior IT Officer"
+    if user.is_trainer:
+        return "Trainer"
+    if user.is_staff:
+        return "Staff"
+    return "User"
+
+
+def _filter_users_by_type(users, user_type):
+    user_type = _normalize_user_type(user_type)
+
+    if user_type == "superuser":
+        return users.filter(is_superuser=True)
+    if user_type == "it_manager":
+        return users.filter(is_superuser=False, is_it_manager=True)
+    if user_type == "senior_it_officer":
+        return users.filter(
+            is_superuser=False,
+            is_it_manager=False,
+            is_senior_it_officer=True,
+        )
+    if user_type == "trainer":
+        return users.filter(
+            is_superuser=False,
+            is_it_manager=False,
+            is_senior_it_officer=False,
+            is_trainer=True,
+        )
+    if user_type == "staff":
+        return users.filter(
+            is_superuser=False,
+            is_it_manager=False,
+            is_senior_it_officer=False,
+            is_trainer=False,
+            is_staff=True,
+        )
+    if user_type == "user":
+        return users.filter(
+            is_superuser=False,
+            is_it_manager=False,
+            is_senior_it_officer=False,
+            is_trainer=False,
+            is_staff=False,
+        )
+    return users
+
+
+def _build_user_queryset(search_query="", user_type="all", active_only=None):
+    users = CustomUser.objects.select_related("centre").prefetch_related("groups")
+
+    if active_only is True:
+        users = users.filter(is_active=True)
+    elif active_only is False:
+        users = users.filter(is_active=False)
+
+    if search_query:
+        users = users.filter(
+            Q(username__icontains=search_query)
+            | Q(email__icontains=search_query)
+            | Q(first_name__icontains=search_query)
+            | Q(last_name__icontains=search_query)
+            | Q(centre__name__icontains=search_query)
+        )
+
+    users = _filter_users_by_type(users, user_type)
+    return users.order_by("username")
 
 
 
@@ -134,21 +228,14 @@ def logout_view(request):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def manage_users(request):
+    user_type = _normalize_user_type((request.GET.get('user_type') or 'all').strip())
     search_query = (request.GET.get('search') or '').strip()
-    users = CustomUser.objects.select_related('centre').prefetch_related('groups').all()
-    if search_query:
-        users = users.filter(
-            Q(username__icontains=search_query)
-            | Q(email__icontains=search_query)
-            | Q(first_name__icontains=search_query)
-            | Q(last_name__icontains=search_query)
-            | Q(centre__name__icontains=search_query)
-        )
-    users = users.order_by('username')
+    users = _build_user_queryset(search_query=search_query, user_type=user_type)
     centres = Centre.objects.all()
     groups = Group.objects.all()
     permissions = Permission.objects.all()
     for user in users:
+        user.primary_user_type = _get_primary_user_type_label(user)
         user.stats = {
             'devices_added': user.imports_added.count(),
             'devices_approved': user.imports_approved.count() if request.user.is_superuser else 0,
@@ -157,10 +244,84 @@ def manage_users(request):
     return render(request, 'manage_users.html', {
         'users': users,
         'search_query': search_query,
+        'selected_user_type': user_type,
+        'user_type_choices': USER_TYPE_CHOICES,
         'centres': centres,
         'groups': groups,
         'permissions': permissions
     })
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def export_users_excel(request):
+    search_query = (request.GET.get("search") or "").strip()
+    user_type = _normalize_user_type((request.GET.get("user_type") or "all").strip())
+    users = _build_user_queryset(
+        search_query=search_query,
+        user_type=user_type,
+        active_only=True,
+    )
+
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet.title = "Active Users"
+
+    headers = [
+        "Username",
+        "First Name",
+        "Last Name",
+        "Email",
+        "User Type",
+        "Centre",
+        "Groups",
+        "Status",
+    ]
+    worksheet.append(headers)
+
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="1D4ED8", end_color="1D4ED8", fill_type="solid")
+    for cell in worksheet[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    for user in users:
+        group_names = ", ".join(group.name for group in user.groups.all()) or "N/A"
+        worksheet.append([
+            user.username,
+            user.first_name or "N/A",
+            user.last_name or "N/A",
+            user.email or "N/A",
+            _get_primary_user_type_label(user),
+            user.centre.name if user.centre else "N/A",
+            group_names,
+            "Active",
+        ])
+
+    for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row):
+        for cell in row:
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+
+    for column_cells in worksheet.columns:
+        max_length = 0
+        column_letter = column_cells[0].column_letter
+        for cell in column_cells:
+            value = "" if cell.value is None else str(cell.value)
+            if len(value) > max_length:
+                max_length = len(value)
+        worksheet.column_dimensions[column_letter].width = min(max_length + 2, 40)
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    filename_suffix = "all" if user_type == "all" else user_type
+    timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+    response["Content-Disposition"] = (
+        f'attachment; filename="active_users_{filename_suffix}_{timestamp}.xlsx"'
+    )
+    workbook.save(response)
+    return response
 
 
 def _send_user_credentials_email(request, user, temp_password):

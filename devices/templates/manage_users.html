@@ -41,11 +41,22 @@
                placeholder="Username, email, name, or centre"
                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
+      <div class="sm:w-64">
+        <label for="user_type" class="mb-1 block text-sm font-medium text-gray-700">User Type</label>
+        <select id="user_type" name="user_type"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          {% for value, label in user_type_choices %}
+            <option value="{{ value }}" {% if selected_user_type == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
       <div class="flex flex-col gap-2 sm:flex-row">
         <button type="submit" class="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-white hover:bg-blue-700 sm:w-auto">Search</button>
+        <button type="submit" formaction="{% url 'export_users_excel' %}" formmethod="get" class="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-white hover:bg-emerald-700 sm:w-auto">Export Active Users</button>
         <a href="{% url 'manage_users' %}" class="w-full rounded-lg bg-gray-100 px-4 py-2.5 text-center text-gray-700 hover:bg-gray-200 sm:w-auto">Reset</a>
       </div>
     </div>
+    <p class="mt-3 text-xs text-gray-500">The Excel file includes active users only and respects the selected user type and search filter.</p>
   </form>
 
   <!-- Table -->
@@ -74,6 +85,7 @@
               data-is-active="{{ user.is_active }}"
               data-is-it-manager="{{ user.is_it_manager }}"
               data-is-senior-it-officer="{{ user.is_senior_it_officer }}"
+              data-primary-user-type="{{ user.primary_user_type }}"
               data-groups="{% for g in user.groups.all %}{{ g.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
             <td class="py-2 px-4 border">
               <strong>Username:</strong> {{ user.username }}<br>
@@ -81,8 +93,7 @@
             </td>
             <td class="py-2 px-4 border">
               <strong>Centre:</strong> {{ user.centre.name|default:"N/A" }}<br>
-              <strong>Role:</strong>
-              {% if user.is_it_manager %}IT Manager{% elif user.is_senior_it_officer %}Senior IT Officer{% elif user.is_trainer %}Trainer{% elif user.is_staff %}Staff{% else %}User{% endif %}
+              <strong>Role:</strong> {{ user.primary_user_type }}
             </td>
             <td class="py-2 px-4 border">{{ user.groups.all|join:", "|default:"N/A" }}</td>
             <td class="py-2 px-4 border">
@@ -276,11 +287,7 @@ function showModal(action, userId = null) {
     document.getElementById('viewEmail').textContent = row.dataset.email;
     document.getElementById('viewName').textContent = `${row.dataset.firstName} ${row.dataset.lastName}`.trim() || '—';
     document.getElementById('viewCentre').textContent = row.dataset.centre;
-    const role = row.dataset.isItManager === 'true' ? 'IT Manager' :
-                 row.dataset.isSeniorItOfficer === 'true' ? 'Senior IT Officer' :
-                 row.dataset.isTrainer === 'true' ? 'Trainer' :
-                 row.dataset.isStaff === 'true' ? 'Staff' : 'User';
-    document.getElementById('viewRole').textContent = role;
+    document.getElementById('viewRole').textContent = row.dataset.primaryUserType || 'User';
     document.getElementById('viewGroups').textContent = row.dataset.groups || 'None';
     document.getElementById('viewModal').classList.remove('hidden');
 
