@@ -7,15 +7,21 @@
 
     <!-- Tabs (top) -->
     <div class="mb-4">
-        <div class="grid grid-cols-2 sm:grid-cols-4 w-full rounded-lg border border-gray-200 bg-white overflow-hidden">
+        <div class="{% if user.is_trainer %}grid grid-cols-2 sm:grid-cols-5{% else %}grid grid-cols-2 sm:grid-cols-4{% endif %} w-full rounded-lg border border-gray-200 bg-white overflow-hidden">
             <a href="{% url 'display_approved_imports' %}"
                class="flex min-h-[3rem] items-center justify-center px-3 py-2 text-center text-xs font-semibold sm:px-4 sm:text-sm {% if view_name == 'display_approved_imports' %}bg-[#288CC8] text-white{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
                 All Devices
             </a>
             <a href="{% url 'display_unapproved_imports' %}"
-               class="flex min-h-[3rem] items-center justify-center border-l border-gray-200 px-3 py-2 text-center text-xs font-semibold sm:px-4 sm:text-sm {% if view_name == 'display_unapproved_imports' %}bg-[#288CC8] text-white{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
+               class="flex min-h-[3rem] items-center justify-center border-l border-gray-200 px-3 py-2 text-center text-xs font-semibold sm:px-4 sm:text-sm {% if view_name == 'display_unapproved_imports' and not clarification_only %}bg-[#288CC8] text-white{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
                 Unapproved
             </a>
+            {% if user.is_trainer %}
+            <a href="{% url 'display_unapproved_imports' %}?clarification=1"
+               class="flex min-h-[3rem] items-center justify-center border-l border-gray-200 px-3 py-2 text-center text-xs font-semibold sm:px-4 sm:text-sm {% if view_name == 'display_unapproved_imports' and clarification_only %}bg-amber-600 text-white{% else %}text-amber-900 hover:bg-amber-50{% endif %}">
+                Needs Clarification{% if clarification_requests_count > 0 %} ({{ clarification_requests_count }}){% endif %}
+            </a>
+            {% endif %}
             <a href="{% url 'display_disposed_imports' %}"
                class="flex min-h-[3rem] items-center justify-center border-l border-gray-200 px-3 py-2 text-center text-xs font-semibold sm:px-4 sm:text-sm {% if view_name == 'display_disposed_imports' %}bg-[#288CC8] text-white{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
                 Disposed

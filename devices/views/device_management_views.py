@@ -904,6 +904,8 @@ def get_list_context(request, initial_queryset, view_name, is_disposed=False):
         'can_request_device_deletion': can_request_device_deletion(request.user),
         'can_review_device_requests': can_review_device_requests(request.user),
         'can_manage_assignments_list': can_manage_device_assignments(request.user),
+        'clarification_requests_count': _trainer_clarification_queryset(request.user).count() if request.user.is_trainer else 0,
+        'clarification_only': _is_truthy_param(request.GET.get('clarification')),
     }
 
 
