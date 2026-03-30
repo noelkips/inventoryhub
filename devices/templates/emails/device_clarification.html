@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Clarification Required</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <h2 style="color: #143C50;">Clarification Required</h2>
+
+    <p>Dear <strong>{{ trainer.get_full_name|default:trainer.username }}</strong>,</p>
+
+    <p>Your device request was sent back for clarification.</p>
+
+    <table style="border-collapse: collapse; width: 100%; max-width: 640px;">
+        <tr><th style="text-align:left; padding:8px; background:#f5f5f5;">Field</th><th style="text-align:left; padding:8px; background:#f5f5f5;">Details</th></tr>
+        <tr><td style="padding:8px; border-bottom:1px solid #ddd;">Device</td><td style="padding:8px; border-bottom:1px solid #ddd;">{{ device_name }} ({{ category }})</td></tr>
+        <tr><td style="padding:8px; border-bottom:1px solid #ddd;">Serial Number</td><td style="padding:8px; border-bottom:1px solid #ddd;">{{ device.serial_number|default:"N/A" }}</td></tr>
+        <tr><td style="padding:8px; border-bottom:1px solid #ddd;">Centre</td><td style="padding:8px; border-bottom:1px solid #ddd;">{{ device.centre.name|default:"N/A" }}</td></tr>
+        <tr><td style="padding:8px; border-bottom:1px solid #ddd;">Department</td><td style="padding:8px; border-bottom:1px solid #ddd;">{{ device.department.name|default:"N/A" }}</td></tr>
+    </table>
+
+    <p style="margin-top: 16px;">
+        <strong>Sent back by:</strong> {{ sent_by.get_full_name|default:sent_by.username }}<br>
+        <strong>Date/Time:</strong> {{ sent_at|date:"Y-m-d H:i" }}
+    </p>
+
+    {% if clarification_reason %}
+    <div style="margin: 16px 0; padding: 12px; background: #FFF7ED; border: 1px solid #FCD34D; border-radius: 8px;">
+        <strong>Clarification Note</strong>
+        <div style="margin-top: 6px;">{{ clarification_reason }}</div>
+    </div>
+    {% endif %}
+
+    <p style="margin: 24px 0;">
+        <a href="{{ edit_url }}" style="display: inline-block; background: #288CC8; color: #ffffff; text-decoration: none; padding: 12px 18px; border-radius: 8px; font-weight: bold;">
+            Open Device Request
+        </a>
+    </p>
+
+    <p>If the button does not work, copy and paste this link into your browser:</p>
+    <p><a href="{{ edit_url }}">{{ edit_url }}</a></p>
+
+    <p>Best regards,<br>
+       {{ sent_by.get_full_name|default:sent_by.username }}<br>
+       MoHI Africa IT Team</p>
+</body>
+</html>

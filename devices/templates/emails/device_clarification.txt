@@ -1,0 +1,23 @@
+Dear {{ trainer.get_full_name|default:trainer.username }},
+
+Your device request was sent back for clarification.
+
+Device: {{ device_name }} ({{ category }})
+Serial Number: {{ device.serial_number|default:"N/A" }}
+Centre: {{ device.centre.name|default:"N/A" }}
+Department: {{ device.department.name|default:"N/A" }}
+
+Sent back by: {{ sent_by.get_full_name|default:sent_by.username }}
+Date/Time: {{ sent_at|date:"Y-m-d H:i" }}
+{% if clarification_reason %}
+
+Clarification Note:
+{{ clarification_reason }}
+{% endif %}
+
+Open the request here:
+{{ edit_url }}
+
+Best regards,
+{{ sent_by.get_full_name|default:sent_by.username }}
+MoHI Africa IT Team

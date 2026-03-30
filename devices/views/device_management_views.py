@@ -34,7 +34,12 @@ from devices.models import (
     DeviceConfiguration,
 )
 from devices.utils.devices_utils import generate_pdf_buffer
-from devices.utils.emails import send_custom_email, send_custom_email, send_device_assignment_email
+from devices.utils.emails import (
+    send_custom_email,
+    send_custom_email,
+    send_device_assignment_email,
+    send_device_clarification_email,
+)
 from devices.utils.device_access import (
     assignment_employee_queryset,
     can_access_inventory_lists,
@@ -356,7 +361,7 @@ def _notify_device_request_reviewers(*, device, message, related_object=None):
         )
 
 
-def _notify_user_for_related_object(*, user, message, related_object):
+def _notify_user_for_related_object(*, user, message, related_object, actor=None):
     if not user or related_object is None:
         return
 
@@ -369,7 +374,7 @@ def _notify_user_for_related_object(*, user, message, related_object):
     ).first()
     if notification:
         notification.message = message
-        notification.responded_by = None
+        notification.responded_by = actor
         notification.save(update_fields=["message", "responded_by"])
         return
 
@@ -378,6 +383,7 @@ def _notify_user_for_related_object(*, user, message, related_object):
         message=message,
         content_type=content_type,
         object_id=related_object.pk,
+        responded_by=actor,
     )
 
 
@@ -814,17 +820,52 @@ def get_list_context(request, initial_queryset, view_name, is_disposed=False):
     if request.user.is_trainer:
         available_centres = available_centres.filter(pk=request.user.centre_id) if request.user.centre_id else available_centres.none()
 
+    clarification_only = _is_truthy_param(request.GET.get('clarification'))
+    import_content_type = ContentType.objects.get_for_model(Import)
+    pending_update_content_type = ContentType.objects.get_for_model(PendingUpdate)
+
     # Pending updates
     data_with_pending = []
     for item in page_obj:
         pending = latest_pending_by_import_id.get(item.id)
         deletion_request = deletion_request_by_device_id.get(item.id)
+        clarification_message = None
+        clarification_sender = None
+
+        if clarification_only:
+            clarification_filters = Q()
+            if pending and pending.pending_clarification:
+                clarification_filters |= Q(
+                    content_type=pending_update_content_type,
+                    object_id=pending.pk,
+                )
+            if getattr(item, 'pending_clarification', False):
+                clarification_filters |= Q(
+                    content_type=import_content_type,
+                    object_id=item.pk,
+                )
+
+            if clarification_filters:
+                latest_clarification = (
+                    Notification.objects.filter(
+                        clarification_filters,
+                        message__icontains='clarification',
+                    )
+                    .order_by('-created_at')
+                    .first()
+                )
+                if latest_clarification:
+                    clarification_message = latest_clarification.message
+                    clarification_sender = latest_clarification.responded_by
+
         data_with_pending.append({
             'item': item,
             'pending_update': pending,
             'deletion_request': deletion_request,
             'open_repair': open_repairs_by_device_id.get(item.id),
             'approval_preview': _build_approval_preview(item, pending),
+            'clarification_message': clarification_message,
+            'clarification_sender': clarification_sender,
         })
 
     # Stats
@@ -904,8 +945,8 @@ def get_list_context(request, initial_queryset, view_name, is_disposed=False):
         'can_request_device_deletion': can_request_device_deletion(request.user),
         'can_review_device_requests': can_review_device_requests(request.user),
         'can_manage_assignments_list': can_manage_device_assignments(request.user),
-        'clarification_requests_count': _trainer_clarification_queryset(request.user).count() if request.user.is_trainer else 0,
-        'clarification_only': _is_truthy_param(request.GET.get('clarification')),
+        'clarification_requests_count': _clarification_queryset_for_user(request.user).count(),
+        'clarification_only': clarification_only,
     }
 
 
@@ -925,6 +966,25 @@ def _trainer_clarification_queryset(user):
         )
         .distinct()
     )
+
+
+def _reviewer_clarification_queryset():
+    return (
+        Import.objects.filter(is_disposed=False)
+        .filter(
+            Q(pending_clarification=True)
+            | Q(pending_updates__pending_clarification=True)
+        )
+        .distinct()
+    )
+
+
+def _clarification_queryset_for_user(user):
+    if getattr(user, 'is_trainer', False):
+        return _trainer_clarification_queryset(user)
+    if can_review_device_requests(user):
+        return _reviewer_clarification_queryset()
+    return Import.objects.none()
 
 
 def _trainer_device_request_queryset(user):
@@ -983,15 +1043,15 @@ def display_unapproved_imports(request):
         else:
             initial_queryset = _trainer_device_request_queryset(request.user)
     elif can_review_device_requests(request.user):
-        initial_queryset = _reviewable_device_request_queryset()
+        if clarification_only:
+            initial_queryset = _reviewer_clarification_queryset()
+        else:
+            initial_queryset = _reviewable_device_request_queryset()
     else:
         initial_queryset = Import.objects.none()
 
     context = get_list_context(request, initial_queryset, 'display_unapproved_imports')
-    if request.user.is_trainer:
-        context['clarification_requests_count'] = _trainer_clarification_queryset(request.user).count()
-    else:
-        context['clarification_requests_count'] = 0
+    context['clarification_requests_count'] = _clarification_queryset_for_user(request.user).count()
     context['clarification_only'] = clarification_only
     return render(request, 'import/displaycsv_unapproved.html', context)
 
@@ -3997,6 +4057,13 @@ def import_reject(request, pk):
                         f"was sent back for clarification.{clarification_suffix}"
                     ),
                     related_object=import_instance,
+                    actor=request.user,
+                )
+                send_device_clarification_email(
+                    trainer=requester,
+                    device=import_instance,
+                    sent_by=request.user,
+                    clarification_reason=clarification_reason,
                 )
             Notification.objects.filter(
                 Q(content_type=ContentType.objects.get_for_model(Import), object_id=import_instance.pk)
@@ -4018,6 +4085,13 @@ def import_reject(request, pk):
                         f"{clarification_suffix}"
                     ),
                     related_object=pending_update,
+                    actor=request.user,
+                )
+                send_device_clarification_email(
+                    trainer=trainer,
+                    device=import_instance,
+                    sent_by=request.user,
+                    clarification_reason=clarification_reason,
                 )
             Notification.objects.filter(
                 Q(content_type=ContentType.objects.get_for_model(Import), object_id=import_instance.pk)
@@ -4041,6 +4115,13 @@ def import_reject(request, pk):
                     f"{clarification_suffix}"
                 ),
                 related_object=import_instance,
+                actor=request.user,
+            )
+            send_device_clarification_email(
+                trainer=trainer,
+                device=import_instance,
+                sent_by=request.user,
+                clarification_reason=clarification_reason,
             )
         Notification.objects.filter(
             content_type=ContentType.objects.get_for_model(Import),

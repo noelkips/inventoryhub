@@ -2,6 +2,7 @@ from django.core.mail import EmailMultiAlternatives, EmailMessage
 from django.conf import settings
 from django.utils import timezone
 from django.template.loader import render_to_string
+from django.urls import reverse
 
 # Detect test/environment mode
 # - If DEBUG=True (local dev) -> treat as test
@@ -192,4 +193,65 @@ def send_device_assignment_email(device, action="assigned", cleared_by=None):
         return True
     except Exception as e:
         print(f"Failed to send {action} email: {e}")
+        return False
+
+
+def send_device_clarification_email(*, trainer, device, sent_by, clarification_reason=None):
+    """
+    Sends a clarification-required email to the trainer with a direct link to the edit page.
+    """
+    if not trainer or not getattr(trainer, "email", None):
+        print("No trainer email available - skipping clarification email")
+        return False
+
+    site_url = str(getattr(settings, "SITE_URL", "") or "").rstrip("/")
+    edit_path = f"{reverse('import_update', args=[device.pk])}?notification=clarification"
+    edit_url = f"{site_url}{edit_path}" if site_url else edit_path
+
+    context = {
+        "trainer": trainer,
+        "device": device,
+        "sent_by": sent_by,
+        "sent_at": timezone.now(),
+        "clarification_reason": (clarification_reason or "").strip(),
+        "edit_url": edit_url,
+        "device_name": device.device_name or device.system_model or "Unknown device",
+        "category": dict(device.CATEGORY_CHOICES).get(device.category, device.category),
+    }
+
+    plain_message = render_to_string("emails/device_clarification.txt", context)
+    html_message = render_to_string("emails/device_clarification.html", context)
+    subject = f"Clarification Required: {context['device_name']} ({device.serial_number})"
+
+    try:
+        if IS_TEST_ENVIRONMENT:
+            subject = f"[TEST EMAIL] {subject}"
+            plain_message = (
+                f"--- THIS IS A TEST EMAIL (original recipient: {trainer.email}, original cc: it@mohiafrica.org) ---\n\n"
+                + plain_message
+            )
+            html_message = (
+                f"<p><strong>--- THIS IS A TEST EMAIL (original recipient: {trainer.email}, original cc: it@mohiafrica.org) ---</strong></p>"
+                + html_message
+            )
+            to_list = [TEST_EMAIL_RECIPIENT]
+            cc_list = []
+            print(f"[TEST MODE] Clarification email redirected to {TEST_EMAIL_RECIPIENT} (original: {trainer.email})")
+        else:
+            to_list = [trainer.email]
+            cc_list = ["it@mohiafrica.org"]
+
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=plain_message,
+            from_email=_get_from_email(),
+            to=to_list,
+            cc=cc_list,
+        )
+        email.attach_alternative(html_message, "text/html")
+        email.send(fail_silently=False)
+        print(f"Clarification email sent to {to_list} (cc: {cc_list})")
+        return True
+    except Exception as e:
+        print(f"Failed to send clarification email: {e}")
         return False
