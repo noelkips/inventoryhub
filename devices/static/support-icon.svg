@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Support icon</title>
+  <desc id="desc">Blue support headset with a white plus sign</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#0f766e" />
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="58" fill="url(#bg)" />
+  <path d="M36 68v-8c0-15.5 12.5-28 28-28s28 12.5 28 28v8" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="10" />
+  <rect x="28" y="62" width="14" height="28" rx="7" fill="#fff" />
+  <rect x="86" y="62" width="14" height="28" rx="7" fill="#fff" />
+  <path d="M64 68v26" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="10" />
+  <path d="M51 81h26" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="10" />
+</svg>
