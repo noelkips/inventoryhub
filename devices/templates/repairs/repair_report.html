@@ -19,8 +19,8 @@
             <a href="?export=excel&period={{ period }}&status={{ status_filter }}" class="group bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-3 rounded-xl transition flex items-center justify-center text-center shadow-lg">
                 Export Excel
             </a>
-            <a href="{% url 'display_approved_imports' %}" class="group bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-3 rounded-xl transition flex items-center justify-center text-center shadow-lg">
-                View Devices
+            <a href="{% url 'display_approved_imports' %}?under_repair=1" class="group bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-3 rounded-xl transition flex items-center justify-center text-center shadow-lg">
+                View Devices Under Repair
             </a>
         </div>
     </div>
@@ -45,7 +45,7 @@
         </div>
         <div class="bg-white p-6 rounded-2xl shadow-lg border-l-4 border-indigo-500">
             <p class="text-gray-500 text-sm font-medium uppercase tracking-wide mb-1">Total Cost (KES)</p>
-            <p class="text-3xl font-bold text-indigo-600 mb-2">{{ total_cost }}</p>
+            <p class="text-3xl font-bold text-indigo-600 mb-2">KES {{ total_cost|floatformat:2 }}</p>
             <p class="text-xs text-gray-500 mt-1">External: {{ external_count }}</p>
         </div>
     </div>
@@ -121,7 +121,7 @@
                             </td>
                             <td class="py-2 px-4 border text-sm">{{ r.centre_department|default:"—" }}</td>
                             <td class="py-2 px-4 border text-sm">{{ r.get_status_display }}</td>
-                            <td class="py-2 px-4 border text-sm">{{ r.cost_kes|default:"—" }}</td>
+                            <td class="py-2 px-4 border text-sm">{% if r.cost_kes != None %}KES {{ r.cost_kes|floatformat:2 }}{% else %}-{% endif %}</td>
                             <td class="py-2 px-4 border text-sm">{{ r.issue_description|truncatechars:80 }}</td>
                         </tr>
                         {% empty %}

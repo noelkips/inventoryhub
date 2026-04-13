@@ -78,6 +78,7 @@ urlpatterns = [
     path('exportpdf/', views.export_to_pdf, name='export_to_pdf'),
     path('exportexcel/', views.export_to_excel, name='export_to_excel'),
     path('reports/inventory-by-centre/download/', views.download_inventory_by_centre_report, name='download_inventory_by_centre_report'),
+    path('reports/inventory-operational/download/', views.download_inventory_operational_report, name='download_inventory_operational_report'),
 
     # Employee Management
     path('employees/', views.employee_list, name='employee_list'),

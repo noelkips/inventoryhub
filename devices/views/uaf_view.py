@@ -13,7 +13,10 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.utils import ImageReader
 from reportlab.lib.units import inch
+from reportlab.platypus import Paragraph
+from reportlab.lib.styles import ParagraphStyle
 import base64
+from xml.sax.saxutils import escape
 from pypdf import PdfReader, PdfWriter
 from ..models import CustomUser, Import, DeviceAgreement
 from ..utils import send_custom_email
@@ -540,8 +543,34 @@ def generate_uaf_pdf(device, agreement, buffer, category_display, include_cleara
     c.drawString(50, y, "• I will not leave the device unattended.")
     y -= 15
 
-    c.drawString(50, y, f"• I accept full responsibility for the {category_display} and accessories and agree to reimburse MOHI")
-    y -= 11
+    category_for_sentence = (
+        device.get_category_display()
+        if hasattr(device, "get_category_display")
+        else (device.category or category_display or "device")
+    ) or category_display or "device"
+    device_name_for_sentence = (getattr(device, "device_name", "") or "").strip()
+
+    if device_name_for_sentence:
+        responsibility_text = (
+            f"\u2022 I accept full responsibility for the {escape(str(category_for_sentence))} "
+            f"<font size='10'><b>({escape(device_name_for_sentence)})</b></font> and accessories and agree to reimburse MOHI"
+        )
+    else:
+        responsibility_text = (
+            f"\u2022 I accept full responsibility for the {escape(str(category_for_sentence))} "
+            f"and accessories and agree to reimburse MOHI"
+        )
+
+    responsibility_style = ParagraphStyle(
+        name="uaf_responsibility_line",
+        fontName="Helvetica",
+        fontSize=9,
+        leading=11,
+    )
+    responsibility_para = Paragraph(responsibility_text, responsibility_style)
+    _, responsibility_height = responsibility_para.wrap(width - 100, 40)
+    responsibility_para.drawOn(c, 50, y - responsibility_height)
+    y -= (responsibility_height + 2)
     c.drawString(65, y, "for the full cost of repairing or replacing the device and accessories if they are lost, stolen, or damaged")
     y -= 11
     c.drawString(65, y, "while they are checked out in my name. I understand that leaving my center with a device constitutes theft.")

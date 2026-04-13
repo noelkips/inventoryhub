@@ -46,6 +46,7 @@ from devices.utils.notification_utils import (
 )
 from ppm.models import PPMTask, PPMPeriod, PPMActivity
 from devices.utils.inventory_centre_report import build_inventory_workbook, get_inventory_devices
+from devices.utils.inventory_operational_excel import build_inventory_operational_workbook
 
 # Third-party & Standard Library
 import csv
@@ -179,6 +180,11 @@ def _safe_next_url(request, *, default_url, deleted_notification_pk=None):
 
 def _can_download_inventory_centre_report(user):
     return bool(user.is_authenticated and (user.is_superuser or user.is_it_manager))
+
+
+def _can_download_inventory_operational_report(user):
+    # Staff-facing report.
+    return bool(user.is_authenticated and user.is_staff)
 
 
 def landing_page(request):
@@ -851,6 +857,7 @@ def dashboard_view(request):
         'can_switch_dashboard_scope': can_switch_dashboard_scope,
         'can_review_device_requests': can_review_device_requests(user),
         'can_download_inventory_centre_report': _can_download_inventory_centre_report(user),
+        'can_download_inventory_operational_report': _can_download_inventory_operational_report(user),
         'total_devices': total_devices,
         'approved_devices': approved_devices,
         'pending_approvals': pending_approvals,
@@ -941,6 +948,29 @@ def download_inventory_by_centre_report(request):
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
     filename = f"IT_Inventory_All_Centres_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    workbook.save(response)
+    return response
+
+
+@login_required
+@require_safe
+def download_inventory_operational_report(request):
+    if not _can_download_inventory_operational_report(request.user):
+        return HttpResponseForbidden("Only staff users can download this report.")
+
+    workbook_kwargs = {}
+    if request.user.is_trainer and request.user.centre:
+        workbook_kwargs = {
+            "centre_codes": [request.user.centre.centre_code],
+            "include_no_centre": False,
+        }
+    workbook = build_inventory_operational_workbook(**workbook_kwargs)
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    filename = f"IT_Inventory_Operational_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     workbook.save(response)
     return response

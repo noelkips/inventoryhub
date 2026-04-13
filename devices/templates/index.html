@@ -114,6 +114,15 @@
                 <span class="text-sm font-medium">Download Inventory Excel</span>
             </a>
             {% endif %}
+
+            {% if can_download_inventory_operational_report %}
+            <a href="{% url 'download_inventory_operational_report' %}" class="group bg-white bg-opacity-20 backdrop-blur-sm hover:bg-opacity-30 text-white px-4 py-3 rounded-xl transition duration-300 flex flex-col items-center justify-center text-center shadow-lg hover:shadow-2xl hover:-translate-y-1 transform">
+                <svg class="w-8 h-8 mb-2 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h4l2 2 2-2h4a2 2 0 002-2V7.414a2 2 0 00-.586-1.414l-2.414-2.414A2 2 0 0013.586 3H4zm6 5a1 1 0 10-2 0v3.586L6.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 10-1.414-1.414L10 11.586V8z" clip-rule="evenodd"></path>
+                </svg>
+                <span class="text-sm font-medium">Download Operational Report</span>
+            </a>
+            {% endif %}
         </div>
     </div>
 

@@ -1013,6 +1013,8 @@ def _reviewable_device_request_queryset():
 
 @login_required
 def display_approved_imports(request):
+    under_repair_only = _is_truthy_param(request.GET.get('under_repair'))
+
     if request.user.is_trainer:
         initial_queryset = Import.objects.filter(
             centre=request.user.centre,
@@ -1030,7 +1032,11 @@ def display_approved_imports(request):
     else:
         initial_queryset = Import.objects.none()
 
+    if under_repair_only:
+        initial_queryset = initial_queryset.filter(is_active=False)
+
     context = get_list_context(request, initial_queryset, 'display_approved_imports')
+    context['under_repair_only'] = under_repair_only
     return render(request, 'import/displaycsv_approved.html', context)
 
 @login_required
